@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NMAO — Mission Control (dry run)</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232d; --line:#2a3340;
+    --ink:#e6edf3; --dim:#8b98a5; --accent:#5db2ff; --accent2:#7ee787;
+    --warn:#ffb454; --bad:#ff6b6b; --gold:#e5c76b; --silver:#c7ccd1; --bronze:#cd8b62;
+    --radius:10px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+  header h1{font-size:15px;margin:0;letter-spacing:.3px;font-weight:600}
+  header .sub{color:var(--dim);font-size:12px}
+  .badge{margin-left:auto;padding:5px 12px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:12px}
+  .badge b{color:var(--accent)}
+  .wrap{display:grid;grid-template-columns:300px 1fr;gap:0;min-height:calc(100vh - 52px)}
+  aside{border-right:1px solid var(--line);background:var(--panel);padding:16px;overflow:auto}
+  main{padding:18px 22px;overflow:auto}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin:0 0 10px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px}
+  label{display:block;font-size:12px;color:var(--dim);margin:10px 0 4px}
+  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 9px;font-size:13px}
+  .row{display:flex;gap:8px}
+  .row>div{flex:1}
+  button{cursor:pointer;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);color:#06243c;border-color:var(--accent)}
+  button.ghost{background:transparent}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary:disabled{background:var(--panel2);color:var(--dim)}
+  .pipeline{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .step{padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--panel);font-size:11px;color:var(--dim);white-space:nowrap}
+  .step.done{color:var(--accent2);border-color:#26482f;background:#132018}
+  .step.current{color:#06243c;background:var(--accent);border-color:var(--accent);font-weight:700}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+  .pod{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .pod h3{margin:0;font-size:12px;padding:9px 12px;background:var(--panel2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+  .pod h3 .tag{margin-left:auto;font-size:10px;color:var(--dim);font-weight:600}
+  .pod table{width:100%;border-collapse:collapse;font-size:12px}
+  .pod td{padding:5px 12px;border-bottom:1px solid #212934}
+  .pod tr:last-child td{border-bottom:none}
+  .muted{color:var(--dim)}
+  .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid var(--line)}
+  .pill.beg{color:#9db4c9} .pill.int{color:#b9a0e0} .pill.adv{color:var(--warn)}
+  .flag{background:#2a1d12;border:1px solid #4a3418;color:var(--warn);padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:12px}
+  table.data{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  table.data th{text-align:left;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  table.data td{padding:7px 12px;border-bottom:1px solid #212934}
+  .delta.up{color:var(--accent2)} .delta.down{color:var(--bad)}
+  .medal{font-size:11px;font-weight:700}
+  .medal.gold{color:var(--gold)} .medal.silver{color:var(--silver)} .medal.bronze{color:var(--bronze)} .medal.participation{color:var(--dim)}
+  .audit{font-size:12px;max-height:180px;overflow:auto}
+  .audit div{padding:4px 0;border-bottom:1px solid #212934;color:var(--dim)}
+  .kpis{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:6px}
+  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 14px}
+  .kpi b{display:block;font-size:20px;color:var(--ink)} .kpi span{font-size:11px;color:var(--dim)}
+  .hint{color:var(--dim);font-size:12px;margin:2px 0 10px}
+  .tabs{display:flex;gap:6px;margin-bottom:12px}
+  .tab{padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--dim);cursor:pointer;font-size:12px;font-weight:600}
+  .tab.active{color:var(--ink);border-color:var(--accent)}
+  .sim{background:#0f1c24;border:1px solid #1d3a4a;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:13px}
+  .sim b{color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>NMAO · Mission Control</h1>
+  <span class="sub">operator dry run — seeded data, real engine</span>
+  <span class="badge">Round state: <b id="stateBadge">open</b></span>
+</header>
+
+<div class="wrap">
+  <aside>
+    <div class="card">
+      <h2>Seed round</h2>
+      <label>Competitors</label>
+      <input id="numComp" type="number" value="120" min="6" max="800" />
+      <div class="row">
+        <div><label>Schools</label><input id="numSchool" type="number" value="10" min="2" max="40" /></div>
+        <div><label>Judges</label><input id="numJudge" type="number" value="14" min="1" max="80" /></div>
+      </div>
+      <label>Seed (deterministic)</label>
+      <input id="seed" type="number" value="42" />
+      <div class="controls"><button class="primary" id="btnSeed">Generate entries</button></div>
+      <div class="hint" id="seedInfo">—</div>
+    </div>
+
+    <div class="card">
+      <h2>Division scheme</h2>
+      <label>Events (comma sep, never merge)</label>
+      <input id="scEvents" value="forms, weapons" />
+      <label>Rank tiers</label>
+      <input id="scRanks" value="beginner, intermediate, advanced" />
+      <label>Age brackets</label>
+      <input id="scAges" value="7-9, 10-12, 13-15, 16-17, 18+" />
+      <div class="row">
+        <div><label>Pod cap</label><input id="scCap" type="number" value="20" /></div>
+        <div><label>Split at</label><input id="scSplit" type="number" value="22" /></div>
+      </div>
+      <div class="row">
+        <div><label>Pod floor</label><input id="scFloor" type="number" value="6" /></div>
+        <div><label>Collapse order</label>
+          <select id="scOrder"><option value="rank,age">rank → age</option><option value="age,rank">age → rank</option></select>
+        </div>
+      </div>
+      <div class="controls"><button id="btnSim">Simulate</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Override tools</h2>
+      <div class="hint">Available in podded/judging. Each writes to the audit log.</div>
+      <div class="controls" style="flex-direction:column;align-items:stretch">
+        <button id="ovVoid" class="ghost">Void a random entry</button>
+        <button id="ovReassign" class="ghost">Reassign a judge</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="card">
+      <div class="pipeline" id="pipeline"></div>
+      <div class="controls">
+        <button class="primary" id="btnAdvance">Advance ▶</button>
+        <button id="btnRollback">◀ Roll back</button>
+        <button id="btnRunAll" class="ghost">Run to finalized ⏭</button>
+        <span class="muted" id="guardMsg" style="align-self:center"></span>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </div>
+
+    <div id="simBox"></div>
+    <div id="flags"></div>
+    <div id="board"></div>
+
+    <div class="card">
+      <h2>Audit log</h2>
+      <div class="audit" id="audit"><div class="muted">No overrides yet.</div></div>
+    </div>
+  </main>
+</div>
+
+<script>
+// ===ENGINE START=== (ported from supabase/functions/_shared/* — kept in sync)
+const ENGINE = (function () {
+  // ---- deterministic RNG (mulberry32) ----
+  function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+  function round2(n){return Math.round((n+Number.EPSILON)*100)/100;}
+
+  // ---- divisioning ----
+  function ageAxis(s){const a=s.axes.find(x=>x.key==='age');return a?a.brackets.map(b=>b.key):[];}
+  function rankAxis(s){const r=s.axes.find(x=>x.key==='rank');return r?r.tiers:[];}
+  function axisMergeable(s,k){const x=s.axes.find(a=>a.key===k);return !!(x&&x.mergeable);}
+  function classify(entries,s){
+    const ages=ageAxis(s),ranks=rankAxis(s),map=new Map();
+    for(const e of entries){
+      const ai=ages.indexOf(e.ageBracket),ri=ranks.indexOf(e.rank);
+      const key=e.event+'|'+e.ageBracket+'|'+e.rank;
+      let d=map.get(key);
+      if(!d){d={key,event:e.event,ageKey:e.ageBracket,rankKey:e.rank,isCollapsed:false,collapsedFrom:[key],cells:[ai+','+ri],entries:[]};map.set(key,d);}
+      d.entries.push(e);
+    }
+    return [...map.values()];
+  }
+  function cellCoords(c){const p=c.split(',').map(Number);return [p[0],p[1]];}
+  function adjacent(d1,d2,axis){
+    if(d1.event!==d2.event)return false;
+    for(const c1 of d1.cells){const[a1,r1]=cellCoords(c1);for(const c2 of d2.cells){const[a2,r2]=cellCoords(c2);
+      if(axis==='rank'&&a1===a2&&Math.abs(r1-r2)===1)return true;
+      if(axis==='age'&&r1===r2&&Math.abs(a1-a2)===1)return true;}}
+    return false;
+  }
+  function stableKey(d){return d.event+'|'+[...d.cells].sort().join('&');}
+  function collapse(divisions,s){
+    const floor=s.podFloor;
+    let work=divisions.map(d=>({event:d.event,cells:new Set(d.cells),entries:[...d.entries],collapsedFrom:new Set(d.collapsedFrom),unmergeable:false}));
+    while(true){
+      const under=work.filter(d=>d.entries.length<floor&&!d.unmergeable).sort((a,b)=>a.entries.length-b.entries.length||stableKey(a).localeCompare(stableKey(b)));
+      if(under.length===0)break;
+      const D=under[0];let cand=null;
+      for(const axis of s.collapseOrder){if(!axisMergeable(s,axis))continue;
+        const cs=work.filter(o=>o!==D&&adjacent(D,o,axis)).sort((a,b)=>a.entries.length-b.entries.length||stableKey(a).localeCompare(stableKey(b)));
+        if(cs.length){cand=cs[0];break;}}
+      if(!cand){D.unmergeable=true;continue;}
+      for(const c of D.cells)cand.cells.add(c);for(const b of D.collapsedFrom)cand.collapsedFrom.add(b);
+      cand.entries.push(...D.entries);work=work.filter(d=>d!==D);
+    }
+    const ages=ageAxis(s),ranks=rankAxis(s);
+    return work.map(d=>{
+      const cells=[...d.cells];
+      const ak=[...new Set(cells.map(c=>ages[cellCoords(c)[0]]).filter(Boolean))];
+      const rk=[...new Set(cells.map(c=>ranks[cellCoords(c)[1]]).filter(Boolean))];
+      const cf=[...d.collapsedFrom].sort();
+      return {key:stableKey(d),event:d.event,ageKey:ak.join('+'),rankKey:rk.join('+'),isCollapsed:cf.length>1,collapsedFrom:cf,cells,entries:d.entries,underFloorUnmergeable:(d.unmergeable&&d.entries.length<floor)?true:undefined};
+    });
+  }
+  function splitSizes(n,k){const base=Math.floor(n/k),rem=n%k;return Array.from({length:k},(_,i)=>base+(i<rem?1:0));}
+  function formPods(division,s){
+    const sorted=[...division.entries].sort((a,b)=>b.rating-a.rating);
+    const n=sorted.length;const numPods=n<s.podSplitThreshold?1:Math.ceil(n/s.podCap);
+    const sizes=splitSizes(n,numPods);const judgeCount=division.rankKey.split('+').includes('advanced')?3:1;
+    const pods=[];let idx=0;
+    for(let seq=0;seq<numPods;seq++){pods.push({divisionKey:division.key,seq:seq+1,judgeCount,entries:sorted.slice(idx,idx+sizes[seq])});idx+=sizes[seq];}
+    return pods;
+  }
+  function runDivisioning(entries,s){
+    const base=classify(entries,s);const divisions=collapse(base,s);const pods=divisions.flatMap(d=>formPods(d,s));
+    const flags=[];for(const d of divisions){if(d.underFloorUnmergeable)flags.push('Division '+d.event+'/'+d.ageKey+'/'+d.rankKey+' has '+d.entries.length+' entries and cannot collapse further (no legal neighbor).');}
+    return {divisions,pods,flags};
+  }
+
+  // ---- judging ----
+  function assignJudges(videos,judges){
+    const load=new Map(judges.map(j=>[j.judgeId,0]));const assignments=[];const flags=[];
+    const vids=[...videos].sort((a,b)=>a.entryId.localeCompare(b.entryId));
+    for(const v of vids){
+      const eligible=judges.filter(j=>j.schoolId!==v.competitorSchoolId);
+      if(eligible.length<v.judgeCount)flags.push('Entry '+v.entryId+' needs '+v.judgeCount+' judge(s) but only '+eligible.length+' non-conflicted available.');
+      const picked=[...eligible].sort((a,b)=>(load.get(a.judgeId)-load.get(b.judgeId))||a.judgeId.localeCompare(b.judgeId)).slice(0,v.judgeCount);
+      const role=v.judgeCount>1?'panel':'sole';
+      for(const j of picked){assignments.push({entryId:v.entryId,judgeId:j.judgeId,role});load.set(j.judgeId,load.get(j.judgeId)+1);}
+    }
+    return {assignments,flags};
+  }
+
+  // ---- scoring / resolve (0-100 judge scores) ----
+  function podScore(a){return round2(a.reduce((x,y)=>x+y,0)/a.length);}
+  // entries: {entryId, competitorId, rank, judgeScores, submittedAt}
+  function resolvePod(entries){
+    const scored=entries.map(e=>({entryId:e.entryId,competitorId:e.competitorId,rank:e.rank,score:podScore(e.judgeScores),highSingle:Math.max(...e.judgeScores),submittedAt:e.submittedAt}));
+    scored.sort((a,b)=>b.score-a.score||b.highSingle-a.highSingle||a.submittedAt-b.submittedAt||a.entryId.localeCompare(b.entryId));
+    return scored.map((s,i)=>({...s,placement:i+1}));
+  }
+
+  // ---- rating (LOCKED: seed 50, same-rank only, K 8->4, clamp 0-100) ----
+  const RCFG={seed:50,D:40,kProvisional:8,kSteady:4,provisionalRounds:3,ratingMin:0,ratingMax:100};
+  function seedRating(_rank,cfg=RCFG){return cfg.seed;}
+  // results: resolvePod output; states: {competitorId:{rating,roundsPlayed}}
+  function updateRatings(results,states,cfg=RCFG){
+    const stateOf=id=>states[id]||{rating:cfg.seed,roundsPlayed:0};
+    const out={};
+    for(const me of results){const my=stateOf(me.competitorId);const Ri=my.rating;
+      const opps=results.filter(o=>o.competitorId!==me.competitorId&&o.rank===me.rank);
+      const k=my.roundsPlayed<cfg.provisionalRounds?cfg.kProvisional:cfg.kSteady;let delta=0;
+      if(opps.length>0){let raw=0;for(const opp of opps){const Rj=stateOf(opp.competitorId).rating;
+        const E=1/(1+Math.pow(10,(Rj-Ri)/cfg.D));const A=me.placement<opp.placement?1:me.placement>opp.placement?0:0.5;raw+=A-E;}
+        delta=(k/opps.length)*raw;}
+      const after=Math.max(cfg.ratingMin,Math.min(cfg.ratingMax,Ri+delta));
+      out[me.competitorId]={before:Ri,delta:round2(after-Ri),after:round2(after),opponents:opps.length,k};}
+    return out;
+  }
+
+  // ---- distribute ----
+  const PLACE={1:'gold',2:'silver',3:'bronze'};
+  function buildShipList(results,schools){
+    const bySchool=new Map();
+    for(const r of results){const medals=['participation'];if(PLACE[r.placement])medals.push(PLACE[r.placement]);
+      const item={competitorId:r.competitorId,competitorName:r.competitorName,event:r.event,placement:r.placement,medals};
+      if(!bySchool.has(r.schoolId))bySchool.set(r.schoolId,[]);bySchool.get(r.schoolId).push(item);}
+    const shipments=[...bySchool.keys()].sort().map(sid=>{
+      const items=bySchool.get(sid).sort((a,b)=>a.competitorName.localeCompare(b.competitorName)||a.event.localeCompare(b.event));
+      const meta=schools[sid]||{name:sid};const itemCount=items.reduce((s,it)=>s+it.medals.length,0);
+      return {schoolId:sid,schoolName:meta.name,itemCount,items};});
+    const totalMedals=shipments.reduce((s,sh)=>s+sh.itemCount,0);
+    return {shipments,totalMedals};
+  }
+
+  // ---- state machine ----
+  const STATES=['open','collecting','closed','classified','collapsed','podded','judging','resolving','distributed','finalized'];
+  function nextState(s){const i=STATES.indexOf(s);return i>=0&&i<STATES.length-1?STATES[i+1]:null;}
+
+  return {rng,classify,collapse,formPods,runDivisioning,assignJudges,podScore,resolvePod,seedRating,updateRatings,buildShipList,STATES,nextState,RCFG};
+})();
+// ===ENGINE END===
+
+// ---------------- application state ----------------
+const S = { entries:[], judges:[], schools:{}, scheme:null, state:'open',
+  divisions:[], pods:[], assignments:[], scores:{}, results:[], shipList:null, flags:[], audit:[] };
+
+const $ = id => document.getElementById(id);
+const NAMES_A=['Ash','Bo','Cy','Dae','Emi','Fen','Gia','Han','Ivy','Jae','Kit','Lux','Mei','Nao','Oz','Pia','Qi','Rin','Sol','Tao','Uma','Vic','Wen','Xin','Yara','Zed'];
+const NAMES_B=['Lee','Kim','Ng','Park','Cruz','Diaz','Ito','Fox','Roy','Vale','Mora','Shah','Reed','Blum','Cole','Frye'];
+
+function parseScheme(){
+  const events=$('scEvents').value.split(',').map(x=>x.trim()).filter(Boolean);
+  const ranks=$('scRanks').value.split(',').map(x=>x.trim()).filter(Boolean);
+  const ages=$('scAges').value.split(',').map(x=>x.trim()).filter(Boolean);
+  return {axes:[
+    {key:'age',type:'bracket',active:true,mergeable:true,brackets:ages.map((k,i)=>({key:k,min:i,max:i}))},
+    {key:'rank',type:'tier',active:true,mergeable:true,tiers:ranks},
+    {key:'event',type:'category',active:true,mergeable:false,values:events},
+  ],podCap:+$('scCap').value,podSplitThreshold:+$('scSplit').value,podFloor:+$('scFloor').value,
+   collapseOrder:$('scOrder').value.split(',')};
+}
+
+function seedRound(){
+  const rand=ENGINE.rng(+$('seed').value||1);
+  const nc=+$('numComp').value, ns=+$('numSchool').value, nj=+$('numJudge').value;
+  const sc=parseScheme();
+  const events=sc.axes[2].values, ranks=sc.axes[1].tiers, ages=sc.axes[0].brackets.map(b=>b.key);
+  const rankWeights=[0.5,0.32,0.18]; // beginner heavy
+  S.schools={}; for(let i=0;i<ns;i++){const id='sch'+i;S.schools[id]={name:'Dojo '+String.fromCharCode(65+(i%26))+(i>=26?Math.floor(i/26):'')};}
+  const schoolIds=Object.keys(S.schools);
+  S.judges=Array.from({length:nj},(_,i)=>({judgeId:'jud'+i,schoolId:schoolIds[Math.floor(rand()*schoolIds.length)]}));
+  const pick=(arr)=>arr[Math.floor(rand()*arr.length)];
+  const wpick=(arr,w)=>{let r=rand(),c=0;for(let i=0;i<arr.length;i++){c+=w[i]||0;if(r<=c)return arr[i];}return arr[arr.length-1];};
+  S.entries=Array.from({length:nc},(_,i)=>{
+    const rank=ranks.length===3?wpick(ranks,rankWeights):pick(ranks);
+    const schoolId=schoolIds[Math.floor(rand()*schoolIds.length)];
+    // hidden true skill drives judge scores (0-100); rating is the locked 0-100 number seeded ~50.
+    const skillBase={beginner:55,intermediate:65,advanced:75}[rank]||60;
+    const skill=Math.max(0,Math.min(100,skillBase+(rand()*40-20)));
+    const rating=Math.max(0,Math.min(100,50+(rand()*24-12))); // mid-season spread around the seed of 50
+    return {id:'e'+i,event:pick(events),ageBracket:pick(ages),rank,rating:Math.round(rating*10)/10,
+      competitorId:'c'+i,competitorName:pick(NAMES_A)+' '+pick(NAMES_B),schoolId,skill,priorRounds:Math.floor(rand()*5),
+      submittedAt:1000+Math.floor(rand()*100000),status:'valid'};
+  });
+  Object.assign(S,{state:'open',divisions:[],pods:[],assignments:[],scores:{},results:[],shipList:null,flags:[],audit:[]});
+  $('seedInfo').textContent = nc+' competitors · '+ns+' schools · '+nj+' judges';
+  render();
+}
+
+// map internal pods (division-scoped) to flat pods with ids
+function buildPods(){
+  S.scheme=parseScheme();
+  const {divisions}=(()=>{const base=ENGINE.classify(S.entries.filter(e=>e.status==='valid'),S.scheme);const divisions=ENGINE.collapse(base,S.scheme);return {divisions};})();
+  S.divisions=divisions;
+  let pid=0;S.pods=[];
+  for(const d of divisions){for(const p of ENGINE.formPods(d,S.scheme)){S.pods.push({id:'p'+(pid++),...p,division:d});}}
+}
+
+function doAssign(){
+  const videos=[];
+  for(const p of S.pods)for(const e of p.entries)videos.push({entryId:e.id,competitorSchoolId:e.schoolId,judgeCount:p.judgeCount,podId:p.id});
+  const {assignments,flags}=ENGINE.assignJudges(videos,S.judges);
+  // attach podId back
+  const podByEntry={};for(const p of S.pods)for(const e of p.entries)podByEntry[e.id]=p.id;
+  S.assignments=assignments.map(a=>({...a,podId:podByEntry[a.entryId]}));
+  S.flags=flags;
+}
+
+function simulateScores(){
+  const rand=ENGINE.rng((+$('seed').value||1)*7+1);
+  S.scores={};
+  const entryById={};S.entries.forEach(e=>entryById[e.id]=e);
+  for(const a of S.assignments){
+    const e=entryById[a.entryId];
+    const raw=Math.max(0,Math.min(100,e.skill + (rand()*12-6))); // 0..100 judge score
+    (S.scores[a.entryId]=S.scores[a.entryId]||[]).push(Math.round(raw*10)/10);
+  }
+}
+
+function doResolve(){
+  simulateScores();
+  const entryById={};S.entries.forEach(e=>entryById[e.id]=e);
+  S.results=[];
+  for(const p of S.pods){
+    const scored=p.entries.filter(e=>S.scores[e.id]&&S.scores[e.id].length).map(e=>({entryId:e.id,competitorId:e.competitorId,rank:e.rank,judgeScores:S.scores[e.id],submittedAt:e.submittedAt}));
+    if(!scored.length)continue;
+    const resolved=ENGINE.resolvePod(scored);
+    const placeBy={};resolved.forEach(r=>placeBy[r.entryId]=r);
+    const states={};p.entries.forEach(e=>states[e.competitorId]={rating:e.rating,roundsPlayed:e.priorRounds});
+    const changes=ENGINE.updateRatings(resolved,states);
+    for(const e of p.entries){const r=placeBy[e.id];if(!r)continue;const c=changes[e.competitorId];
+      S.results.push({entryId:e.id,podId:p.id,competitorId:e.competitorId,competitorName:e.competitorName,schoolId:e.schoolId,event:e.event,rank:e.rank,
+        score:r.score,placement:r.placement,ratingBefore:c.before,ratingDelta:c.delta,ratingAfter:c.after,opponents:c.opponents});}
+  }
+}
+
+function doDistribute(){ S.shipList=ENGINE.buildShipList(S.results,S.schools); }
+
+// ---- advance / rollback ----
+function guardReason(to){
+  const valid=S.entries.filter(e=>e.status==='valid').length;
+  if(to==='classified'&&valid===0)return 'Zero valid entries — cannot classify.';
+  return null;
+}
+function advance(){
+  const to=ENGINE.nextState(S.state);if(!to)return;
+  const g=guardReason(to);if(g){$('guardMsg').textContent=g;return;}
+  $('guardMsg').textContent='';
+  if(to==='classified'){S.scheme=parseScheme();const base=ENGINE.classify(S.entries.filter(e=>e.status==='valid'),S.scheme);S.divisions=base;}
+  if(to==='collapsed'){S.divisions=ENGINE.collapse(ENGINE.classify(S.entries.filter(e=>e.status==='valid'),S.scheme),S.scheme);S.flags=ENGINE.runDivisioning(S.entries.filter(e=>e.status==='valid'),S.scheme).flags;}
+  if(to==='podded'){buildPods();}
+  if(to==='judging'){doAssign();}
+  if(to==='resolving'){doResolve();}
+  if(to==='distributed'){doDistribute();}
+  S.state=to;render();
+}
+function rollback(){
+  const i=ENGINE.STATES.indexOf(S.state);if(i<=0)return;
+  const to=ENGINE.STATES[i-1];
+  // clear artifacts at/after the state we're leaving
+  const clearFrom=ENGINE.STATES.indexOf(to)+1;
+  const order=['classified','collapsed','podded','judging','resolving','distributed'];
+  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('distributed'))S.shipList=null;
+  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('resolving')){S.results=[];S.scores={};}
+  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('judging'))S.assignments=[];
+  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('podded'))S.pods=[];
+  S.state=to;$('guardMsg').textContent='';render();
+}
+function runAll(){let guard=0;while(ENGINE.nextState(S.state)&&guard++<20){const before=S.state;advance();if(S.state===before)break;}}
+
+// ---- overrides ----
+function logAudit(action,detail){S.audit.unshift({t:new Date().toLocaleTimeString(),action,detail});renderAudit();}
+function ovVoid(){
+  const live=S.entries.filter(e=>e.status==='valid');if(!live.length)return;
+  const rand=ENGINE.rng(Date.now()%100000);const victim=live[Math.floor(rand()*live.length)];
+  victim.status='voided';logAudit('void','entry '+victim.id+' ('+victim.competitorName+') voided');
+  // re-resolve affected pod if we're past podded
+  if(['podded','judging','resolving','distributed','finalized'].includes(S.state)){
+    buildPods();if(['judging','resolving','distributed','finalized'].includes(S.state))doAssign();
+    if(['resolving','distributed','finalized'].includes(S.state))doResolve();
+    if(['distributed','finalized'].includes(S.state))doDistribute();
+  }
+  render();
+}
+function ovReassign(){
+  if(!S.assignments.length){logAudit('reassign','no assignments yet');return;}
+  const rand=ENGINE.rng(Date.now()%99991);const a=S.assignments[Math.floor(rand()*S.assignments.length)];
+  const entry=S.entries.find(e=>e.id===a.entryId);
+  const onVideo=S.assignments.filter(x=>x.entryId===a.entryId).map(x=>x.judgeId);
+  const cand=S.judges.filter(j=>j.schoolId!==entry.schoolId&&!onVideo.includes(j.judgeId));
+  if(!cand.length){logAudit('reassign','no eligible replacement for '+a.entryId);return;}
+  const repl=cand[Math.floor(rand()*cand.length)];
+  logAudit('reassign','video '+a.entryId+': '+a.judgeId+' → '+repl.judgeId);
+  a.judgeId=repl.judgeId;
+  if(['resolving','distributed','finalized'].includes(S.state)){doResolve();if(['distributed','finalized'].includes(S.state))doDistribute();}
+  render();
+}
+
+// ---------------- rendering ----------------
+function rankPill(rk){const map={beginner:'beg',intermediate:'int',advanced:'adv'};const cls=rk.split('+').map(r=>map[r]||'beg')[0];
+  return '<span class="pill '+cls+'">'+rk+'</span>';}
+
+function renderPipeline(){
+  $('pipeline').innerHTML=ENGINE.STATES.map(st=>{
+    const cur=st===S.state;const done=ENGINE.STATES.indexOf(st)<ENGINE.STATES.indexOf(S.state);
+    return '<span class="step '+(cur?'current':done?'done':'')+'">'+st+'</span>';
+  }).join('');
+  $('stateBadge').textContent=S.state;
+  $('btnAdvance').disabled=!ENGINE.nextState(S.state);
+  $('btnRollback').disabled=ENGINE.STATES.indexOf(S.state)<=0;
+}
+function renderKpis(){
+  const valid=S.entries.filter(e=>e.status==='valid').length;
+  const items=[['Valid entries',valid],['Divisions',S.divisions.length||'—'],['Pods',S.pods.length||'—'],
+    ['Judge assigns',S.assignments.length||'—'],['Resolved',S.results.length||'—'],
+    ['Medals',S.shipList?S.shipList.totalMedals:'—']];
+  $('kpis').innerHTML=items.map(([l,v])=>'<div class="kpi"><b>'+v+'</b><span>'+l+'</span></div>').join('');
+}
+function renderFlags(){
+  $('flags').innerHTML=(S.flags&&S.flags.length)?S.flags.map(f=>'<div class="flag">⚠ '+f+'</div>').join(''):'';
+}
+function renderBoard(){
+  const st=S.state, i=ENGINE.STATES.indexOf(st);
+  let html='';
+  if(i>=ENGINE.STATES.indexOf('distributed')&&S.shipList){
+    html+='<div class="card"><h2>Medal ship list — one shipment per school</h2>';
+    html+='<div class="grid">'+S.shipList.shipments.map(sh=>
+      '<div class="pod"><h3>'+sh.schoolName+'<span class="tag">'+sh.itemCount+' pcs</span></h3><table>'+
+      sh.items.map(it=>'<tr><td>'+it.competitorName+'<div class="muted" style="font-size:10px">'+it.event+' · '+ordinal(it.placement)+'</div></td><td style="text-align:right">'+
+        it.medals.map(m=>'<span class="medal '+m+'">'+m[0].toUpperCase()+'</span>').join(' ')+'</td></tr>').join('')+
+      '</table></div>').join('')+'</div></div>';
+  }
+  if(i>=ENGINE.STATES.indexOf('resolving')&&S.results.length){
+    const sorted=[...S.results].sort((a,b)=>a.podId.localeCompare(b.podId)||a.placement-b.placement);
+    html+='<div class="card"><h2>Results & rating updates</h2><table class="data"><thead><tr>'+
+      '<th>Pod</th><th>Place</th><th>Competitor</th><th>Rank</th><th>Score</th><th>Rating</th><th>Δ</th></tr></thead><tbody>'+
+      sorted.slice(0,200).map(r=>'<tr><td class="muted">'+r.podId+'</td><td>'+ordinal(r.placement)+'</td><td>'+r.competitorName+'</td><td>'+rankPill(r.rank)+
+        '</td><td>'+r.score.toFixed(2)+'</td><td>'+Math.round(r.ratingAfter)+'</td><td class="delta '+(r.ratingDelta>=0?'up':'down')+'">'+(r.ratingDelta>=0?'+':'')+r.ratingDelta.toFixed(1)+'</td></tr>').join('')+
+      '</tbody></table>'+(sorted.length>200?'<div class="hint">showing first 200 of '+sorted.length+'</div>':'')+'</div>';
+  }
+  if(st==='judging'&&S.assignments.length){
+    const byPod={};S.assignments.forEach(a=>{(byPod[a.podId]=byPod[a.podId]||[]).push(a);});
+    html+='<div class="card"><h2>Judge assignments (per video)</h2><div class="grid">'+
+      S.pods.map(p=>{const as=byPod[p.id]||[];const uniq=[...new Set(as.map(a=>a.judgeId))];
+        return '<div class="pod"><h3>'+p.division.event+' · '+p.division.ageKey+'<span class="tag">'+p.judgeCount+'-judge</span></h3>'+
+        '<table><tr><td class="muted">Videos</td><td style="text-align:right">'+p.entries.length+'</td></tr>'+
+        '<tr><td class="muted">Assignments</td><td style="text-align:right">'+as.length+'</td></tr>'+
+        '<tr><td class="muted">Judges used</td><td style="text-align:right">'+uniq.length+'</td></tr></table></div>';}).join('')+'</div></div>';
+  }
+  if((st==='podded'||st==='judging')&&S.pods.length){
+    html+='<div class="card"><h2>Pods ('+S.pods.length+')</h2><div class="grid">'+
+      S.pods.map(p=>'<div class="pod"><h3>'+p.division.event+' · '+p.division.ageKey+' '+rankPill(p.division.rankKey)+
+        '<span class="tag">pod '+p.seq+'</span></h3><table>'+
+        p.entries.slice(0,10).map(e=>'<tr><td>'+e.competitorName+'</td><td class="muted" style="text-align:right">'+e.rating+'</td></tr>').join('')+
+        (p.entries.length>10?'<tr><td class="muted" colspan="2">+'+(p.entries.length-10)+' more</td></tr>':'')+
+        '</table></div>').join('')+'</div></div>';
+  }
+  if((st==='classified'||st==='collapsed')&&S.divisions.length){
+    html+='<div class="card"><h2>Divisions ('+S.divisions.length+')</h2><table class="data"><thead><tr><th>Event</th><th>Age</th><th>Rank</th><th>Entries</th><th>Status</th></tr></thead><tbody>'+
+      [...S.divisions].sort((a,b)=>b.entries.length-a.entries.length).map(d=>'<tr><td>'+d.event+'</td><td>'+d.ageKey+'</td><td>'+rankPill(d.rankKey)+'</td><td>'+d.entries.length+'</td><td>'+
+        (d.underFloorUnmergeable?'<span class="medal bronze">under floor</span>':d.isCollapsed?'<span class="muted">collapsed</span>':'<span class="delta up">ok</span>')+'</td></tr>').join('')+
+      '</tbody></table></div>';
+  }
+  if(i<ENGINE.STATES.indexOf('classified')){
+    html+='<div class="card"><h2>Entries preview</h2><div class="hint">'+S.entries.filter(e=>e.status==='valid').length+' valid entries seeded. Advance to classify them into divisions.</div>'+
+      '<table class="data"><thead><tr><th>Competitor</th><th>School</th><th>Event</th><th>Age</th><th>Rank</th><th>Rating</th></tr></thead><tbody>'+
+      S.entries.slice(0,12).map(e=>'<tr><td>'+e.competitorName+'</td><td class="muted">'+(S.schools[e.schoolId]?.name||e.schoolId)+'</td><td>'+e.event+'</td><td>'+e.ageBracket+'</td><td>'+rankPill(e.rank)+'</td><td>'+e.rating+'</td></tr>').join('')+
+      '</tbody></table><div class="hint">showing 12 of '+S.entries.length+'</div></div>';
+  }
+  $('board').innerHTML=html;
+}
+function renderAudit(){
+  $('audit').innerHTML=S.audit.length?S.audit.map(a=>'<div><b style="color:var(--ink)">'+a.action+'</b> · '+a.detail+' <span style="float:right">'+a.t+'</span></div>').join(''):'<div class="muted">No overrides yet.</div>';
+}
+function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+
+function simulate(){
+  const sc=parseScheme();const valid=S.entries.filter(e=>e.status==='valid');
+  if(!valid.length){$('simBox').innerHTML='<div class="sim">Seed a round first.</div>';return;}
+  const res=ENGINE.runDivisioning(valid,sc);
+  const healthy=res.pods.filter(p=>p.entries.length>=sc.podFloor).length;
+  const under=res.pods.length-healthy;
+  $('simBox').innerHTML='<div class="sim"><b>Simulation</b> (no state change) — '+valid.length+' entries → <b>'+res.divisions.length+'</b> divisions, <b>'+res.pods.length+'</b> pods ('+
+    healthy+' healthy'+(under?', '+under+' under floor':'')+'), '+res.flags.length+' flag(s). Collapsed: '+
+    res.divisions.filter(d=>d.isCollapsed).length+' division(s).</div>';
+}
+
+function render(){renderPipeline();renderKpis();renderFlags();renderBoard();renderAudit();}
+
+// ---- wire up ----
+$('btnSeed').onclick=seedRound;
+$('btnAdvance').onclick=advance;
+$('btnRollback').onclick=rollback;
+$('btnRunAll').onclick=runAll;
+$('btnSim').onclick=simulate;
+$('ovVoid').onclick=ovVoid;
+$('ovReassign').onclick=ovReassign;
+
+seedRound();
+</script>
+</body>
+</html>

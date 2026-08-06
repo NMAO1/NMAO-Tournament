@@ -1,0 +1,13 @@
+{
+  "name": "nmao-tournament",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NMAO Tournament engine — video-based martial arts tournament (Supabase backend).",
+  "type": "module",
+  "scripts": {
+    "test": "tsx supabase/functions/_shared/divisioning.test.ts && tsx supabase/functions/_shared/rating.test.ts && tsx supabase/functions/_shared/assignments.test.ts && tsx supabase/functions/_shared/distribute.test.ts && tsx supabase/functions/_shared/engine.test.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}
