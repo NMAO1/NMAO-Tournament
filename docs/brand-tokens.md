@@ -61,7 +61,7 @@ The hero identity element — logo lockup, section headers, the reveal energy bu
 - **Black** is the canvas — everything sits on `--bg` / `--surface`.
 - **Gold** = **achievement & action**: medals, primary CTAs, the yin-yang's earned segments, rank rings. Gold is the "you did it" color.
 - **The Spectrum (Ruby / Amethyst / Sapphire)** = **energy & identity**: the logo, headers, the reveal burst, celebratory moments, and — proposed — **rank tiers**:
-  - **Sapphire → Beginner**, **Amethyst → Intermediate**, **Ruby → Advanced** (cool → hot as skill rises). This gives the spectrum a functional, intuitive job in addition to its brand role. *(Confirm — or the spectrum can stay purely decorative and tiers use another cue.)*
+  - **Sapphire → Beginner**, **Amethyst → Intermediate**, **Ruby → Advanced** (cool → hot as skill rises) — **LOCKED**. Gives the spectrum a functional, intuitive job alongside its brand role.
 - **Type:** serif display (Georgia / a refined serif) for headings; clean sans (Inter/system) for UI. Ceremonial, generous spacing.
 
 ## Usage notes
