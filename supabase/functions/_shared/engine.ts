@@ -55,6 +55,9 @@ type Await<T> = T | Promise<T>;
 export interface EngineStore {
   getStepStatus(roundId: string, step: StepName): Await<StepStatus | null>;
   setStepStatus(roundId: string, step: StepName, status: StepStatus, detail?: unknown): Await<void>;
+  // Atomically claim a step: returns true only for the caller that wins the
+  // claim (see the claim_step() SQL). Used to serialize concurrent runs.
+  claimStep(roundId: string, step: StepName): Await<boolean>;
 
   // assign_judges
   getPodsForAssignment(roundId: string): Await<AssignPod[]>;
@@ -74,19 +77,23 @@ export interface EngineStore {
 
 export type StepOutcome = { step: StepName; ran: boolean; flags: string[]; detail?: unknown };
 
-// Idempotency wrapper: a step already 'done' is a no-op; a step 'running'
-// is treated as in-flight and skipped. Errors mark the step 'error'.
+// Idempotency wrapper. Claims the step ATOMICALLY (claim_step): only the
+// winning caller runs the work; a concurrent/duplicate call sees the step is
+// already 'running' or 'done' and no-ops. Errors mark the step 'error' (which
+// is claimable again, so a retry can re-run it). This closes the read-then-set
+// race the previous version had.
 async function idempotent(
   store: EngineStore,
   roundId: string,
   step: StepName,
   work: () => Promise<{ flags: string[]; detail?: unknown }>,
 ): Promise<StepOutcome> {
-  const status = await store.getStepStatus(roundId, step);
-  if (status === 'done') return { step, ran: false, flags: [], detail: 'already done' };
-  if (status === 'running') return { step, ran: false, flags: [], detail: 'in flight' };
+  const claimed = await store.claimStep(roundId, step);
+  if (!claimed) {
+    const status = await store.getStepStatus(roundId, step);
+    return { step, ran: false, flags: [], detail: status === 'done' ? 'already done' : 'in flight' };
+  }
 
-  await store.setStepStatus(roundId, step, 'running');
   try {
     const { flags, detail } = await work();
     await store.setStepStatus(roundId, step, 'done', detail);

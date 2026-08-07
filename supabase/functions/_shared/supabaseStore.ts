@@ -91,6 +91,12 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
       if (status === 'done' || status === 'error') patch.completed_at = new Date().toISOString();
       await db.from('round_step_runs').upsert(patch, { onConflict: 'round_id,step' });
     },
+    async claimStep(roundId, step) {
+      // Race-free claim via the claim_step() SQL (INSERT ... ON CONFLICT ... WHERE).
+      const { data, error } = await db.rpc('claim_step', { p_round_id: roundId, p_step: step });
+      if (error) throw error;
+      return data === true;
+    },
 
     // ---------- assign_judges ----------
     async getPodsForAssignment(roundId) {
@@ -207,16 +213,35 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
       }));
       await db.from('results').upsert(payload, { onConflict: 'entry_id' });
     },
-    async saveRatingUpdates(_roundId, rows: RatingWrite[]) {
+    async saveRatingUpdates(roundId, rows: RatingWrite[]) {
       if (rows.length === 0) return;
       const prov = DEFAULT_RATING_CONFIG.provisionalRounds;
+
+      // 1) One history row per rated entry — UPSERT on entry_id so a re-run
+      //    overwrites in place instead of appending duplicates.
+      await db.from('rating_history').upsert(
+        rows.map((r) => ({
+          competitor_id: r.competitorId,
+          round_id: roundId,
+          entry_id: r.entryId,
+          rating_before: r.ratingBefore,
+          rating_after: r.ratingAfter,
+          rating_delta: r.ratingDelta,
+          opponents: r.opponents,
+          k_factor: r.k, // K is 8/4 on the 0-100 scale; column is numeric(5,2)
+        })),
+        { onConflict: 'entry_id' },
+      );
+
+      // 2) Current rating + events_count DERIVED from history (a count), not
+      //    read-add-write — so re-running the same round can't inflate the
+      //    count. events_count = rated entries on record for the competitor.
       for (const r of rows) {
-        const { data: sr } = await db
-          .from('skill_ratings')
-          .select('events_count')
-          .eq('competitor_id', r.competitorId)
-          .maybeSingle();
-        const events = (sr?.events_count ?? 0) + 1;
+        const { count } = await db
+          .from('rating_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('competitor_id', r.competitorId);
+        const events = count ?? 1;
         await db.from('skill_ratings').upsert(
           {
             competitor_id: r.competitorId,
@@ -228,12 +253,6 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
           },
           { onConflict: 'competitor_id' },
         );
-        await db.from('rating_history').insert({
-          competitor_id: r.competitorId,
-          rating_before: r.ratingBefore,
-          rating_after: r.ratingAfter,
-          k_factor: r.k, // K is 8/4 on the 0-100 scale; ensure the column is numeric(5,3)+
-        });
       }
     },
 

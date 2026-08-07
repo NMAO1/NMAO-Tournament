@@ -29,6 +29,12 @@ class MemStore implements EngineStore {
 
   getStepStatus(r: string, s: StepName) { return this.steps.get(`${r}:${s}`) ?? null; }
   setStepStatus(r: string, s: StepName, st: StepStatus) { this.steps.set(`${r}:${s}`, st); }
+  claimStep(r: string, s: StepName) {
+    const cur = this.steps.get(`${r}:${s}`);
+    if (cur === 'running' || cur === 'done') return false; // already held or finished
+    this.steps.set(`${r}:${s}`, 'running');
+    return true;
+  }
 
   getPodsForAssignment() { return this.assignPods; }
   getJudgePool() { return this.judges; }
