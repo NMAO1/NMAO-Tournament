@@ -83,6 +83,36 @@ export function resolvePod(entries: PodEntry[]): PodResult[] {
   return scored;
 }
 
+// ---------- per-criterion weighted scoring (a judge's single video score) ----------
+// Judges score one field per criterion; the video's per-judge score is the
+// weighted combination using the style's rubric profile (Traditional or Open).
+// See docs/scoring-and-rating.md §1.
+
+export type CriterionScore = { criterionCode: string; rawScore: number };   // each 0-100
+export type CriterionWeight = { criterionCode: string; weightPct: number };  // sum to 100 per style
+
+/**
+ * Combine a judge's per-criterion scores into their single 0-100 score for a
+ * video. `weights` is the style's rubric profile (weight_pct sums to 100).
+ * Result = Σ(rawScore × weightPct) / Σ(weightPct present), clamped to [0,100].
+ * Normalising by the weight actually present means a partial rubric still
+ * yields a sensible 0-100 number rather than an under-count.
+ */
+export function weightedJudgeScore(scores: CriterionScore[], weights: CriterionWeight[]): number {
+  const wByCode = new Map(weights.map((w) => [w.criterionCode, w.weightPct]));
+  let weighted = 0;
+  let weightSum = 0;
+  for (const s of scores) {
+    const w = wByCode.get(s.criterionCode);
+    if (w == null) continue;
+    weighted += s.rawScore * w;
+    weightSum += w;
+  }
+  const denom = weightSum > 0 ? weightSum : 100;
+  const score = weighted / denom;
+  return Math.max(0, Math.min(100, Math.round(score * 100) / 100));
+}
+
 // ---------- rating update ----------
 
 export type RatingState = { rating: number; roundsPlayed: number };

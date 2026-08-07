@@ -22,9 +22,48 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 import { EngineStore, StepName, StepStatus, PodForResolve, ResultWrite, RatingWrite } from './engine.ts';
-import { DEFAULT_RATING_CONFIG } from './rating.ts';
+import { DEFAULT_RATING_CONFIG, weightedJudgeScore } from './rating.ts';
 import type { AssignPod, JudgeInput, Assignment } from './assignments.ts';
 import type { ResultRow } from './distribute.ts';
+
+// Season-1 events encode style in their key: `open_*` = Open profile, else Traditional.
+export function styleFromEvent(event: string): 'traditional' | 'open' {
+  return event.startsWith('open') ? 'open' : 'traditional';
+}
+
+// A judge submits one score per criterion (0-100). We persist the per-criterion
+// rows (audit) and compute the video's single weighted score via the style's
+// rubric profile, storing it on judge_assignments.score so the resolve/rating
+// pipeline is unchanged. Called from the judge app's submit action.
+export async function submitJudgeScores(
+  db: SupabaseClient,
+  args: { entryId: string; judgeId: string; event: string; scores: { criterionCode: string; rawScore: number }[] },
+): Promise<number> {
+  const style = styleFromEvent(args.event);
+  const { data: weightRows } = await db
+    .from('rubric_weights')
+    .select('criterion_code, weight_pct')
+    .eq('style', style);
+  const weights = (weightRows ?? []).map((w: any) => ({ criterionCode: w.criterion_code, weightPct: Number(w.weight_pct) }));
+
+  await db.from('submission_scores').upsert(
+    args.scores.map((s) => ({
+      entry_id: args.entryId,
+      judge_id: args.judgeId,
+      criterion_code: s.criterionCode,
+      raw_score: s.rawScore,
+    })),
+    { onConflict: 'entry_id,judge_id,criterion_code' },
+  );
+
+  const score = weightedJudgeScore(args.scores, weights);
+  await db
+    .from('judge_assignments')
+    .update({ score, state: 'submitted', submitted_at: new Date().toISOString() })
+    .eq('entry_id', args.entryId)
+    .eq('judge_id', args.judgeId);
+  return score;
+}
 
 export function createSupabaseStore(client?: SupabaseClient): EngineStore {
   const db =

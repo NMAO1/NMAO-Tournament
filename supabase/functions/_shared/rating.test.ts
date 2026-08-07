@@ -1,6 +1,6 @@
 // Unit tests for the locked resolve + rating core. Run: tsx rating.test.ts
 // Pins the worked examples in docs/scoring-and-rating.md.
-import { resolvePod, updateRatings, DEFAULT_RATING_CONFIG, PodEntry, PodResult, RatingState } from './rating.ts';
+import { resolvePod, updateRatings, weightedJudgeScore, CriterionWeight, DEFAULT_RATING_CONFIG, PodEntry, PodResult, RatingState } from './rating.ts';
 
 let passed = 0, failed = 0; const fails: string[] = [];
 function ok(c: boolean, m: string) { if (c) passed++; else { failed++; fails.push(m); } }
@@ -127,6 +127,57 @@ function states(ids: string[], rating = 50, roundsPlayed = 0): Record<string, Ra
   const res = evenPod(2);
   const ch = updateRatings(res, {}); // no states -> all seed 50
   ok(ch['c0'].before === 50, 'unseen competitor starts at 50');
+}
+
+// ================= weighted per-criterion scoring (A6) =================
+const TRADITIONAL: CriterionWeight[] = [
+  { criterionCode: 'technical', weightPct: 25 }, { criterionCode: 'power', weightPct: 20 },
+  { criterionCode: 'balance', weightPct: 20 }, { criterionCode: 'timing', weightPct: 15 },
+  { criterionCode: 'spirit', weightPct: 12 }, { criterionCode: 'difficulty', weightPct: 8 },
+];
+const OPEN: CriterionWeight[] = [
+  { criterionCode: 'technical', weightPct: 20 }, { criterionCode: 'power', weightPct: 15 },
+  { criterionCode: 'balance', weightPct: 15 }, { criterionCode: 'timing', weightPct: 15 },
+  { criterionCode: 'spirit', weightPct: 15 }, { criterionCode: 'difficulty', weightPct: 20 },
+];
+const allSame = (v: number) => TRADITIONAL.map((w) => ({ criterionCode: w.criterionCode, rawScore: v }));
+
+// uniform scores -> that value, on either profile
+ok(weightedJudgeScore(allSame(80), TRADITIONAL) === 80, 'weighted: all-80 traditional = 80');
+ok(weightedJudgeScore(allSame(80), OPEN) === 80, 'weighted: all-80 open = 80');
+
+// single criterion carries only its weight
+{
+  const only = [{ criterionCode: 'technical', rawScore: 100 }, { criterionCode: 'power', rawScore: 0 },
+    { criterionCode: 'balance', rawScore: 0 }, { criterionCode: 'timing', rawScore: 0 },
+    { criterionCode: 'spirit', rawScore: 0 }, { criterionCode: 'difficulty', rawScore: 0 }];
+  ok(weightedJudgeScore(only, TRADITIONAL) === 25, 'weighted: only technical=100 (trad w25) -> 25');
+  ok(weightedJudgeScore(only, OPEN) === 20, 'weighted: only technical=100 (open w20) -> 20');
+}
+
+// profiles differ: difficulty-heavy performance scores higher on Open
+{
+  const diffHeavy = [{ criterionCode: 'technical', rawScore: 60 }, { criterionCode: 'power', rawScore: 60 },
+    { criterionCode: 'balance', rawScore: 60 }, { criterionCode: 'timing', rawScore: 60 },
+    { criterionCode: 'spirit', rawScore: 60 }, { criterionCode: 'difficulty', rawScore: 100 }];
+  ok(weightedJudgeScore(diffHeavy, OPEN) > weightedJudgeScore(diffHeavy, TRADITIONAL),
+     'weighted: difficulty-heavy scores higher on Open than Traditional');
+}
+
+// partial rubric normalises to 0-100 (not an under-count)
+{
+  const partial = [{ criterionCode: 'technical', rawScore: 90 }]; // only 25% weight present
+  ok(weightedJudgeScore(partial, TRADITIONAL) === 90, 'weighted: partial rubric normalises (single 90 -> 90)');
+}
+
+// clamp + rounding
+ok(weightedJudgeScore(allSame(100), TRADITIONAL) === 100, 'weighted: all-100 -> 100 (clamped)');
+{
+  const mixed = [{ criterionCode: 'technical', rawScore: 83 }, { criterionCode: 'power', rawScore: 77 },
+    { criterionCode: 'balance', rawScore: 91 }, { criterionCode: 'timing', rawScore: 68 },
+    { criterionCode: 'spirit', rawScore: 74 }, { criterionCode: 'difficulty', rawScore: 88 }];
+  // 83*25+77*20+91*20+68*15+74*12+88*8 = 2075+1540+1820+1020+888+704 = 8047 /100 = 80.47
+  ok(weightedJudgeScore(mixed, TRADITIONAL) === 80.47, 'weighted: mixed traditional = 80.47 (2dp)');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

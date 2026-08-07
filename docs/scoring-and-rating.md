@@ -11,12 +11,19 @@ Last updated: 2026-08-05
 
 ## 1. Scoring a video
 
-Every entry is a video judged on a **0–100** scale.
+Every entry is a video. A judge scores it **one field per criterion** — the six criteria (technical, power, balance, timing, spirit, difficulty), each on a **0–100** scale. The judge's single score for the video is the **weighted combination** of those criteria, using the profile for the entry's style:
 
-- **Beginner / intermediate** pods: **1 judge**. That judge's score *is* the entry's pod score.
-- **Advanced** pods: **3 judges**. The entry's pod score is the **straight average** of the three scores. (Example: 80, 90, 85 → **85.0**.)
+- **Traditional** events (`traditional_forms`, `traditional_weapons`): technical 25, power 20, balance 20, timing 15, spirit 12, difficulty 8.
+- **Open** events (`open_forms`, `open_weapons`): technical 20, power 15, balance 15, timing 15, spirit 15, difficulty 20.
 
-That's the whole scoring rule — a mean, nothing weighted or dropped. If you ever want drop-high/drop-low instead, it's a one-line change, but straight average is what's locked today.
+`judge_score = Σ(criterion_score × weight%) ÷ Σ(weight% present)` — with a full rubric (weights sum to 100) that's a weighted average on the same 0–100 scale. (Example, Traditional, scores 83/77/91/68/74/88 → **80.47**.) Every criterion score is stored (`submission_scores`) so any result traces back to the rubric. Weights live in `rubric_weights` and are tunable per season.
+
+Then, per pod:
+
+- **Beginner / intermediate** pods: **1 judge**. That judge's weighted score *is* the entry's pod score.
+- **Advanced** pods: **3 judges**. The entry's pod score is the **straight average** of the three judges' weighted scores. (Example: 80, 90, 85 → **85.0**.)
+
+Implemented in `functions/_shared/rating.ts` (`weightedJudgeScore` → then `resolvePod`); persisted via `submitJudgeScores` in `supabaseStore.ts`.
 
 ---
 

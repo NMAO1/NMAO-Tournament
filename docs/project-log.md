@@ -117,3 +117,35 @@ Migration `20260807000000_rls_policies.sql` adds per-role Row-Level Security acr
 Validated in Postgres (PGlite) with seeded users for each role — **17 isolation checks pass**: competitors see only their own rows and not each other's; guardians see their ward's; judges see only assigned videos and can submit a score; staff see all; a stranger sees nothing; service role bypasses; and a competitor cannot file an entry for someone else.
 
 **Identity model — CONFIRM WITH BRADLEY (handoff §3 left this [TO DEFINE]):** policies assume auth users are linked via the existing `auth_user_id` columns, guardians act for their linked competitors, and staff are NMAO operators. The **school app has no school↔auth mapping yet**, so school-scoped self-service is deferred and school data is staff-only for now — this is the main identity item to close before the school spoke ships.
+
+## Locked decisions — 2026-08-06 Q&A round
+
+Full Q&A in `docs/open-questions.md`. Engine/product locks:
+
+- **Four apps** to build: school, competitor, judge, viewer. Operator **mission-control** = a real multi-user web app.
+- **Events (Season 1):** traditional_forms, open_forms, traditional_weapons, open_weapons (add more as participation grows).
+- **Age brackets:** 7-9, 10-12, 13-15, 16-17, 18+; min age 7.
+- **Calendar:** monthly submission deadline the **15th**, starting January. 7-day judging window; medals shipped within 1 week after. Season = 9 qualifying rounds + 1 month semi-finals + 1 month grand finale + 1 month off (12 months). Standings = best 6 of 9. *(Advancement counts still open.)*
+- **Scoring — CHANGED:** judges score **per criterion** using the Traditional/Open weight profiles (`rubric_weights`); the per-judge score = weighted sum of criteria. This supersedes the single-0-100-per-judge lock. `resolvePod`/placement/rating are unchanged; needs per-criterion capture (`submission_scores`) re-added + judge-app fields. (Confirm scale + 3-judge averaging.)
+- **Rating → rank:** member-platform rank auto-seeds `declared_rank`; add a **school-configurable belt→tier mapping** (beginner/intermediate/advanced/black belt) since belt systems differ by style.
+- **Identity:** self sign-up for school/guardian/competitor; **judges invited** by a tournament admin. School app uses a `school_members(school_id, auth_user_id, role)` table (owner + assistant instructors).
+- **Payments:** Stripe. Entry fee **$45**, captured at sign-up. School payouts **per round via Stripe Connect**, tiers 10/20/30% automated (30% = tournament + accreditation + member platform).
+- **Video:** Vimeo (no ads); minor-safety protocols (private/unlisted, no public discovery).
+- **Consent:** signed e-waiver (COPPA).
+- **Legal:** incorporated. D-U-N-S meeting Aug 24. Privacy policy to be drafted here (reuse member-platform policy).
+- **Accreditation (schools only):** standards + process per nmao.us (≥7 of 9 standards; 6-month compliance grace; annual renewal; no fee currently). Accredited schools get certificate, seal/badge, 2 window decals, directory listing, +20% tournament tier; no ranking privileges.
+- **Member platform:** already built. Pricing $99/mo (waived with accreditation) + 1% txn fee capped $200/mo.
+- **Brand:** NMAO = National Martial Arts Organization. Mission/vision/values confirmed.
+- **Sponsor-vote:** build after the four apps ship.
+
+### Still open
+Advancement counts (semis/finale), Supabase project/hosting decision, client-app framework, data-retention policy, accreditation→tournament gating specifics, member-platform "existing tools" relationship, and the "Classes 1-4" reconciliation.
+
+### Follow-up locks (2026-08-06, round 2)
+
+- **Infra:** Supabase owned by the NMAO account, region **US East**, with **staging + production** instances.
+- **Apps:** **React Native + Expo** for all four apps; **React web app** for operator mission-control.
+- **Advancement:** per division, **top 25% → semis** (min 3, max 8), **top 3 → finale**; counts in config.
+- **Retention:** waiver states videos stored **indefinitely, promotional use only**; private; guardian delete honored.
+- **Accreditation gate:** → the **20% payout tier only**. Judges need **not** belong to an accredited school (retired instructors may judge). No ranking privileges.
+- **Member platform:** **replaces** existing school tools; NMAO is system of record for rank; CSV roster import for onboarding.
