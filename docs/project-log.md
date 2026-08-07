@@ -149,3 +149,12 @@ Advancement counts (semis/finale), Supabase project/hosting decision, client-app
 - **Retention:** waiver states videos stored **indefinitely, promotional use only**; private; guardian delete honored.
 - **Accreditation gate:** → the **20% payout tier only**. Judges need **not** belong to an accredited school (retired instructors may judge). No ranking privileges.
 - **Member platform:** **replaces** existing school tools; NMAO is system of record for rank; CSV roster import for onboarding.
+
+### Build (2026-08-07) — divisioning DB step + full-round demo
+
+- **`divide` step added** (`engine.ts` `stepDivide` on a new `DivisionStore` seam, kept off `EngineStore` so the locked in-memory `engine.test.ts` still compiles). Refactored the idempotency wrapper onto a minimal `StepLedger` shared by both seams. `supabaseStore` implements `getSchemeForRound` / `getEntriesForDivision` / `saveDivisioning` (upserts divisions + pods, seats entries, advances round → `podded`). `distribute` now also materializes `medal_shipments` + `medals` and sets round → `distributed`.
+- **round-controller:** added `divide` and `all` steps; regenerated `index.bundled.ts` via a bundler (`0` relative imports, single jsr import).
+- **Combined SQL regenerated:** `apply_all.sql` + `reset_and_apply.sql` were **stale** (missing `20260809_idempotency_hardening`, i.e. `claim_step()`). Both now rebuilt from all six migrations — re-run `reset_and_apply.sql` if the live DB predates this.
+- **Demo:** `supabase/seed_demo.sql` (one closed round, 26 entries / 4 schools / 8 judges, cohorts that exercise a normal pod, a 3-judge advanced pod, a thin division that collapses on rank, and a separate event) + `seed_demo_scores.sql`. Run guide: `docs/run-a-round.md`.
+- **Validation:** `npm test` 101/101 (incl. locked engine 18/18); `npm run typecheck` clean (Deno edge sources via `tsconfig.check.json` + `types/shims.d.ts`); `npm run validate:schema` 14/14 — applies the schema + seed in PGlite, runs the real `runDivisioning` (→ 4 divisions / 4 pods, collapse verified), mirrors the writes, and checks `claim_step` atomicity.
+- **Still to run live:** deploy `round-controller`, run the `divide → assign_judges → (scores) → resolve → distribute` sequence on the demo round, and eyeball `divisions/pods/results/skill_ratings/medals/medal_shipments`.

@@ -4,15 +4,20 @@
 // round. Every step is idempotent and keyed by (round_id, step), so this
 // is safe to invoke from a schedule, a retry, or an operator button.
 //
-// POST body: { "roundId": "<uuid>", "step": "assign_judges" | "resolve" |
-//              "distribute" | "tail" }
+// POST body: { "roundId": "<uuid>", "step": "divide" | "assign_judges" |
+//              "resolve" | "distribute" | "tail" | "all" }
+//   divide = classify -> collapse -> form pods (writes divisions/pods)
+//   tail   = assign_judges -> resolve -> distribute
+//   all    = divide, then the tail (resolve only scores pods that have judge
+//            scores in; run 'divide'+'assign_judges', collect scores, then
+//            'resolve'+'distribute' for a real judged round)
 //
 // Deploy: supabase functions deploy round-controller
 // =====================================================================
 
 // deno-lint-ignore-file no-explicit-any
 import { createSupabaseStore } from '../_shared/supabaseStore.ts';
-import { stepAssignJudges, stepResolve, stepDistribute, runPipelineTail } from '../_shared/engine.ts';
+import { stepDivide, stepAssignJudges, stepResolve, stepDistribute, runPipelineTail } from '../_shared/engine.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
@@ -34,10 +39,12 @@ Deno.serve(async (req: Request) => {
   try {
     let outcome;
     switch (step) {
+      case 'divide':        outcome = await stepDivide(store, roundId); break;
       case 'assign_judges': outcome = await stepAssignJudges(store, roundId); break;
       case 'resolve':       outcome = await stepResolve(store, roundId); break;
       case 'distribute':    outcome = await stepDistribute(store, roundId); break;
       case 'tail':          outcome = await runPipelineTail(store, roundId); break;
+      case 'all':           outcome = [await stepDivide(store, roundId), ...await runPipelineTail(store, roundId)]; break;
       default:              return json({ error: `unknown step: ${step}` }, 400);
     }
     return json({ ok: true, roundId, step, outcome });

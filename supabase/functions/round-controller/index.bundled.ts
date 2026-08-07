@@ -1,9 +1,11 @@
 // =====================================================================
 // round-controller — SELF-CONTAINED bundle for the Supabase dashboard.
 // Paste this whole file as index.ts. No ../_shared imports to resolve.
-// (Source of truth remains the split files; regenerate if those change.)
+// (Source of truth remains the split files; regenerate with bundle.mjs.)
+// GENERATED — do not edit by hand.
 // =====================================================================
 
+// deno-lint-ignore-file no-explicit-any
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
 
 // ----------------------- rating.ts -----------------------
@@ -331,6 +333,248 @@ export function buildShipList(
   return { shipments, totalMedals };
 }
 
+// ----------------------- divisioning.ts -----------------------
+// =====================================================================
+// NMAO Tournament Engine — divisioning core
+// Pure, DB-free functions: classify -> collapse -> formPods.
+// runDivisioning() chains them and IS the simulate core (spec §7).
+// Everything is deterministic and side-effect-free so it can be unit
+// tested and reused verbatim by both the live engine and the preview.
+// =====================================================================
+
+export type AgeBracket = { key: string; min: number; max: number };
+
+export type Scheme = {
+  axes: Array<
+    | { key: 'age'; type: 'bracket'; active: boolean; brackets: AgeBracket[]; mergeable: boolean }
+    | { key: 'rank'; type: 'tier'; active: boolean; tiers: string[]; mergeable: boolean }
+    | { key: 'event'; type: 'category'; active: boolean; values: string[]; mergeable: boolean }
+  >;
+  podCap: number;            // 20
+  podSplitThreshold: number; // 22
+  podFloor: number;          // 6
+  collapseOrder: string[];   // e.g. ['rank','age'] — which axis to merge first
+};
+
+export type Entry = {
+  id: string;
+  event: string;
+  ageBracket: string; // key matching scheme age brackets
+  rank: string;       // key matching scheme rank tiers
+  rating: number;
+};
+
+export type Division = {
+  key: string;              // stable key
+  event: string;
+  ageKey: string;           // single or composite (e.g. "7-9+10-12")
+  rankKey: string;          // single or composite (e.g. "beginner+intermediate")
+  isCollapsed: boolean;
+  collapsedFrom: string[];  // base division keys merged in
+  cells: string[];          // "ageIndex,rankIndex" base cells covered
+  entries: Entry[];
+  underFloorUnmergeable?: boolean; // flagged for operator (spec §6.2 step 4)
+};
+
+export type Pod = {
+  divisionKey: string;
+  seq: number;
+  judgeCount: number; // 1 (beg/int) or 3 (advanced)
+  entries: Entry[];
+};
+
+export type DivisioningResult = {
+  divisions: Division[];
+  pods: Pod[];
+  flags: string[]; // human-readable notes for the operator board
+};
+
+// ---------- helpers ----------
+
+function ageAxis(scheme: Scheme) {
+  const a = scheme.axes.find((x) => x.key === 'age');
+  return a && a.type === 'bracket' ? a.brackets.map((b) => b.key) : [];
+}
+function rankAxis(scheme: Scheme) {
+  const r = scheme.axes.find((x) => x.key === 'rank');
+  return r && r.type === 'tier' ? r.tiers : [];
+}
+function axisMergeable(scheme: Scheme, key: string) {
+  return !!scheme.axes.find((x) => x.key === key)?.mergeable;
+}
+
+// ---------- 6.1 classify ----------
+
+export function classify(entries: Entry[], scheme: Scheme): Division[] {
+  const ages = ageAxis(scheme);
+  const ranks = rankAxis(scheme);
+  const map = new Map<string, Division>();
+  for (const e of entries) {
+    const ai = ages.indexOf(e.ageBracket);
+    const ri = ranks.indexOf(e.rank);
+    const key = `${e.event}|${e.ageBracket}|${e.rank}`;
+    let d = map.get(key);
+    if (!d) {
+      d = {
+        key,
+        event: e.event,
+        ageKey: e.ageBracket,
+        rankKey: e.rank,
+        isCollapsed: false,
+        collapsedFrom: [key],
+        cells: [`${ai},${ri}`],
+        entries: [],
+      };
+      map.set(key, d);
+    }
+    d.entries.push(e);
+  }
+  return [...map.values()];
+}
+
+// ---------- 6.2 collapse ----------
+
+type WorkDiv = {
+  event: string;
+  cells: Set<string>; // "ai,ri"
+  entries: Entry[];
+  collapsedFrom: Set<string>;
+  unmergeable: boolean;
+};
+
+function cellCoords(c: string): [number, number] {
+  const [a, r] = c.split(',').map(Number);
+  return [a, r];
+}
+
+function adjacent(d1: WorkDiv, d2: WorkDiv, axis: string): boolean {
+  if (d1.event !== d2.event) return false;
+  for (const c1 of d1.cells) {
+    const [a1, r1] = cellCoords(c1);
+    for (const c2 of d2.cells) {
+      const [a2, r2] = cellCoords(c2);
+      if (axis === 'rank' && a1 === a2 && Math.abs(r1 - r2) === 1) return true;
+      if (axis === 'age' && r1 === r2 && Math.abs(a1 - a2) === 1) return true;
+    }
+  }
+  return false;
+}
+
+function stableKey(d: WorkDiv): string {
+  return d.event + '|' + [...d.cells].sort().join('&');
+}
+
+export function collapse(divisions: Division[], scheme: Scheme): Division[] {
+  const floor = scheme.podFloor;
+  let work: WorkDiv[] = divisions.map((d) => ({
+    event: d.event,
+    cells: new Set(d.cells),
+    entries: [...d.entries],
+    collapsedFrom: new Set(d.collapsedFrom),
+    unmergeable: false,
+  }));
+
+  // greedy: repeatedly take the smallest under-floor division and merge it
+  // with its nearest legal neighbor, preferring earlier axes in collapseOrder.
+  // Each merge reduces the division count by 1, so this always terminates.
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const under = work
+      .filter((d) => d.entries.length < floor && !d.unmergeable)
+      .sort((a, b) => a.entries.length - b.entries.length || stableKey(a).localeCompare(stableKey(b)));
+    if (under.length === 0) break;
+    const D = under[0];
+
+    let candidate: WorkDiv | null = null;
+    for (const axis of scheme.collapseOrder) {
+      if (!axisMergeable(scheme, axis)) continue;
+      const cands = work
+        .filter((o) => o !== D && adjacent(D, o, axis))
+        .sort((a, b) => a.entries.length - b.entries.length || stableKey(a).localeCompare(stableKey(b)));
+      if (cands.length) {
+        candidate = cands[0];
+        break;
+      }
+    }
+
+    if (!candidate) {
+      D.unmergeable = true; // no legal neighbor on any mergeable axis
+      continue;
+    }
+
+    // merge D into candidate
+    for (const c of D.cells) candidate.cells.add(c);
+    for (const b of D.collapsedFrom) candidate.collapsedFrom.add(b);
+    candidate.entries.push(...D.entries);
+    work = work.filter((d) => d !== D);
+  }
+
+  const ages = ageAxis(scheme);
+  const ranks = rankAxis(scheme);
+  return work.map((d) => {
+    const cells = [...d.cells];
+    const ageKeys = [...new Set(cells.map((c) => ages[cellCoords(c)[0]]).filter(Boolean))];
+    const rankKeys = [...new Set(cells.map((c) => ranks[cellCoords(c)[1]]).filter(Boolean))];
+    const collapsedFrom = [...d.collapsedFrom].sort();
+    return {
+      key: stableKey(d),
+      event: d.event,
+      ageKey: ageKeys.join('+'),
+      rankKey: rankKeys.join('+'),
+      isCollapsed: collapsedFrom.length > 1,
+      collapsedFrom,
+      cells,
+      entries: d.entries,
+      underFloorUnmergeable: d.unmergeable && d.entries.length < floor ? true : undefined,
+    };
+  });
+}
+
+// ---------- 6.3 form pods ----------
+
+function splitSizes(n: number, numPods: number): number[] {
+  const base = Math.floor(n / numPods);
+  const rem = n % numPods;
+  return Array.from({ length: numPods }, (_, i) => base + (i < rem ? 1 : 0));
+}
+
+export function formPods(division: Division, scheme: Scheme): Pod[] {
+  const sorted = [...division.entries].sort((a, b) => b.rating - a.rating);
+  const n = sorted.length;
+  const numPods = n < scheme.podSplitThreshold ? 1 : Math.ceil(n / scheme.podCap);
+  const sizes = splitSizes(n, numPods);
+  // 3 judges if the (possibly collapsed) division includes the advanced tier.
+  const judgeCount = division.rankKey.split('+').includes('advanced') ? 3 : 1;
+
+  const pods: Pod[] = [];
+  let idx = 0;
+  for (let seq = 0; seq < numPods; seq++) {
+    pods.push({
+      divisionKey: division.key,
+      seq: seq + 1,
+      judgeCount,
+      entries: sorted.slice(idx, idx + sizes[seq]),
+    });
+    idx += sizes[seq];
+  }
+  return pods;
+}
+
+// ---------- runDivisioning = the simulate core ----------
+
+export function runDivisioning(entries: Entry[], scheme: Scheme): DivisioningResult {
+  const base = classify(entries, scheme);
+  const divisions = collapse(base, scheme);
+  const pods = divisions.flatMap((d) => formPods(d, scheme));
+  const flags: string[] = [];
+  for (const d of divisions) {
+    if (d.underFloorUnmergeable) {
+      flags.push(`Division ${d.event}/${d.ageKey}/${d.rankKey} has ${d.entries.length} entries and cannot collapse further (no legal neighbor).`);
+    }
+  }
+  return { divisions, pods, flags };
+}
+
 // ----------------------- engine.ts -----------------------
 // =====================================================================
 // NMAO Tournament Engine — orchestration layer (spec §14)
@@ -342,7 +586,7 @@ export function buildShipList(
 // =====================================================================
 
 
-export type StepName = 'assign_judges' | 'resolve' | 'distribute';
+export type StepName = 'divide' | 'assign_judges' | 'resolve' | 'distribute';
 export type StepStatus = 'pending' | 'running' | 'done' | 'error';
 
 // A pod ready to resolve: its videos' scores plus each entry's rating state.
@@ -383,10 +627,18 @@ export type RatingWrite = {
 // awaits every call, so both work.
 type Await<T> = T | Promise<T>;
 
-export interface EngineStore {
+// The idempotency ledger every step reads/writes (round_step_runs). Split out
+// so both EngineStore and DivisionStore share the claim machinery without the
+// in-memory engine tests needing to know about divisioning.
+export interface StepLedger {
   getStepStatus(roundId: string, step: StepName): Await<StepStatus | null>;
   setStepStatus(roundId: string, step: StepName, status: StepStatus, detail?: unknown): Await<void>;
+  // Atomically claim a step: returns true only for the caller that wins the
+  // claim (see the claim_step() SQL). Used to serialize concurrent runs.
+  claimStep(roundId: string, step: StepName): Await<boolean>;
+}
 
+export interface EngineStore extends StepLedger {
   // assign_judges
   getPodsForAssignment(roundId: string): Await<AssignPod[]>;
   getJudgePool(roundId: string): Await<JudgeInput[]>;
@@ -405,19 +657,23 @@ export interface EngineStore {
 
 export type StepOutcome = { step: StepName; ran: boolean; flags: string[]; detail?: unknown };
 
-// Idempotency wrapper: a step already 'done' is a no-op; a step 'running'
-// is treated as in-flight and skipped. Errors mark the step 'error'.
+// Idempotency wrapper. Claims the step ATOMICALLY (claim_step): only the
+// winning caller runs the work; a concurrent/duplicate call sees the step is
+// already 'running' or 'done' and no-ops. Errors mark the step 'error' (which
+// is claimable again, so a retry can re-run it). This closes the read-then-set
+// race the previous version had.
 async function idempotent(
-  store: EngineStore,
+  store: StepLedger,
   roundId: string,
   step: StepName,
   work: () => Promise<{ flags: string[]; detail?: unknown }>,
 ): Promise<StepOutcome> {
-  const status = await store.getStepStatus(roundId, step);
-  if (status === 'done') return { step, ran: false, flags: [], detail: 'already done' };
-  if (status === 'running') return { step, ran: false, flags: [], detail: 'in flight' };
+  const claimed = await store.claimStep(roundId, step);
+  if (!claimed) {
+    const status = await store.getStepStatus(roundId, step);
+    return { step, ran: false, flags: [], detail: status === 'done' ? 'already done' : 'in flight' };
+  }
 
-  await store.setStepStatus(roundId, step, 'running');
   try {
     const { flags, detail } = await work();
     await store.setStepStatus(roundId, step, 'done', detail);
@@ -499,8 +755,32 @@ export function stepDistribute(store: EngineStore, roundId: string): Promise<Ste
   });
 }
 
+// ---------- step: divide (classify -> collapse -> form pods, then persist) ----------
+// The three divisioning sub-steps are one pure function (runDivisioning); we
+// run them together and persist divisions/pods/entry assignments in a single
+// idempotent 'divide' step. It uses its own DivisionStore seam so the in-memory
+// engine orchestration tests (which don't exercise divisioning) are unaffected.
+export interface DivisionStore extends StepLedger {
+  getSchemeForRound(roundId: string): Await<Scheme>;
+  getEntriesForDivision(roundId: string): Await<Entry[]>;
+  saveDivisioning(
+    roundId: string,
+    result: DivisioningResult,
+  ): Await<{ divisions: number; pods: number; assigned: number }>;
+}
+
+export function stepDivide(store: DivisionStore, roundId: string): Promise<StepOutcome> {
+  return idempotent(store, roundId, 'divide', async () => {
+    const scheme = await store.getSchemeForRound(roundId);
+    const entries = await store.getEntriesForDivision(roundId);
+    const result = runDivisioning(entries, scheme);
+    const counts = await store.saveDivisioning(roundId, result);
+    return { flags: result.flags, detail: counts };
+  });
+}
+
 // ---------- controller: run the tail of the pipeline in order ----------
-// (classify/collapse/form_pods are the divisioning steps handled upstream.)
+// (divide runs first; assign_judges -> resolve -> distribute are the tail.)
 export async function runPipelineTail(
   store: EngineStore,
   roundId: string,
@@ -579,7 +859,7 @@ export async function submitJudgeScores(
   return score;
 }
 
-export function createSupabaseStore(client?: SupabaseClient): EngineStore {
+export function createSupabaseStore(client?: SupabaseClient): EngineStore & DivisionStore {
   const db =
     client ??
     createClient(
@@ -604,6 +884,107 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
       if (status === 'running') patch.started_at = new Date().toISOString();
       if (status === 'done' || status === 'error') patch.completed_at = new Date().toISOString();
       await db.from('round_step_runs').upsert(patch, { onConflict: 'round_id,step' });
+    },
+    async claimStep(roundId, step) {
+      // Race-free claim via the claim_step() SQL (INSERT ... ON CONFLICT ... WHERE).
+      const { data, error } = await db.rpc('claim_step', { p_round_id: roundId, p_step: step });
+      if (error) throw error;
+      return data === true;
+    },
+
+    // ---------- divide (classify -> collapse -> form pods, persisted) ----------
+    async getSchemeForRound(roundId) {
+      const { data: round, error: rErr } = await db
+        .from('rounds')
+        .select('scheme_id')
+        .eq('id', roundId)
+        .single();
+      if (rErr) throw rErr;
+      const { data: s, error: sErr } = await db
+        .from('division_schemes')
+        .select('axes, pod_cap, pod_split_threshold, pod_floor, collapse_order')
+        .eq('id', (round as any).scheme_id)
+        .single();
+      if (sErr) throw sErr;
+      return {
+        axes: (s as any).axes,
+        podCap: (s as any).pod_cap,
+        podSplitThreshold: (s as any).pod_split_threshold,
+        podFloor: (s as any).pod_floor,
+        collapseOrder: (s as any).collapse_order,
+      } as Scheme;
+    },
+    async getEntriesForDivision(roundId) {
+      const { data } = await db
+        .from('entries')
+        .select('id, event, age_bracket, declared_rank, rating_at_entry')
+        .eq('round_id', roundId)
+        .eq('status', 'valid');
+      return (data ?? []).map((e: any): Entry => ({
+        id: e.id,
+        event: e.event,
+        ageBracket: e.age_bracket,
+        rank: e.declared_rank,
+        rating: e.rating_at_entry != null ? Number(e.rating_at_entry) : DEFAULT_RATING_CONFIG.seed,
+      }));
+    },
+    async saveDivisioning(roundId, result) {
+      // 1) upsert divisions (unique on round_id,event,age_key,rank_key), map key -> id
+      const divRows = result.divisions.map((d) => ({
+        round_id: roundId,
+        event: d.event,
+        age_key: d.ageKey,
+        rank_key: d.rankKey,
+        is_collapsed: d.isCollapsed,
+        collapsed_from: d.collapsedFrom,
+        entry_count: d.entries.length,
+      }));
+      const { data: divBack, error: divErr } = await db
+        .from('divisions')
+        .upsert(divRows, { onConflict: 'round_id,event,age_key,rank_key' })
+        .select('id, event, age_key, rank_key');
+      if (divErr) throw divErr;
+      const divIdByTriple = new Map(
+        (divBack ?? []).map((r: any) => [`${r.event}|${r.age_key}|${r.rank_key}`, r.id]),
+      );
+      const divIdByKey = new Map<string, string>();
+      for (const d of result.divisions) {
+        const id = divIdByTriple.get(`${d.event}|${d.ageKey}|${d.rankKey}`);
+        if (id) divIdByKey.set(d.key, id);
+      }
+
+      // 2) upsert pods (unique on division_id,seq), map (divisionId:seq) -> id
+      const podRows = result.pods.map((p) => ({
+        division_id: divIdByKey.get(p.divisionKey),
+        seq: p.seq,
+        size: p.entries.length,
+        judge_count: p.judgeCount,
+        state: 'forming',
+      }));
+      const { data: podBack, error: podErr } = await db
+        .from('pods')
+        .upsert(podRows, { onConflict: 'division_id,seq' })
+        .select('id, division_id, seq');
+      if (podErr) throw podErr;
+      const podIdByDivSeq = new Map(
+        (podBack ?? []).map((r: any) => [`${r.division_id}:${r.seq}`, r.id]),
+      );
+
+      // 3) stamp each entry with its division_id + pod_id
+      let assigned = 0;
+      for (const p of result.pods) {
+        const divisionId = divIdByKey.get(p.divisionKey);
+        const podId = podIdByDivSeq.get(`${divisionId}:${p.seq}`);
+        for (const e of p.entries) {
+          await db.from('entries').update({ division_id: divisionId, pod_id: podId }).eq('id', e.id);
+          assigned++;
+        }
+      }
+
+      // 4) advance round state (classify -> collapse -> form_pods complete)
+      await db.from('rounds').update({ state: 'podded' }).eq('id', roundId);
+
+      return { divisions: result.divisions.length, pods: result.pods.length, assigned };
     },
 
     // ---------- assign_judges ----------
@@ -721,16 +1102,35 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
       }));
       await db.from('results').upsert(payload, { onConflict: 'entry_id' });
     },
-    async saveRatingUpdates(_roundId, rows: RatingWrite[]) {
+    async saveRatingUpdates(roundId, rows: RatingWrite[]) {
       if (rows.length === 0) return;
       const prov = DEFAULT_RATING_CONFIG.provisionalRounds;
+
+      // 1) One history row per rated entry — UPSERT on entry_id so a re-run
+      //    overwrites in place instead of appending duplicates.
+      await db.from('rating_history').upsert(
+        rows.map((r) => ({
+          competitor_id: r.competitorId,
+          round_id: roundId,
+          entry_id: r.entryId,
+          rating_before: r.ratingBefore,
+          rating_after: r.ratingAfter,
+          rating_delta: r.ratingDelta,
+          opponents: r.opponents,
+          k_factor: r.k, // K is 8/4 on the 0-100 scale; column is numeric(5,2)
+        })),
+        { onConflict: 'entry_id' },
+      );
+
+      // 2) Current rating + events_count DERIVED from history (a count), not
+      //    read-add-write — so re-running the same round can't inflate the
+      //    count. events_count = rated entries on record for the competitor.
       for (const r of rows) {
-        const { data: sr } = await db
-          .from('skill_ratings')
-          .select('events_count')
-          .eq('competitor_id', r.competitorId)
-          .maybeSingle();
-        const events = (sr?.events_count ?? 0) + 1;
+        const { count } = await db
+          .from('rating_history')
+          .select('*', { count: 'exact', head: true })
+          .eq('competitor_id', r.competitorId);
+        const events = count ?? 1;
         await db.from('skill_ratings').upsert(
           {
             competitor_id: r.competitorId,
@@ -742,12 +1142,6 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
           },
           { onConflict: 'competitor_id' },
         );
-        await db.from('rating_history').insert({
-          competitor_id: r.competitorId,
-          rating_before: r.ratingBefore,
-          rating_after: r.ratingAfter,
-          k_factor: r.k, // K is 8/4 on the 0-100 scale; ensure the column is numeric(5,3)+
-        });
       }
     },
 
@@ -773,10 +1167,39 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
       return out;
     },
     async saveShipList(roundId, list) {
-      await db.from('round_step_runs').upsert(
-        { round_id: roundId, step: 'distribute', status: 'done', detail: list as any, completed_at: new Date().toISOString() },
-        { onConflict: 'round_id,step' },
-      );
+      // Materialize one shipment row per school (idempotent on round_id,school_id).
+      for (const sh of list.shipments) {
+        await db.from('medal_shipments').upsert(
+          {
+            round_id: roundId,
+            school_id: sh.schoolId,
+            item_count: sh.itemCount,
+            manifest: sh as any,
+            ship_status: 'pending',
+            ship_address: (sh.address ?? null) as any,
+          },
+          { onConflict: 'round_id,school_id' },
+        );
+      }
+      // medals has no natural unique key; replace this round's set so a re-run
+      // can't duplicate (distribute is claim-guarded, so this is belt-and-braces).
+      await db.from('medals').delete().eq('round_id', roundId);
+      const medalRows: any[] = [];
+      for (const sh of list.shipments) {
+        for (const it of sh.items) {
+          for (const m of it.medals) {
+            medalRows.push({
+              round_id: roundId,
+              competitor_id: it.competitorId,
+              event: it.event,
+              medal_type: m,
+              placement: it.placement >= 1 && it.placement <= 3 ? it.placement : null,
+            });
+          }
+        }
+      }
+      if (medalRows.length) await db.from('medals').insert(medalRows);
+      await db.from('rounds').update({ state: 'distributed' }).eq('id', roundId);
     },
   };
 }
@@ -788,13 +1211,19 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
 // round. Every step is idempotent and keyed by (round_id, step), so this
 // is safe to invoke from a schedule, a retry, or an operator button.
 //
-// POST body: { "roundId": "<uuid>", "step": "assign_judges" | "resolve" |
-//              "distribute" | "tail" }
+// POST body: { "roundId": "<uuid>", "step": "divide" | "assign_judges" |
+//              "resolve" | "distribute" | "tail" | "all" }
+//   divide = classify -> collapse -> form pods (writes divisions/pods)
+//   tail   = assign_judges -> resolve -> distribute
+//   all    = divide, then the tail (resolve only scores pods that have judge
+//            scores in; run 'divide'+'assign_judges', collect scores, then
+//            'resolve'+'distribute' for a real judged round)
 //
 // Deploy: supabase functions deploy round-controller
 // =====================================================================
 
-// deno-lint-ignore-file no-explicit-any
+import { createSupabaseStore } from '../_shared/supabaseStore.ts';
+import { stepDivide, stepAssignJudges, stepResolve, stepDistribute, runPipelineTail } from '../_shared/engine.ts';
 
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') {
@@ -816,10 +1245,12 @@ Deno.serve(async (req: Request) => {
   try {
     let outcome;
     switch (step) {
+      case 'divide':        outcome = await stepDivide(store, roundId); break;
       case 'assign_judges': outcome = await stepAssignJudges(store, roundId); break;
       case 'resolve':       outcome = await stepResolve(store, roundId); break;
       case 'distribute':    outcome = await stepDistribute(store, roundId); break;
       case 'tail':          outcome = await runPipelineTail(store, roundId); break;
+      case 'all':           outcome = [await stepDivide(store, roundId), ...await runPipelineTail(store, roundId)]; break;
       default:              return json({ error: `unknown step: ${step}` }, 400);
     }
     return json({ ok: true, roundId, step, outcome });

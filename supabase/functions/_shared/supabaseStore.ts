@@ -21,10 +21,11 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
-import { EngineStore, StepName, StepStatus, PodForResolve, ResultWrite, RatingWrite } from './engine.ts';
+import { EngineStore, DivisionStore, StepName, StepStatus, PodForResolve, ResultWrite, RatingWrite } from './engine.ts';
 import { DEFAULT_RATING_CONFIG, weightedJudgeScore } from './rating.ts';
 import type { AssignPod, JudgeInput, Assignment } from './assignments.ts';
 import type { ResultRow } from './distribute.ts';
+import type { Scheme, Entry } from './divisioning.ts';
 
 // Season-1 events encode style in their key: `open_*` = Open profile, else Traditional.
 export function styleFromEvent(event: string): 'traditional' | 'open' {
@@ -65,7 +66,7 @@ export async function submitJudgeScores(
   return score;
 }
 
-export function createSupabaseStore(client?: SupabaseClient): EngineStore {
+export function createSupabaseStore(client?: SupabaseClient): EngineStore & DivisionStore {
   const db =
     client ??
     createClient(
@@ -96,6 +97,101 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
       const { data, error } = await db.rpc('claim_step', { p_round_id: roundId, p_step: step });
       if (error) throw error;
       return data === true;
+    },
+
+    // ---------- divide (classify -> collapse -> form pods, persisted) ----------
+    async getSchemeForRound(roundId) {
+      const { data: round, error: rErr } = await db
+        .from('rounds')
+        .select('scheme_id')
+        .eq('id', roundId)
+        .single();
+      if (rErr) throw rErr;
+      const { data: s, error: sErr } = await db
+        .from('division_schemes')
+        .select('axes, pod_cap, pod_split_threshold, pod_floor, collapse_order')
+        .eq('id', (round as any).scheme_id)
+        .single();
+      if (sErr) throw sErr;
+      return {
+        axes: (s as any).axes,
+        podCap: (s as any).pod_cap,
+        podSplitThreshold: (s as any).pod_split_threshold,
+        podFloor: (s as any).pod_floor,
+        collapseOrder: (s as any).collapse_order,
+      } as Scheme;
+    },
+    async getEntriesForDivision(roundId) {
+      const { data } = await db
+        .from('entries')
+        .select('id, event, age_bracket, declared_rank, rating_at_entry')
+        .eq('round_id', roundId)
+        .eq('status', 'valid');
+      return (data ?? []).map((e: any): Entry => ({
+        id: e.id,
+        event: e.event,
+        ageBracket: e.age_bracket,
+        rank: e.declared_rank,
+        rating: e.rating_at_entry != null ? Number(e.rating_at_entry) : DEFAULT_RATING_CONFIG.seed,
+      }));
+    },
+    async saveDivisioning(roundId, result) {
+      // 1) upsert divisions (unique on round_id,event,age_key,rank_key), map key -> id
+      const divRows = result.divisions.map((d) => ({
+        round_id: roundId,
+        event: d.event,
+        age_key: d.ageKey,
+        rank_key: d.rankKey,
+        is_collapsed: d.isCollapsed,
+        collapsed_from: d.collapsedFrom,
+        entry_count: d.entries.length,
+      }));
+      const { data: divBack, error: divErr } = await db
+        .from('divisions')
+        .upsert(divRows, { onConflict: 'round_id,event,age_key,rank_key' })
+        .select('id, event, age_key, rank_key');
+      if (divErr) throw divErr;
+      const divIdByTriple = new Map<string, string>(
+        (divBack ?? []).map((r: any) => [`${r.event}|${r.age_key}|${r.rank_key}`, r.id] as [string, string]),
+      );
+      const divIdByKey = new Map<string, string>();
+      for (const d of result.divisions) {
+        const id = divIdByTriple.get(`${d.event}|${d.ageKey}|${d.rankKey}`);
+        if (id) divIdByKey.set(d.key, id);
+      }
+
+      // 2) upsert pods (unique on division_id,seq), map (divisionId:seq) -> id
+      const podRows = result.pods.map((p) => ({
+        division_id: divIdByKey.get(p.divisionKey),
+        seq: p.seq,
+        size: p.entries.length,
+        judge_count: p.judgeCount,
+        state: 'forming',
+      }));
+      const { data: podBack, error: podErr } = await db
+        .from('pods')
+        .upsert(podRows, { onConflict: 'division_id,seq' })
+        .select('id, division_id, seq');
+      if (podErr) throw podErr;
+      const podIdByDivSeq = new Map<string, string>(
+        (podBack ?? []).map((r: any) => [`${r.division_id}:${r.seq}`, r.id] as [string, string]),
+      );
+
+      // 3) stamp each entry with its division_id + pod_id
+      let assigned = 0;
+      for (const p of result.pods) {
+        const divisionId = divIdByKey.get(p.divisionKey);
+        const podId = podIdByDivSeq.get(`${divisionId}:${p.seq}`);
+        for (const e of p.entries) {
+          await db.from('entries').update({ division_id: divisionId, pod_id: podId }).eq('id', e.id);
+          assigned++;
+        }
+      }
+
+      // 4) advance round state (classify -> collapse -> form_pods complete)
+      await db.from('rounds').update({ state: 'podded' }).eq('id', roundId);
+
+      return { divisions: result.divisions.length, pods: result.pods.length, assigned };
     },
 
     // ---------- assign_judges ----------
@@ -278,10 +374,39 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore {
       return out;
     },
     async saveShipList(roundId, list) {
-      await db.from('round_step_runs').upsert(
-        { round_id: roundId, step: 'distribute', status: 'done', detail: list as any, completed_at: new Date().toISOString() },
-        { onConflict: 'round_id,step' },
-      );
+      // Materialize one shipment row per school (idempotent on round_id,school_id).
+      for (const sh of list.shipments) {
+        await db.from('medal_shipments').upsert(
+          {
+            round_id: roundId,
+            school_id: sh.schoolId,
+            item_count: sh.itemCount,
+            manifest: sh as any,
+            ship_status: 'pending',
+            ship_address: (sh.address ?? null) as any,
+          },
+          { onConflict: 'round_id,school_id' },
+        );
+      }
+      // medals has no natural unique key; replace this round's set so a re-run
+      // can't duplicate (distribute is claim-guarded, so this is belt-and-braces).
+      await db.from('medals').delete().eq('round_id', roundId);
+      const medalRows: any[] = [];
+      for (const sh of list.shipments) {
+        for (const it of sh.items) {
+          for (const m of it.medals) {
+            medalRows.push({
+              round_id: roundId,
+              competitor_id: it.competitorId,
+              event: it.event,
+              medal_type: m,
+              placement: it.placement >= 1 && it.placement <= 3 ? it.placement : null,
+            });
+          }
+        }
+      }
+      if (medalRows.length) await db.from('medals').insert(medalRows);
+      await db.from('rounds').update({ state: 'distributed' }).eq('id', roundId);
     },
   };
 }

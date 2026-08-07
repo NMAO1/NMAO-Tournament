@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "module": "esnext",
+    "target": "es2022",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "lib": ["es2022", "dom"],
+    "types": []
+  },
+  "include": [
+    "types/shims.d.ts",
+    "supabase/functions/_shared/*.ts",
+    "supabase/functions/round-controller/index.ts"
+  ],
+  "exclude": ["supabase/functions/_shared/*.test.ts"]
+}

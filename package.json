@@ -5,9 +5,13 @@
   "description": "NMAO Tournament engine — video-based martial arts tournament (Supabase backend).",
   "type": "module",
   "scripts": {
-    "test": "tsx supabase/functions/_shared/divisioning.test.ts && tsx supabase/functions/_shared/rating.test.ts && tsx supabase/functions/_shared/assignments.test.ts && tsx supabase/functions/_shared/distribute.test.ts && tsx supabase/functions/_shared/engine.test.ts"
+    "test": "tsx supabase/functions/_shared/divisioning.test.ts && tsx supabase/functions/_shared/rating.test.ts && tsx supabase/functions/_shared/assignments.test.ts && tsx supabase/functions/_shared/distribute.test.ts && tsx supabase/functions/_shared/engine.test.ts",
+    "typecheck": "tsc -p tsconfig.check.json",
+    "validate:schema": "tsx scripts/validate-schema.mts"
   },
   "devDependencies": {
-    "tsx": "^4.19.2"
+    "@electric-sql/pglite": "^0.2.17",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
   }
 }

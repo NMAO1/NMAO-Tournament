@@ -2,6 +2,7 @@
 -- NMAO Tournament — RESET + full schema (run this ONCE).
 -- Safe on a project with NO real data: it clears any partial apply, then
 -- rebuilds the whole schema cleanly. Paste into the Supabase SQL Editor → Run.
+-- GENERATED — do not edit by hand (edit migrations, then regenerate).
 -- =====================================================================
 
 -- ---- reset (remove partial apply) ----
@@ -16,14 +17,12 @@ alter default privileges in schema public grant all on functions  to postgres, a
 
 -- =====================================================================
 -- NMAO Tournament — full schema, all migrations in order.
--- Paste this whole file into the Supabase SQL Editor and press Run.
--- Safe on a BLANK project. Order: base -> engine -> ratings -> RLS -> per-criterion.
--- Generated 2026-08-07T12:01Z
+-- GENERATED from supabase/migrations/*.sql — do not edit by hand.
+-- Files: 20260804000000_base_reference_people.sql, 20260805120000_tournament_engine.sql, 20260806000000_ratings_finance_recognition.sql, 20260807000000_rls_policies.sql, 20260808000000_per_criterion_scoring.sql, 20260809000000_idempotency_hardening.sql
 -- =====================================================================
 
 
 -- ===================== 20260804000000_base_reference_people.sql =====================
-
 -- =====================================================================
 -- NMAO Tournaments — Migration 1 of 3: base reference + people/org
 -- Reconciled schema (2026-08-06). Applies BEFORE the tournament engine.
@@ -271,7 +270,6 @@ on conflict (key) do nothing;
 commit;
 
 -- ===================== 20260805120000_tournament_engine.sql =====================
-
 -- =====================================================================
 -- NMAO Tournament Engine — core data model
 -- Migration 2 of 3: tournament_engine
@@ -496,7 +494,6 @@ alter table round_step_runs   enable row level security;
 alter table engine_audit      enable row level security;
 
 -- ===================== 20260806000000_ratings_finance_recognition.sql =====================
-
 -- =====================================================================
 -- NMAO Tournaments — Migration 3 of 3: ratings, finance & recognition
 -- Reconciled schema (2026-08-06). Applies AFTER the tournament engine, so it
@@ -642,7 +639,6 @@ alter table content_reports enable row level security;
 commit;
 
 -- ===================== 20260807000000_rls_policies.sql =====================
-
 -- =====================================================================
 -- NMAO Tournaments — Migration 4 of 4: Row-Level Security policies
 -- Reconciled schema (2026-08-06). Applies AFTER the base, engine, and
@@ -840,7 +836,6 @@ grant all on all tables in schema public to service_role;
 commit;
 
 -- ===================== 20260808000000_per_criterion_scoring.sql =====================
-
 -- =====================================================================
 -- NMAO Tournaments — Migration 5 of 5: per-criterion judge scoring (A6)
 -- Applies AFTER the RLS migration (uses nmao.judge_id() / nmao.is_staff()).
@@ -883,3 +878,52 @@ grant select, insert, update on submission_scores to authenticated;
 grant all on submission_scores to service_role;
 
 commit;
+
+-- ===================== 20260809000000_idempotency_hardening.sql =====================
+-- =====================================================================
+-- Idempotency hardening for the round pipeline (engine step-runner).
+--
+--  1. claim_step(): atomically claim a pipeline step so a concurrent
+--     double-fire (cron + operator button, or a retry while the first run
+--     is mid-flight) cannot execute resolve/distribute twice. Replaces the
+--     racy read-status-then-set-'running' guard in engine.ts.
+--
+--  2. rating_history: one row per rated entry, so saveRatingUpdates can
+--     UPSERT (idempotent) instead of INSERT — a re-run can no longer create
+--     duplicate history rows or double-count skill_ratings.events_count.
+--
+-- Safe/reversible: creating a function and a unique index; no data changes.
+-- NOTE: the unique index will fail if rating_history already contains rows
+-- with duplicate entry_id (only possible from a prior double-run in testing);
+-- dedupe those first if so. Fresh/pre-production DBs are unaffected.
+-- =====================================================================
+
+-- (2) One rating_history row per rated entry — the UPSERT conflict target.
+create unique index if not exists rating_history_entry_uk
+  on rating_history (entry_id);
+
+-- (1) Atomically claim a pipeline step.
+-- Returns true ONLY to the caller that wins the claim (row absent, or its
+-- status is 'pending'/'error'); returns false if another worker already
+-- holds it ('running') or it is already 'done'. The single INSERT ... ON
+-- CONFLICT ... WHERE statement takes the row lock, so it is race-free.
+create or replace function public.claim_step(p_round_id uuid, p_step text)
+returns boolean
+language plpgsql
+as $$
+declare
+  claimed boolean;
+begin
+  insert into round_step_runs (round_id, step, status, started_at)
+  values (p_round_id, p_step, 'running', now())
+  on conflict (round_id, step) do update
+      set status = 'running', started_at = now()
+    where round_step_runs.status not in ('running', 'done')
+  returning true into claimed;
+
+  return coalesce(claimed, false);
+end;
+$$;
+
+grant execute on function public.claim_step(uuid, text) to service_role;
+

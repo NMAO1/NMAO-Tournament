@@ -10,8 +10,9 @@
 import { assignJudges, JudgeInput, AssignPod, Assignment } from './assignments.ts';
 import { resolvePod, updateRatings, PodEntry, RatingState, RatingConfig, DEFAULT_RATING_CONFIG } from './rating.ts';
 import { buildShipList, ResultRow } from './distribute.ts';
+import { runDivisioning, Scheme, Entry, DivisioningResult } from './divisioning.ts';
 
-export type StepName = 'assign_judges' | 'resolve' | 'distribute';
+export type StepName = 'divide' | 'assign_judges' | 'resolve' | 'distribute';
 export type StepStatus = 'pending' | 'running' | 'done' | 'error';
 
 // A pod ready to resolve: its videos' scores plus each entry's rating state.
@@ -52,13 +53,18 @@ export type RatingWrite = {
 // awaits every call, so both work.
 type Await<T> = T | Promise<T>;
 
-export interface EngineStore {
+// The idempotency ledger every step reads/writes (round_step_runs). Split out
+// so both EngineStore and DivisionStore share the claim machinery without the
+// in-memory engine tests needing to know about divisioning.
+export interface StepLedger {
   getStepStatus(roundId: string, step: StepName): Await<StepStatus | null>;
   setStepStatus(roundId: string, step: StepName, status: StepStatus, detail?: unknown): Await<void>;
   // Atomically claim a step: returns true only for the caller that wins the
   // claim (see the claim_step() SQL). Used to serialize concurrent runs.
   claimStep(roundId: string, step: StepName): Await<boolean>;
+}
 
+export interface EngineStore extends StepLedger {
   // assign_judges
   getPodsForAssignment(roundId: string): Await<AssignPod[]>;
   getJudgePool(roundId: string): Await<JudgeInput[]>;
@@ -83,7 +89,7 @@ export type StepOutcome = { step: StepName; ran: boolean; flags: string[]; detai
 // is claimable again, so a retry can re-run it). This closes the read-then-set
 // race the previous version had.
 async function idempotent(
-  store: EngineStore,
+  store: StepLedger,
   roundId: string,
   step: StepName,
   work: () => Promise<{ flags: string[]; detail?: unknown }>,
@@ -175,8 +181,32 @@ export function stepDistribute(store: EngineStore, roundId: string): Promise<Ste
   });
 }
 
+// ---------- step: divide (classify -> collapse -> form pods, then persist) ----------
+// The three divisioning sub-steps are one pure function (runDivisioning); we
+// run them together and persist divisions/pods/entry assignments in a single
+// idempotent 'divide' step. It uses its own DivisionStore seam so the in-memory
+// engine orchestration tests (which don't exercise divisioning) are unaffected.
+export interface DivisionStore extends StepLedger {
+  getSchemeForRound(roundId: string): Await<Scheme>;
+  getEntriesForDivision(roundId: string): Await<Entry[]>;
+  saveDivisioning(
+    roundId: string,
+    result: DivisioningResult,
+  ): Await<{ divisions: number; pods: number; assigned: number }>;
+}
+
+export function stepDivide(store: DivisionStore, roundId: string): Promise<StepOutcome> {
+  return idempotent(store, roundId, 'divide', async () => {
+    const scheme = await store.getSchemeForRound(roundId);
+    const entries = await store.getEntriesForDivision(roundId);
+    const result = runDivisioning(entries, scheme);
+    const counts = await store.saveDivisioning(roundId, result);
+    return { flags: result.flags, detail: counts };
+  });
+}
+
 // ---------- controller: run the tail of the pipeline in order ----------
-// (classify/collapse/form_pods are the divisioning steps handled upstream.)
+// (divide runs first; assign_judges -> resolve -> distribute are the tail.)
 export async function runPipelineTail(
   store: EngineStore,
   roundId: string,
