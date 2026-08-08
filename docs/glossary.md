@@ -93,11 +93,19 @@ Example: `--body "..."` attaches data to the request.
 version of JavaScript). Files end in `.ts`.
 
 **Key / token / auth** — a secret string that proves who's allowed to do
-something. Two of ours:
-- **anon key** — public, safe to share; limited by security rules. Fine for normal
-  app use.
-- **service_role key** — *secret*, all-powerful; it bypasses the security rules.
-  It only ever lives in the server's settings, never in chat or the app.
+something. Supabase has two generations of keys, and both appear on the dashboard:
+- **Legacy keys (JWTs, start `eyJ…`)** — the older `anon` (public) and
+  `service_role` (secret) keys, on the *Legacy* API-keys tab.
+- **New keys** — `sb_publishable_…` (public) and `sb_secret_…` (secret), on the
+  *Publishable and secret API keys* tab. Our project has these enabled.
+- **Which one the tournament function wants:** the **`sb_secret_…`** secret key.
+  Because the new system is on, the function's built-in `SUPABASE_SERVICE_ROLE_KEY`
+  is that new secret key — *not* the legacy `service_role` JWT. Sending the legacy
+  or anon key gives `Invalid or expired session`. Any secret key bypasses security,
+  so it lives only in your terminal/server settings — never in chat or the app.
+- **Fingerprint trick:** to check a key matches what the server holds without
+  revealing it, compare SHA-256 hashes — `printf '%s' "$KEY" | shasum -a 256`
+  against the digest in `supabase secrets list`.
 
 ## Version control (Git / GitHub)
 

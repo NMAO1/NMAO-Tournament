@@ -35,17 +35,26 @@ Run `supabase/seed_demo.sql`. It prints a `round_id` (also returned by the final
 
 ## 2. Run the pipeline
 
-Because the function is gated, invoke it with the **service-role key** as the
+Because the function is gated, invoke it with the project's **secret key** as the
 bearer (it stays on your machine — never paste it anywhere shared). Set:
 
 ```bash
 FN=https://oxzuavpyoetchwebdejp.functions.supabase.co/round-controller
-KEY=$SUPABASE_SERVICE_ROLE_KEY     # export this locally; do not echo/commit it
+KEY='sb_secret_...'                 # the new-style secret key; do not echo/commit it
 ```
 
-> `supabase functions invoke` sends the **anon** key, which the gate rejects
-> (401/403) — that's expected. Use the curl form below with the service-role key,
-> or sign in as a staff user and pass that session token instead.
+> **Which key? (this bit the first time.)** This project has Supabase's **new API
+> key system** enabled, so the function's built-in `SUPABASE_SERVICE_ROLE_KEY` is
+> actually the **new `sb_secret_…` secret key** (dashboard → API → *Publishable and
+> secret API keys* → `secret` → Reveal), **not** the legacy `service_role` JWT on
+> the *Legacy* tab. Passing the legacy key (or the anon key) returns
+> `{"error":"Invalid or expired session."}`.
+>
+> Confirm you have the right one without exposing it: `supabase secrets list
+> --project-ref oxzuavpyoetchwebdejp` shows a SHA-256 digest for
+> `SUPABASE_SERVICE_ROLE_KEY`; `printf '%s' "$KEY" | shasum -a 256` must match it.
+> (`supabase functions invoke` sends the anon key, which the gate rejects — use the
+> curl form below.)
 
 ```bash
 post () { curl -sS -X POST "$FN" -H "Authorization: Bearer $KEY" \
