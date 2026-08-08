@@ -22,7 +22,28 @@ granular powers**, **Sponsorship**, **Leaderboards**, and **Governance (COI,
 conduct, protests)**. Most of the engine core already exists; the rest is new
 surface area to phase in.
 
-## 1. Reconciliations to decide (conflicts with the current build)
+## 1. Reconciliations — DECISIONS LOCKED (2026-08-08)
+
+- **Age brackets:** KEEP OURS (7-9, 10-12, 13-15, 16-17, 18+). The doc's
+  4-7…51+ is *not* adopted.
+- **Rank:** stays as-is — belt→tier via the Member Platform (which the instructor
+  controls), so it's already instructor-governed and system-of-record.
+- **Two tournament flows (NEW):**
+  1. **Seasonal** (built) — monthly, same-rank rating, divisions/pods, best-6-of-9.
+  2. **Championship bracket** (new, for the **live Grand Finale + Sponsor
+     tournaments**) — a tiered elimination: Stage 1 pods → **top 5** of each advance
+     → regroup into new pods → **top 3** of each advance → a **final pod** decides
+     Grand Champion / Sponsor winner. Engine reuse: each stage = form pods from
+     qualifiers → judge → resolve, with a **top-N advancement cut** that re-pods
+     survivors. (Phase 2 engine work; the competitor app shows an advancement/
+     bracket tracker during these events.)
+- **Rating + Points:** keep BOTH — rating = skill/matchmaking/growth; points =
+  public season standings + prizes + finale seeding.
+- **Dueling:** **participant-vote** only for now (voters = the duel's participants /
+  same division), no public voting — keeps it minor-safe.
+- Nothing already built changes; scope expands around it.
+
+## 1b. (superseded) Reconciliations table
 
 These are the "pick one" items — the engine is config-driven, so most are edits, not rewrites.
 
