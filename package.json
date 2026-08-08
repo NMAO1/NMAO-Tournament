@@ -5,9 +5,11 @@
   "description": "NMAO Tournament engine — video-based martial arts tournament (Supabase backend).",
   "type": "module",
   "scripts": {
-    "test": "tsx supabase/functions/_shared/divisioning.test.ts && tsx supabase/functions/_shared/rating.test.ts && tsx supabase/functions/_shared/assignments.test.ts && tsx supabase/functions/_shared/distribute.test.ts && tsx supabase/functions/_shared/engine.test.ts",
+    "test": "tsx supabase/functions/_shared/divisioning.test.ts && tsx supabase/functions/_shared/rating.test.ts && tsx supabase/functions/_shared/assignments.test.ts && tsx supabase/functions/_shared/distribute.test.ts && tsx supabase/functions/_shared/engine.test.ts && tsx supabase/functions/_shared/scenarios.test.ts",
     "typecheck": "tsc -p tsconfig.check.json",
-    "validate:schema": "tsx scripts/validate-schema.mts"
+    "validate:schema": "tsx scripts/validate-schema.mts",
+    "validate:idempotency": "tsx scripts/validate-idempotency.mts",
+    "validate": "npm run typecheck && npm run test && npm run validate:schema && npm run validate:idempotency"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.17",
