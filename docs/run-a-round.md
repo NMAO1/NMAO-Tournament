@@ -14,14 +14,19 @@ re-running a step is a no-op once it's `done`.
 
 ### Deploy the function
 
-Two options:
+**CLI only** — the Supabase CLI bundles the `../_shared` imports for you:
 
-- **CLI (preferred):** `supabase functions deploy round-controller` — the CLI
-  bundles the `../_shared` imports for you.
-- **Dashboard editor:** paste `supabase/functions/round-controller/index.bundled.ts`
-  as the function body. It's the same code flattened into one file with no
-  `../_shared` imports (regenerate it from the split sources with the bundler if
-  they change).
+```bash
+supabase functions deploy round-controller --project-ref oxzuavpyoetchwebdejp
+```
+
+Do **not** deploy a hand-flattened single-file bundle: it drops the `authorize()`
+gate (re-opening the pipeline to anyone who can POST) and the dashboard can't
+resolve `../_shared` anyway. The split files + CLI are the only supported path.
+
+The function is **gated** (`authorize()` in `index.ts`): a caller must present
+either the **service-role key** (internal/cron) or a signed-in **NMAO staff**
+session (`nmao.is_staff()`). Anyone else gets 401/403.
 
 ## 1. Seed a round
 
@@ -30,9 +35,17 @@ Run `supabase/seed_demo.sql`. It prints a `round_id` (also returned by the final
 
 ## 2. Run the pipeline
 
-Let `FN=https://<project-ref>.functions.supabase.co/round-controller` and
-`KEY=<anon or service-role key>` (if the function has JWT verification on, pass a
-valid key; for quick testing you can deploy with `--no-verify-jwt`).
+Because the function is gated, invoke it with the **service-role key** as the
+bearer (it stays on your machine — never paste it anywhere shared). Set:
+
+```bash
+FN=https://oxzuavpyoetchwebdejp.functions.supabase.co/round-controller
+KEY=$SUPABASE_SERVICE_ROLE_KEY     # export this locally; do not echo/commit it
+```
+
+> `supabase functions invoke` sends the **anon** key, which the gate rejects
+> (401/403) — that's expected. Use the curl form below with the service-role key,
+> or sign in as a staff user and pass that session token instead.
 
 ```bash
 post () { curl -sS -X POST "$FN" -H "Authorization: Bearer $KEY" \
