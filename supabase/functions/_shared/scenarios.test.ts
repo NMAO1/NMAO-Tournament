@@ -3,7 +3,7 @@
 // judge shortfalls, mixed-rank pods, provisional vs steady K, clamp invariants.
 import { runDivisioning, Scheme, Entry } from './divisioning.ts';
 import { assignJudges, AssignPod, JudgeInput } from './assignments.ts';
-import { resolvePod, updateRatings, PodEntry, RatingState, DEFAULT_RATING_CONFIG } from './rating.ts';
+import { resolvePod, updateRatings, weightedJudgeScore, PodEntry, RatingState, DEFAULT_RATING_CONFIG } from './rating.ts';
 import { buildShipList, ResultRow } from './distribute.ts';
 
 let passed = 0, failed = 0; const fails: string[] = [];
@@ -176,6 +176,82 @@ function many(n: number, event: string, age: string, rank: string): Entry[] {
   const s1 = list.shipments.find((s) => s.schoolId === 's1')!;
   ok(s1.items.find((i) => i.competitorName === 'Ann')!.medals.includes('gold'), '1st place -> gold');
   ok(!results.some((r) => r.placement === 4) || !list.shipments.flatMap((s) => s.items).find((i) => i.placement === 4)!.medals.some((m) => m !== 'participation'), '4th place -> participation only');
+}
+
+// ---- 11. rating clamps at the 0 and 100 bounds ----
+{
+  const hi = updateRatings(resolvePod([
+    { entryId: 'hi', competitorId: 'hi', rank: 'advanced', judgeScores: [99, 99, 99], submittedAt: 1 },
+    { entryId: 'lo', competitorId: 'lo', rank: 'advanced', judgeScores: [10, 10, 10], submittedAt: 1 },
+  ]), { hi: { rating: 97, roundsPlayed: 0 }, lo: { rating: 100, roundsPlayed: 0 } }, DEFAULT_RATING_CONFIG);
+  ok(hi.hi.after === 100 && approx(hi.hi.delta, 3), 'win beyond 100 clamps to 100 (delta trimmed)');
+
+  const lo = updateRatings(resolvePod([
+    { entryId: 'a', competitorId: 'a', rank: 'beginner', judgeScores: [90], submittedAt: 1 },
+    { entryId: 'b', competitorId: 'b', rank: 'beginner', judgeScores: [10], submittedAt: 1 },
+  ]), { a: { rating: 0, roundsPlayed: 0 }, b: { rating: 3, roundsPlayed: 0 } }, DEFAULT_RATING_CONFIG);
+  ok(lo.b.after === 0 && approx(lo.b.delta, -3), 'loss below 0 clamps to 0');
+}
+
+// ---- 12. large fields split into cap-sized pods ----
+{
+  const r100 = runDivisioning(many(100, 'trad_forms', '10_12', 'advanced'), scheme());
+  ok(r100.pods.length === 5 && r100.pods.every((p) => p.entries.length === 20), '100 -> 5 pods of 20 (cap)');
+  const r101 = runDivisioning(many(101, 'trad_forms', '10_12', 'advanced'), scheme());
+  ok(r101.pods.length === 6 && r101.pods.map((p) => p.entries.length).join(',') === '17,17,17,17,17,16', '101 -> 17×5 + 16');
+}
+
+// ---- 13. determinism: identical input -> identical output ----
+{
+  const inp = () => [...many(15, 'trad_forms', '10_12', 'advanced'), ...many(8, 'open_forms', '13_15', 'beginner')];
+  const key = (r: ReturnType<typeof runDivisioning>) =>
+    r.pods.map((p) => p.divisionKey + ':' + p.entries.map((e) => e.rating).join('-')).sort().join('|');
+  ok(key(runDivisioning(inp(), scheme())) === key(runDivisioning(inp(), scheme())), 'divisioning is deterministic');
+  const pods: AssignPod[] = [{ podId: 'p', judgeCount: 3, entries: [
+    { entryId: 'x', competitorId: 'x', schoolId: 's1' }, { entryId: 'y', competitorId: 'y', schoolId: 's2' }] }];
+  const js: JudgeInput[] = [{ id: 'j1', schoolId: 's3' }, { id: 'j2', schoolId: 's4' }, { id: 'j3', schoolId: 's5' }];
+  ok(JSON.stringify(assignJudges(pods, js)) === JSON.stringify(assignJudges(pods, js)), 'judge assignment is deterministic');
+}
+
+// ---- 14. exact-floor and single-entry divisions ----
+{
+  const floor6 = runDivisioning(many(6, 'trad_forms', '10_12', 'beginner'), scheme());
+  ok(floor6.divisions.length === 1 && !floor6.divisions[0].underFloorUnmergeable && floor6.pods.length === 1,
+     'exactly floor (6) -> valid single pod, no flag');
+  const solo = runDivisioning(many(1, 'open_weapons', '18_plus', 'advanced'), scheme());
+  ok(solo.divisions[0].underFloorUnmergeable === true && solo.pods[0].entries.length === 1, 'single isolated entry -> flagged 1-entry pod');
+  ok(resolvePod([{ entryId: 's', competitorId: 's', rank: 'advanced', judgeScores: [88, 90, 86], submittedAt: 1 }])[0].placement === 1,
+     'single-entry pod resolves to 1st');
+}
+
+// ---- 15. unknown competitor falls back to seed 50 + provisional K ----
+{
+  const ch = updateRatings(resolvePod([
+    { entryId: 'n1', competitorId: 'n1', rank: 'beginner', judgeScores: [70], submittedAt: 1 },
+    { entryId: 'n2', competitorId: 'n2', rank: 'beginner', judgeScores: [60], submittedAt: 1 },
+  ]), {}, DEFAULT_RATING_CONFIG); // no states supplied
+  ok(ch.n1.before === 50 && ch.n1.k === 8, 'no prior state -> seed 50, K=8');
+  ok(approx(ch.n1.delta, 4) && approx(ch.n2.delta, -4), 'two brand-new beginners move +4 / -4');
+}
+
+// ---- 16. weighted per-criterion judge score (Traditional rubric) ----
+{
+  const w = [
+    { criterionCode: 'technical', weightPct: 25 }, { criterionCode: 'power', weightPct: 20 },
+    { criterionCode: 'balance', weightPct: 20 }, { criterionCode: 'timing', weightPct: 15 },
+    { criterionCode: 'spirit', weightPct: 12 }, { criterionCode: 'difficulty', weightPct: 8 },
+  ];
+  ok(approx(weightedJudgeScore(w.map((x) => ({ criterionCode: x.criterionCode, rawScore: 80 })), w), 80), 'all criteria 80 -> 80');
+  ok(approx(weightedJudgeScore([{ criterionCode: 'technical', rawScore: 90 }, { criterionCode: 'power', rawScore: 60 }], w),
+     (90 * 25 + 60 * 20) / 45), 'partial rubric normalizes by weight present');
+  ok(weightedJudgeScore([{ criterionCode: 'technical', rawScore: 200 }], w) === 100, 'out-of-range clamps to 100');
+}
+
+// ---- 17. judge count follows rank ----
+{
+  ok(runDivisioning(many(7, 'trad_forms', '10_12', 'beginner'), scheme()).pods[0].judgeCount === 1, 'beginner pod -> 1 judge');
+  ok(runDivisioning(many(7, 'trad_forms', '10_12', 'intermediate'), scheme()).pods[0].judgeCount === 1, 'intermediate pod -> 1 judge');
+  ok(runDivisioning(many(7, 'trad_forms', '10_12', 'advanced'), scheme()).pods[0].judgeCount === 3, 'advanced pod -> 3 judges');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
