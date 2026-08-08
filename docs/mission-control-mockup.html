@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO Mission Control — Pipeline Board (mockup)</title>
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b;
+    --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
+    --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22;
+    --ruby:#FF2E3B; --amethyst:#A32BF7; --sapphire:#1F7BFF;
+    --success:#5DCAA5; --danger:#E07070; --amber:#E6B93F;
+    --spectrum:linear-gradient(180deg,#1F7BFF 0%,#A32BF7 50%,#FF2E3B 100%);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#141220 0%,var(--bg) 60%);color:var(--text);
+       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;padding:22px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  a{color:inherit}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer}
+  .btn:hover{border-color:#3a3a40}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
+  .btn.danger{border-color:#4a2b2b;color:#E9A0A0;background:#1c1414}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  .badge{font-size:12px;font-weight:600;padding:4px 11px;border-radius:99px}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F5F0E8 0 50%,#141210 0 100%);border:1px solid var(--gold);position:relative}
+  .brand h1{font-size:16px;margin:0;letter-spacing:.02em}
+  .brand small{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .selectors{display:flex;align-items:center;gap:8px}
+  .sel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:13px;color:var(--text)}
+  .state-badge{background:linear-gradient(160deg,#2a2f4a,#171a2b);border:1px solid #33406e;color:#bcd0ff}
+
+  /* kpi strip */
+  .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:18px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+  .kpi .l{font-size:11px;color:var(--muted);letter-spacing:.02em}
+  .kpi .v{font-size:22px;font-weight:600;margin-top:2px}
+  .kpi .v small{font-size:12px;color:var(--muted);font-weight:400}
+
+  /* layout */
+  .grid{display:grid;grid-template-columns:1fr 328px;gap:16px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  .card > .hd{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd h2{font-size:14px;margin:0;letter-spacing:.02em}
+  .hd .sub{font-size:12px;color:var(--muted)}
+
+  /* pipeline */
+  .pipeline{position:relative;padding:8px 16px 14px 16px}
+  .pipeline::before{content:"";position:absolute;left:31px;top:22px;bottom:60px;width:2px;background:var(--spectrum);opacity:.5;border-radius:2px}
+  .stage{position:relative;display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:start;padding:13px 0;border-bottom:1px solid #202024}
+  .stage:last-child{border-bottom:none}
+  .dot{width:16px;height:16px;border-radius:50%;margin-top:2px;border:2px solid var(--panel);z-index:1;background:var(--muted2)}
+  .dot.done{background:var(--success)}
+  .dot.run{background:var(--amber);box-shadow:0 0 0 4px rgba(230,185,63,.18)}
+  .dot.next{background:var(--gold);box-shadow:0 0 0 4px rgba(230,185,63,.14)}
+  .st-title{font-size:14px;font-weight:600}
+  .st-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .st-sub b{color:var(--text);font-weight:600}
+  .st-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;white-space:nowrap}
+  .time{font-size:11px;color:var(--muted2)}
+  .s-done{color:var(--success)} .s-run{color:var(--amber)} .s-next{color:var(--gold)} .s-idle{color:var(--muted2)}
+  .status-pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;border:1px solid var(--line)}
+
+  /* right rail */
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .list{padding:6px 14px 12px}
+  .row{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #202024;font-size:12.5px}
+  .row:last-child{border-bottom:none}
+  .allclear{display:flex;align-items:center;gap:8px;color:var(--success);font-size:13px;padding:12px 14px}
+  .muted{color:var(--muted)} .tiny{font-size:11px;color:var(--muted2)}
+  .guard{font-size:12px;color:var(--muted);padding:2px 14px 0;line-height:1.6}
+  .guard li{margin:4px 0}
+  .log .row .t{color:var(--muted2);min-width:52px}
+  .foot{margin-top:16px;color:var(--muted2);font-size:11.5px;text-align:center}
+  .tier{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="yy"></span>
+      <div><h1 class="serif">NMAO Mission Control</h1><small>Operator Console</small></div>
+    </div>
+    <div class="selectors">
+      <span class="sel">Season: Demo 2026 ▾</span>
+      <span class="sel">Round 1 ▾</span>
+      <span class="badge state-badge">● Distributed</span>
+      <button class="btn">Refresh</button>
+    </div>
+  </header>
+
+  <div class="kpis">
+    <div class="kpi"><div class="l">Entries</div><div class="v">26</div></div>
+    <div class="kpi"><div class="l">Divisions</div><div class="v">4</div></div>
+    <div class="kpi"><div class="l">Pods</div><div class="v">4</div></div>
+    <div class="kpi"><div class="l">Judges assigned</div><div class="v">64</div></div>
+    <div class="kpi"><div class="l">Judged</div><div class="v">100<small>%</small></div></div>
+    <div class="kpi"><div class="l">Medals</div><div class="v">38</div></div>
+    <div class="kpi"><div class="l">School boxes</div><div class="v">4</div></div>
+  </div>
+
+  <div class="grid">
+    <!-- PIPELINE -->
+    <div class="card">
+      <div class="hd">
+        <div><h2 class="serif">Round pipeline</h2></div>
+        <div class="sub">Closes 15th · Reveal in 6 days · <span class="tiny">round 587dee84</span></div>
+      </div>
+      <div class="pipeline">
+
+        <div class="stage">
+          <span class="dot done"></span>
+          <div><div class="st-title">Entries closed</div>
+            <div class="st-sub"><b>26</b> valid entries · window ended</div></div>
+          <div class="st-right"><span class="status-pill s-done">done</span><span class="time">Aug 8 · 10:22</span></div>
+        </div>
+
+        <div class="stage">
+          <span class="dot done"></span>
+          <div><div class="st-title">Divide <span class="muted">— classify → collapse → form pods</span></div>
+            <div class="st-sub"><b>4</b> divisions · <b>4</b> pods · <b>26</b> seated · 1 collapsed (13–15 int+adv)</div></div>
+          <div class="st-right"><button class="btn">View divisions</button><span class="time">ran 10:24 · re-runnable</span></div>
+        </div>
+
+        <div class="stage">
+          <span class="dot done"></span>
+          <div><div class="st-title">Assign judges</div>
+            <div class="st-sub"><b>64</b> assignments · 1/pod beg-int, 3/pod advanced · <b>0</b> shortfalls</div></div>
+          <div class="st-right"><button class="btn">View judges</button><span class="time">ran 10:25</span></div>
+        </div>
+
+        <div class="stage">
+          <span class="dot done"></span>
+          <div><div class="st-title">Judging window</div>
+            <div class="st-sub"><b>64 / 64</b> scored · 100% · deadline passed</div></div>
+          <div class="st-right"><span class="status-pill s-done">complete</span><span class="time">closed 10:40</span></div>
+        </div>
+
+        <div class="stage">
+          <span class="dot done"></span>
+          <div><div class="st-title">Resolve <span class="muted">— placements + ratings</span></div>
+            <div class="st-sub"><b>26</b> results · ratings updated (same-rank rule) · rating_history written</div></div>
+          <div class="st-right"><button class="btn">View results</button><span class="time">ran 10:41</span></div>
+        </div>
+
+        <div class="stage">
+          <span class="dot done"></span>
+          <div><div class="st-title">Distribute <span class="muted">— medals + ship list</span></div>
+            <div class="st-sub"><b>38</b> medals (4G · 4S · 4B · 26 part.) · <b>4</b> school boxes</div></div>
+          <div class="st-right"><button class="btn">View medals</button><span class="time">ran 10:42</span></div>
+        </div>
+
+        <div class="stage">
+          <span class="dot next"></span>
+          <div><div class="st-title">Finalize round</div>
+            <div class="st-sub">Freeze the scheme version, publish public results, archive the round.</div></div>
+          <div class="st-right"><button class="btn gold">Finalize ✓</button><span class="time">next action</span></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT RAIL -->
+    <div class="rail">
+
+      <div class="card">
+        <div class="hd"><h2>Exceptions &amp; guardrails</h2></div>
+        <div class="allclear">● &nbsp;All clear — no under-floor pods, no judge shortfalls.</div>
+        <ul class="guard">
+          <li>Can't advance past <i>closed</i> with 0 valid entries.</li>
+          <li>Can't enter <i>judging</i> with a pod below floor (6) unless acknowledged.</li>
+          <li>Can't <i>distribute</i> with any pod unresolved.</li>
+        </ul>
+        <div style="padding:10px 14px 14px"><span class="chip">Flags surface here in red with a jump-to link</span></div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Divisions &amp; pods</h2><span class="sub">4</span></div>
+        <div class="list">
+          <div class="row"><span><span class="tier" style="background:var(--ruby)"></span>Trad Forms · Advanced</span><span class="muted" style="margin-left:auto">pod of 6 · 3 judges</span></div>
+          <div class="row"><span><span class="tier" style="background:var(--ruby)"></span>Open Forms · Advanced</span><span class="muted" style="margin-left:auto">pod of 6 · 3 judges</span></div>
+          <div class="row"><span><span class="tier" style="background:var(--sapphire)"></span>Trad Forms · Beginner</span><span class="muted" style="margin-left:auto">pod of 7 · 1 judge</span></div>
+          <div class="row"><span><span class="tier" style="background:var(--amethyst)"></span>Trad Forms · 13–15 merged</span><span class="muted" style="margin-left:auto">pod of 7 · 3 judges</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2>Activity log</h2><span class="sub">audit</span></div>
+        <div class="list log">
+          <div class="row"><span class="t">10:42</span><span>distribute → done · <span class="muted">operator</span></span></div>
+          <div class="row"><span class="t">10:41</span><span>resolve → done · <span class="muted">operator</span></span></div>
+          <div class="row"><span class="t">10:25</span><span>assign_judges → done</span></div>
+          <div class="row"><span class="t">10:24</span><span>divide → done</span></div>
+        </div>
+        <div style="padding:0 14px 14px;display:flex;gap:8px">
+          <select class="sel" style="flex:1"><option>Roll back to…</option><option>resolve</option><option>divide</option></select>
+          <button class="btn danger">Roll back</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="foot">Design mockup — visual reference for the Next.js build. Populated with live demo round <b>587dee84</b>. Steps call <code>round-controller</code>; statuses read <code>round_step_runs</code> (realtime).</div>
+
+</div>
+</body>
+</html>
