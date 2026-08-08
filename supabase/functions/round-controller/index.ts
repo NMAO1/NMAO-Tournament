@@ -5,10 +5,14 @@
 // is safe to invoke from a schedule, a retry, or an operator button.
 //
 // POST body: { "roundId": "<uuid>", "step": "divide" | "assign_judges" |
-//              "resolve" | "distribute" | "tail" | "all" }
-//   divide = classify -> collapse -> form pods (writes divisions/pods)
-//   tail   = assign_judges -> resolve -> distribute
-//   all    = divide, then the tail
+//              "resolve" | "distribute" | "tail" | "all" | "finalize" |
+//              "rollback", "to"?: "<step>" }
+//   divide   = classify -> collapse -> form pods (writes divisions/pods)
+//   tail     = assign_judges -> resolve -> distribute
+//   all      = divide, then the tail
+//   finalize = distributed -> finalized (freezes scheme, locks the round)
+//   rollback = clear `to` + every later step's output and reset state so `to`
+//              can re-run (reverts ratings; requires "to")
 //
 // AUTHORIZATION: the engine runs as the service role and bypasses RLS, so
 // this entrypoint MUST gate the caller. Allowed callers:
@@ -22,7 +26,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { createSupabaseStore } from '../_shared/supabaseStore.ts';
+import { createSupabaseStore, finalizeRound, rollbackRound } from '../_shared/supabaseStore.ts';
 import { stepDivide, stepAssignJudges, stepResolve, stepDistribute, runPipelineTail } from '../_shared/engine.ts';
 
 const cors = {
@@ -32,12 +36,12 @@ const cors = {
 };
 
 // Service-role caller (cron/internal) OR an authenticated NMAO staff member.
-async function authorize(req: Request): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+async function authorize(req: Request): Promise<{ ok: true; actorId: string | null } | { ok: false; status: number; error: string }> {
   const bearer = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
   // 1) Internal / scheduled caller presenting the service-role key.
-  if (bearer && serviceKey && bearer === serviceKey) return { ok: true };
+  if (bearer && serviceKey && bearer === serviceKey) return { ok: true, actorId: null };
 
   // 2) A signed-in user — confirm the token, then confirm they are staff.
   if (!bearer) return { ok: false, status: 401, error: 'Sign in required.' };
@@ -56,7 +60,7 @@ async function authorize(req: Request): Promise<{ ok: true } | { ok: false; stat
   const { data: staff } = await svc.from('staff').select('id, role').eq('auth_user_id', uid).maybeSingle();
   if (!staff) return { ok: false, status: 403, error: 'Not authorized — NMAO staff only.' };
 
-  return { ok: true };
+  return { ok: true, actorId: (staff as any).id as string };
 }
 
 Deno.serve(async (req: Request) => {
@@ -66,14 +70,14 @@ Deno.serve(async (req: Request) => {
   const az = await authorize(req);
   if (!az.ok) return json({ error: az.error }, az.status);
 
-  let body: { roundId?: string; step?: string };
+  let body: { roundId?: string; step?: string; to?: string };
   try {
     body = await req.json();
   } catch {
     return json({ error: 'invalid JSON body' }, 400);
   }
 
-  const { roundId, step } = body;
+  const { roundId, step, to } = body;
   if (!roundId || !step) return json({ error: 'roundId and step are required' }, 400);
 
   const store = createSupabaseStore();
@@ -87,6 +91,18 @@ Deno.serve(async (req: Request) => {
       case 'distribute':    outcome = await stepDistribute(store, roundId); break;
       case 'tail':          outcome = await runPipelineTail(store, roundId); break;
       case 'all':           outcome = [await stepDivide(store, roundId), ...await runPipelineTail(store, roundId)]; break;
+      // Operator actions (Mission Control). Use a fresh service client, not the step store.
+      case 'finalize': {
+        const svc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+        outcome = await finalizeRound(svc, roundId, az.actorId);
+        break;
+      }
+      case 'rollback': {
+        if (!to) return json({ error: 'rollback requires a "to" step: divide | assign_judges | resolve | distribute' }, 400);
+        const svc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+        outcome = await rollbackRound(svc, roundId, to as any, az.actorId);
+        break;
+      }
       default:              return json({ error: `unknown step: ${step}` }, 400);
     }
     return json({ ok: true, roundId, step, outcome });

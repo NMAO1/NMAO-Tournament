@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.check.json",
     "validate:schema": "tsx scripts/validate-schema.mts",
     "validate:idempotency": "tsx scripts/validate-idempotency.mts",
-    "validate": "npm run typecheck && npm run test && npm run validate:schema && npm run validate:idempotency"
+    "validate:rollback": "tsx scripts/validate-rollback.mts",
+    "validate": "npm run typecheck && npm run test && npm run validate:schema && npm run validate:idempotency && npm run validate:rollback"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.2.17",

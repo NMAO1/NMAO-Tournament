@@ -66,6 +66,139 @@ export async function submitJudgeScores(
   return score;
 }
 
+// =====================================================================
+// Operator actions (not pipeline steps): finalize + rollback.
+// These are DB-heavy operations invoked from Mission Control, so they live
+// here as standalone functions taking a service-role client (like
+// submitJudgeScores) rather than on the EngineStore seam. Return a
+// StepOutcome-shaped object so round-controller reports them uniformly.
+// =====================================================================
+
+const PIPELINE_STEPS: StepName[] = ['divide', 'assign_judges', 'resolve', 'distribute'];
+
+// FINALIZE: distributed -> finalized. Freezes the scheme version (locked) and
+// stamps the round locked_at. Idempotent: a re-press on a finalized round no-ops.
+export async function finalizeRound(
+  db: SupabaseClient,
+  roundId: string,
+  actorId?: string | null,
+): Promise<{ step: string; ran: boolean; flags: string[]; detail: unknown }> {
+  const { data: round, error } = await db
+    .from('rounds').select('state, scheme_id').eq('id', roundId).single();
+  if (error || !round) throw new Error('Round not found.');
+  const state = (round as any).state;
+  if (state === 'finalized') return { step: 'finalize', ran: false, flags: [], detail: 'already done' };
+  if (state !== 'distributed') {
+    throw new Error(`Cannot finalize: round is '${state}' (must be 'distributed').`);
+  }
+
+  // Freeze the scheme version — immutable once locked (spec §4).
+  await db.from('division_schemes').update({ locked: true }).eq('id', (round as any).scheme_id);
+  const now = new Date().toISOString();
+  await db.from('rounds').update({ state: 'finalized', locked_at: now, updated_at: now }).eq('id', roundId);
+  await db.from('engine_audit').insert({
+    round_id: roundId, actor_id: actorId ?? null, action: 'finalize',
+    before: { state: 'distributed' }, after: { state: 'finalized' },
+  });
+  return { step: 'finalize', ran: true, flags: [], detail: { state: 'finalized' } };
+}
+
+// ROLLBACK: clear the output of `to` and every later step, then reset the round
+// so `to` can be re-run. Reverts ratings using each rating_history row's
+// rating_before (safe only for the latest rated round — guarded below).
+export async function rollbackRound(
+  db: SupabaseClient,
+  roundId: string,
+  to: StepName,
+  actorId?: string | null,
+): Promise<{ step: string; ran: boolean; flags: string[]; detail: unknown }> {
+  if (!PIPELINE_STEPS.includes(to)) throw new Error(`Invalid rollback target: ${to}.`);
+  const { data: round, error } = await db
+    .from('rounds').select('state, season_id, seq').eq('id', roundId).single();
+  if (error || !round) throw new Error('Round not found.');
+  const state = (round as any).state;
+  if (state === 'finalized') throw new Error('Round is finalized; cannot roll back.');
+
+  const toIdx = PIPELINE_STEPS.indexOf(to);
+  const clearAssignments = toIdx <= PIPELINE_STEPS.indexOf('assign_judges');
+  const clearResults = toIdx <= PIPELINE_STEPS.indexOf('resolve');
+  const clearDivide = to === 'divide';
+
+  const { data: entRows } = await db.from('entries').select('id').eq('round_id', roundId);
+  const entryIds = (entRows ?? []).map((e: any) => e.id);
+
+  // --- ratings + results reversal (only when rolling back resolve or earlier) ---
+  if (clearResults) {
+    // Safety: refuse if a LATER round in the season already carries ratings built
+    // on this one — rolling this back would corrupt their carry-over.
+    const { data: laterRounds } = await db
+      .from('rounds').select('id').eq('season_id', (round as any).season_id).gt('seq', (round as any).seq);
+    const laterIds = (laterRounds ?? []).map((r: any) => r.id);
+    if (laterIds.length) {
+      const { count } = await db
+        .from('rating_history').select('*', { count: 'exact', head: true }).in('round_id', laterIds);
+      if ((count ?? 0) > 0) {
+        throw new Error('Cannot roll back ratings: a later round already has ratings. Roll it back first.');
+      }
+    }
+    // Capture this round's rating_before per competitor (= their pre-round rating),
+    // then delete this round's results + history and restore.
+    const { data: hist } = await db
+      .from('rating_history').select('competitor_id, rating_before').eq('round_id', roundId);
+    const beforeByComp = new Map<string, number>();
+    for (const h of hist ?? []) beforeByComp.set((h as any).competitor_id, Number((h as any).rating_before));
+
+    if (entryIds.length) await db.from('results').delete().in('entry_id', entryIds);
+    await db.from('rating_history').delete().eq('round_id', roundId);
+
+    const prov = DEFAULT_RATING_CONFIG.provisionalRounds;
+    for (const [competitorId, ratingBefore] of beforeByComp) {
+      const { count } = await db
+        .from('rating_history').select('*', { count: 'exact', head: true }).eq('competitor_id', competitorId);
+      const events = count ?? 0;
+      await db.from('skill_ratings').update({
+        rating: ratingBefore, events_count: events, provisional: events < prov,
+        updated_at: new Date().toISOString(),
+      }).eq('competitor_id', competitorId);
+    }
+  }
+
+  // --- medals + shipments (distribute output — always cleared) ---
+  await db.from('medals').delete().eq('round_id', roundId);
+  await db.from('medal_shipments').delete().eq('round_id', roundId);
+
+  // --- judge assignments ---
+  if (clearAssignments && entryIds.length) {
+    await db.from('judge_assignments').delete().in('entry_id', entryIds);
+  }
+
+  // --- divisions / pods / entry stamps (full divide rollback) ---
+  // Unstamp entries BEFORE deleting pods (entries.pod_id references pods).
+  if (clearDivide) {
+    await db.from('entries').update({ division_id: null, pod_id: null }).eq('round_id', roundId);
+    const { data: divRows } = await db.from('divisions').select('id').eq('round_id', roundId);
+    const divIds = (divRows ?? []).map((d: any) => d.id);
+    if (divIds.length) await db.from('pods').delete().in('division_id', divIds);
+    await db.from('divisions').delete().eq('round_id', roundId);
+  }
+
+  // --- clear the step-run ledger for `to` and every later step (so they re-run) ---
+  const stepsCleared = PIPELINE_STEPS.slice(toIdx);
+  await db.from('round_step_runs').delete().eq('round_id', roundId).in('step', stepsCleared);
+
+  // --- reset round state (only divide/distribute stamp state; pre-divide = closed,
+  //     everything else rests at podded until distribute re-runs) ---
+  const targetState = clearDivide ? 'closed' : 'podded';
+  const now = new Date().toISOString();
+  await db.from('rounds').update({ state: targetState, locked_at: null, updated_at: now }).eq('id', roundId);
+
+  await db.from('engine_audit').insert({
+    round_id: roundId, actor_id: actorId ?? null, action: 'rollback',
+    before: { state }, after: { state: targetState, to },
+  });
+  return { step: 'rollback', ran: true, flags: [], detail: { to, state: targetState, cleared: stepsCleared } };
+}
+
 export function createSupabaseStore(client?: SupabaseClient): EngineStore & DivisionStore {
   const db =
     client ??
