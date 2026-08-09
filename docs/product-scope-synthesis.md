@@ -42,6 +42,12 @@ surface area to phase in.
 - **Dueling:** **participant-vote** only for now (voters = the duel's participants /
   same division), no public voting — keeps it minor-safe.
 - Nothing already built changes; scope expands around it.
+- **Two separate products (LOCKED 2026-08-08):** the **Tournament School Portal** is
+  a standalone offering — sold, marketed, priced, and deployed **completely
+  separately** from the existing **Member Platform** (staff/member management app).
+  They may **integrate at an optional, opt-in level** (SSO, roster/belt sync) but
+  neither depends on the other. The Tournament Portal owns its own accounts, roster,
+  auth, and data (see `school-portal-map.md`).
 
 ## 1b. (superseded) Reconciliations table
 
