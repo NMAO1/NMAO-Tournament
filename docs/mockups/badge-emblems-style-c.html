@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO — Badge Emblems Style C (gaming × martial arts)</title>
+<style>
+  body{margin:0;background:#0b0b0d;color:#F5F0E8;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:26px 16px 60px}
+  h1{text-align:center;font-weight:600;font-size:20px;margin:0 0 2px;font-family:Georgia,serif}
+  .sub{color:#8f887c;font-size:12px;text-align:center;margin:0 0 16px}
+  .wrap{display:flex;flex-wrap:wrap;gap:20px 10px;justify-content:center;max-width:900px;margin:0 auto}
+  .cell{width:120px;text-align:center}
+  .nm{font-size:11px;color:#EDE6D8;margin-top:6px;line-height:1.2}.rr{font-size:9px;color:#8f887c}
+</style>
+</head>
+<body>
+<h1>NMAO Badge Emblems — Style C</h1>
+<p class="sub">gaming × martial arts · vibrant · meaningful · colored border (no spikes)</p>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+<linearGradient id="rimU" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#EEF1F4"/><stop offset=".55" stop-color="#C9CDD3"/><stop offset="1" stop-color="#8f959c"/></linearGradient>
+<linearGradient id="rimR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE488"/><stop offset=".55" stop-color="#E6B93F"/><stop offset="1" stop-color="#9C7A22"/></linearGradient>
+<linearGradient id="rimL" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F2F4F7"/><stop offset=".55" stop-color="#CDD2D9"/><stop offset="1" stop-color="#8A9099"/></linearGradient>
+<radialGradient id="scWarm" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#4a3512"/><stop offset="1" stop-color="#140d04"/></radialGradient>
+<radialGradient id="scRed" cx="50%" cy="46%" r="60%"><stop offset="0" stop-color="#5a1512"/><stop offset="1" stop-color="#180706"/></radialGradient>
+<radialGradient id="scTeal" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#0e4a56"/><stop offset="1" stop-color="#06171b"/></radialGradient>
+<linearGradient id="scSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#123a8f"/><stop offset="1" stop-color="#3f7fd6"/></linearGradient>
+<radialGradient id="scDark" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#2a2a34"/><stop offset="1" stop-color="#0c0c0f"/></radialGradient>
+<radialGradient id="scGold" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#FFE29A"/><stop offset="1" stop-color="#B98A22"/></radialGradient>
+<linearGradient id="fGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF0B0"/><stop offset="1" stop-color="#E6B93F"/></linearGradient>
+<linearGradient id="fAmber" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFD27A"/><stop offset="1" stop-color="#E0851E"/></linearGradient>
+<linearGradient id="fBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFE0FF"/><stop offset="1" stop-color="#1F5FCC"/></linearGradient>
+<linearGradient id="fPurple" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D3A0FF"/><stop offset="1" stop-color="#7A28C4"/></linearGradient>
+<linearGradient id="fPink" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB0DA"/><stop offset="1" stop-color="#E0219B"/></linearGradient>
+<radialGradient id="burst" cx="50%" cy="55%" r="55%"><stop offset="0" stop-color="#FFE07A"/><stop offset=".5" stop-color="#FF9E2A"/><stop offset="1" stop-color="#FF3B2E"/></radialGradient>
+<linearGradient id="fSpec" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF2E3B"/><stop offset=".5" stop-color="#A32BF7"/><stop offset="1" stop-color="#1F7BFF"/></linearGradient>
+<clipPath id="cD"><circle cx="50" cy="50" r="43"/></clipPath>
+</defs></svg>
+
+<div class="wrap" id="w"></div>
+<script>
+const GL='<path d="M26,32 A34,34 0 0,1 74,32" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="5" stroke-linecap="round"/>';
+function pin(rim,scene,icon){return '<svg width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="49" fill="url(#'+rim+')"/><circle cx="50" cy="50" r="43" fill="url(#'+scene+')"/><g clip-path="url(#cD)">'+icon+'</g>'+GL+'</svg>';}
+const IC={
+ fearless:'<g fill="#120a02" opacity=".5"><path d="M14,32 Q30,40 22,52 Q15,44 14,32Z"/><path d="M86,32 Q70,40 78,52 Q85,44 86,32Z"/><path d="M18,72 Q34,62 40,72 Q28,76 18,72Z"/><path d="M82,72 Q66,62 60,72 Q72,76 82,72Z"/></g><path d="M22,50 Q50,30 78,50 Q50,70 22,50 Z" fill="#F7C15A"/><circle cx="50" cy="50" r="15" fill="url(#fAmber)"/><circle cx="50" cy="50" r="15" fill="none" stroke="#8a5a0c" stroke-width="1"/><ellipse cx="50" cy="50" rx="4" ry="13" fill="#140a02"/><circle cx="45" cy="44" r="3" fill="#fff" opacity=".85"/><path d="M22,42 Q40,32 52,38" stroke="#120a02" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
+ spirit:'<path d="M22,50 Q50,31 78,50 Q50,69 22,50 Z" fill="#F7C15A"/><path d="M50,35 C59,44 59,53 53,59 C51,63 45,63 44,57 C43,61 40,55 43,51 C42,56 42,50 47,47 C48,51 51,47 50,41 C54,44 51,38 50,35 Z" fill="url(#burst)"/><ellipse cx="50" cy="53" rx="2.6" ry="7" fill="#3a0a02"/><circle cx="45" cy="45" r="2.4" fill="#fff" opacity=".8"/><path d="M22,42 Q40,32 52,38" stroke="#3a0a02" stroke-width="3.5" fill="none" stroke-linecap="round"/>',
+ undefeated:'<g fill="url(#fGold)" opacity=".45"><path d="M50,14 Q41,26 45,37 Q50,28 50,14Z"/><path d="M50,14 Q59,26 55,37 Q50,28 50,14Z"/></g><path d="M40,33 Q33,20 27,15 Q34,25 38,35 Z" fill="url(#fGold)"/><path d="M60,33 Q67,20 73,15 Q66,25 62,35 Z" fill="url(#fGold)"/><path d="M34,40 Q50,33 66,40 Q71,53 62,65 Q56,73 50,73 Q44,73 38,65 Q29,53 34,40 Z" fill="url(#fGold)" stroke="#7a5a10" stroke-width="1"/><path d="M39,46 l8,2.5 l-1.5,4.5 l-7.5,-2.5 Z" fill="#B10D1E"/><path d="M61,46 l-8,2.5 l1.5,4.5 l7.5,-2.5 Z" fill="#B10D1E"/><circle cx="46" cy="61" r="1.6" fill="#7a5a10"/><circle cx="54" cy="61" r="1.6" fill="#7a5a10"/><path d="M43,67 Q50,73 57,67" stroke="#7a5a10" stroke-width="1.6" fill="none"/><path d="M46,67 l1.4,4 l1.4,-4Z" fill="#fff"/><path d="M54,67 l-1.4,4 l-1.4,-4Z" fill="#fff"/><path d="M34,53 Q22,55 17,63" stroke="url(#fGold)" stroke-width="1.6" fill="none" stroke-linecap="round"/><path d="M66,53 Q78,55 83,63" stroke="url(#fGold)" stroke-width="1.6" fill="none" stroke-linecap="round"/>',
+ openMind:'<path d="M14,64 Q50,58 86,64 L86,86 L14,86 Z" fill="#12586a" opacity=".55"/><path d="M24,67 Q34,64 44,67 M56,67 Q66,64 76,67" stroke="#8fe8f0" stroke-width="1.3" fill="none" opacity=".5"/><g fill="url(#fPink)"><path d="M50,62 C40,54 36,42 40,32 C48,40 52,52 50,62Z"/><path d="M50,62 C60,54 64,42 60,32 C52,40 48,52 50,62Z"/><path d="M50,62 C36,58 26,48 26,38 C38,42 46,52 50,62Z"/><path d="M50,62 C64,58 74,48 74,38 C62,42 54,52 50,62Z"/></g><g fill="url(#fPurple)"><path d="M50,62 C44,54 42,44 46,36 C50,44 52,54 50,62Z"/><path d="M50,62 C36,60 30,52 30,44 C40,48 46,54 50,62Z"/><path d="M50,62 C64,60 70,52 70,44 C60,48 54,54 50,62Z"/></g><path d="M50,62 C47,54 47,46 50,40 C53,46 53,54 50,62Z" fill="#FFCDEA"/><circle cx="50" cy="55" r="3.2" fill="url(#fGold)"/>',
+ traditionalist:'<circle cx="50" cy="46" r="26" fill="none" stroke="#E6B93F" stroke-width="2.5" stroke-dasharray="118 34" opacity=".45"/><circle cx="50" cy="32" r="6.5" fill="url(#fGold)"/><path d="M41,39 Q50,35 59,39 L61,55 Q50,51 39,55 Z" fill="url(#fGold)"/><path d="M33,67 Q50,58 67,67 Q58,73 50,71 Q42,73 33,67 Z" fill="url(#fGold)"/><path d="M42,52 Q35,60 39,67" stroke="url(#fGold)" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M58,52 Q65,60 61,67" stroke="url(#fGold)" stroke-width="4" fill="none" stroke-linecap="round"/>',
+ flow:'<path d="M12,66 C22,58 40,58 52,50 C66,42 78,44 88,52 L88,84 L12,84 Z" fill="#1f5fcc"/><path d="M12,64 C16,44 34,28 56,32 C48,28 40,34 40,44 C45,40 53,42 53,49 C46,46 42,53 46,59 C39,54 31,58 29,67 C23,60 17,62 12,64 Z" fill="url(#fBlue)"/><g fill="#fff"><circle cx="41" cy="40" r="3"/><circle cx="34" cy="46" r="2.5"/><circle cx="47" cy="42" r="2.3"/><circle cx="28" cy="57" r="2.1"/></g><g fill="#fff" opacity=".8"><circle cx="58" cy="30" r="1.4"/><circle cx="64" cy="34" r="1.2"/><circle cx="52" cy="27" r="1.1"/></g>',
+ goldMedallion:'<g stroke="#F2F4F7" stroke-width="1.4" stroke-linecap="round" opacity=".7"><line x1="50" y1="22" x2="50" y2="18"/><line x1="70" y1="30" x2="73" y2="27"/><line x1="78" y1="50" x2="82" y2="50"/><line x1="30" y1="30" x2="27" y2="27"/><line x1="22" y1="50" x2="18" y2="50"/></g><path d="M32,66 C20,50 28,30 48,29 C66,28 76,42 67,55 C61,64 47,64 45,54" fill="none" stroke="url(#fSpec)" stroke-width="7.5" stroke-linecap="round"/><g fill="#7A28C4"><path d="M40,30 l-3,-5 l5,1 Z"/><path d="M52,28 l0,-5 l4,3 Z"/><path d="M63,36 l4,-3 l0,5 Z"/></g><circle cx="48" cy="29" r="5.5" fill="url(#fSpec)" stroke="#F2F4F7" stroke-width="1"/><circle cx="46" cy="28" r="1.4" fill="#fff"/><circle cx="58" cy="60" r="3" fill="url(#fGold)" stroke="#F2F4F7" stroke-width=".8"/>',
+ precision:'<g fill="none" stroke="#fff" stroke-width="3"><circle cx="50" cy="46" r="15"/><circle cx="50" cy="46" r="8"/></g><circle cx="50" cy="46" r="3.4" fill="#FF3B47"/><line x1="30" y1="64" x2="50" y2="46" stroke="#FFE07A" stroke-width="3.2" stroke-linecap="round"/><path d="M50,46 l-6.5,1 l2,-6.5 z" fill="#FFE07A"/>'
+};
+const B=[['Fearless','uncommon','rimU','scWarm','fearless'],['Spirit','rare','rimR','scRed','spirit'],['Undefeated','rare','rimR','scRed','undefeated'],['Open Mind','uncommon','rimU','scTeal','openMind'],['Traditionalist','rare','rimR','scWarm','traditionalist'],['Flow','rare','rimR','scSky','flow'],['Gold Medallion','legendary','rimL','scGold','goldMedallion'],['Precision','rare','rimR','scDark','precision']];
+document.getElementById('w').innerHTML=B.map(b=>`<div class="cell">${pin(b[2],b[3],IC[b[4]])}<div class="nm">${b[0]}</div><div class="rr">${b[1]}</div></div>`).join('');
+</script>
+</body>
+</html>
