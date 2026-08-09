@@ -44,9 +44,27 @@ for conflict exclusion.
 ### 3. History
 Past scored videos; reopened / incomplete-pod flags; can revisit read-only.
 
-### 4. Profile
-Name, **school** (drives conflict exclusion), status, background-check state,
-notification prefs.
+### 4. Profile & onboarding
+- **Bio & credentials** (builds trust in the pool): **style(s) studied**, **years
+  of training**, and **notable mentions** — free-form credentials like "Taught for
+  25 years," "Former forms champion (2011)," rank/titles. Shown on the judge's
+  record (and an optional public "Our Judges" page for credibility).
+- **Integrity Creed** — a short code the judge **affirms and signs at onboarding**
+  and can revisit anytime: impartiality, honest scoring, conflict disclosure,
+  confidentiality, upholding the art. Gates judging until signed; ties to the COI
+  regime + code of conduct.
+- **Payout (paid role):** connect a bank via **Stripe Connect** to receive judging
+  fees. Bank details go straight to Stripe's onboarding — **never entered into or
+  stored by NMAO**. Shows earnings this season + next payout date.
+- **Conflicts of interest** — own-school auto-excluded; declare relatives, recent
+  students (24 mo), or financial ties.
+- Name, school, background-check state, notification prefs.
+
+**The NMAO Judge's Creed** (draft): *I judge with impartiality and fairness, free of
+bias or favor. I score only what I see, honoring each competitor's effort. I
+disclose any conflict of interest and recuse when in doubt. I hold performances and
+scores in confidence. I uphold the integrity of the tournament and the spirit of the
+martial arts.*
 
 ## Judging model (locked)
 
@@ -69,6 +87,10 @@ The rule book's older 3-criterion scale is superseded.
 Reads `judge_assignments` (my queue, realtime), `entries` (signed dual-angle video
 URLs), `criteria` + `rubric_weights` (the rubric). Writes `submission_scores` +
 `judge_assignments.score`. Judging progress streams to Mission Control.
+
+New `judges` fields: `styles` (text[]), `years_training` (int), `notable_mentions`
+(text), `creed_accepted_at` (timestamptz — gates judging), `stripe_connect_account_id`
+(payout; NMAO never stores raw bank data). `years_experience` already exists.
 
 ## States
 
