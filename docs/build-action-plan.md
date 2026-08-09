@@ -22,31 +22,43 @@ Last updated: 2026-08-08
 - **COPPA is a hard gate, everywhere** (guardian consent, private video, no public
   minor social, guardian controls).
 
-## 1. Decisions to lock before Phase 1 (recommendation baked in)
+## 1. Decisions — LOCKED 2026-08-08
 
-| # | Decision | Options | **Recommendation** | Blocks |
-|---|---|---|---|---|
-| D1 | Frontend platform | Next.js PWA (all) vs RN (competitor) | **One Next.js App-Router codebase for all surfaces.** Reveal/Imprint animations are achievable on web (Canvas/WebGL + Framer Motion). Only fork to RN post-launch if the ceremony demands native. | everything |
-| D2 | Dueling voting (minors) | community vote vs participant/judge-decided | **v1 = participant/judge-decided + guardian-gated; nationwide community voting only for adult/opt-in divisions, post legal review.** Resolves the biggest cross-doc contradiction. | dueling (Phase 2) |
-| D3 | Video hosting | Supabase Storage vs Vimeo | **Supabase Storage + signed URLs for v1** (one stack, RLS-native). Revisit Vimeo only if transcoding/bandwidth bites. | Compete + Judge |
-| D4 | Two-round advanced | v1 vs Phase 2 | **Phase 2.** Ship the single-round seasonal flow (built) first. | judge/competitor depth |
-| D5 | Points ledger | now vs later | **Phase 1** — add a `season_points` ledger + lifetime `total_points`; standings/prizes need it. | leaderboards, profile |
-| D6 | **Auth method** | magic-link-primary (docs) vs password+reset | **Password-primary + robust reset (implicit flow); admin-provisioned initial passwords.** We just learned the hard way that one-time email links get eaten by scanners + break in mobile webviews. Do NOT make magic links the primary path for any role. | all auth |
-| D7 | Badge catalog | as-is vs cleaned | **Dedup + renumber + assign stable `code`s before seeding `badges`.** (Duplicate #63/64/66/67/68; "~90" vs "~70".) | badges |
+| # | Decision | **Locked answer** | Ripples into |
+|---|---|---|---|
+| D1 | Build approach | **Hybrid: a NATIVE cross-platform app for the COMPETITOR experience (recommend React Native + Expo, Reanimated/Skia + haptics for the Reveal / Imprint fill / badge ignite) + a Next.js WEB app for Mission Control, School Portal, Judge, and public results.** | whole architecture |
+| D2 | Dueling voting | **Full CLOSED community vote** — verified competitors from verified schools only — gated by the rails: verified-only · explicit **guardian consent for peer voting** · **NO free-text** (A/B + preset phrases only) · anonymous tallies · no discovery/DMs · guardian off-switch. **Consent wording + optional age-tiering → legal review before it ships to minors.** | dueling (Phase 2) + consent |
+| D3 | Video hosting | **Supabase Storage + signed URLs for v1** (clips are short 30s–2min, ~10–30MB → stream fine; tightest privacy + instant guardian-delete). **Mux** = later premium-streaming upgrade if scale demands (better fit than Vimeo for a kids' app). | Compete + Judge |
+| D4 | Two-round advanced flow | **Phase 2** — ship the single-round seasonal flow (built) first. | engine depth |
+| D5 | Rating + points | **Keep both**; add a `season_points` ledger + lifetime `total_points` in **Phase 1**. | leaderboards, profile |
+| D6 | Auth | **Password + robust reset; admin-provisioned initial passwords. NOT magic-link-primary** (one-time email links get eaten by scanners + break in mobile webviews — we lived it). | all auth |
+| D7 | Badge catalog | **Dedup + renumber + stable `code`s before seeding `badges`** (duplicate #63/64/66/67/68; "~90" vs "~70"). | badges |
 
-## 2. Architecture & repo layout
+## 2. Architecture & repo layout (Hybrid, per D1)
 
-- **One Next.js (App Router) app**, route-grouped by audience: `(public)` (SSR/SEO),
-  `(control)` staff, `(judge)`, `(me)` competitor/guardian, `(school)` portal.
-  Tailwind + shadcn/ui, brand tokens from `brand-tokens.md`, `@supabase/ssr`,
-  TanStack Query + Supabase Realtime, Recharts. Deploy on **Vercel**.
-- **Shared packages:** `design-system` (tokens + Imprint/Badge/Reveal primitives),
-  `supabase` (typed client + generated types), and the existing **engine cores**
-  (plain TS, already shared by the edge functions).
-- **Domain:** its own host (e.g. `tournament.nmao.us` / `nmao.us`), **separate**
-  from the member platform's `app.nmao.us` (two products, locked).
-- **Secrets:** service key only in edge functions; the browser calls gated EFs with
-  the **staff/user session token**, never a secret.
+Two front-ends over one Supabase backend:
+
+- **Competitor app — NATIVE, cross-platform (recommend React Native + Expo).**
+  iPhone + Android from one codebase; **Reanimated + Skia + haptics** carry the
+  crown-jewel moments (Reveal ceremony, 9-segment Imprint fill, badge ignite,
+  particle bursts). Ships to the App Store + Play Store. This is where the premium
+  feel lives — the reason we went hybrid.
+- **Web app — Next.js (App Router)** for the "desk"/utility surfaces: `(control)`
+  Mission Control, `(school)` School Portal, `(judge)` Judge app (mobile-first web
+  PWA — judges are adults, a tool not a showcase), `(public)` SSR/SEO results.
+  Tailwind + shadcn/ui, `@supabase/ssr`, TanStack Query + Realtime, Recharts;
+  deploy on **Vercel**.
+- **Shared across both:** brand **design tokens** (native + web match), the typed
+  **Supabase client/types**, and the existing **engine cores** (plain TS).
+- **Domain:** its own host (e.g. `tournament.nmao.us`), **separate** from the member
+  platform's `app.nmao.us` (two products, locked).
+- **Secrets:** service key only in edge functions; both clients use the anon key +
+  RLS + gated EFs — never a secret in the client.
+
+*(Sub-choice to confirm at M3: **React Native + Expo** (recommended — one codebase,
+both stores, best animation libs) vs. two fully-native apps (SwiftUI + Jetpack
+Compose — highest ceiling, ~2× the work). Your existing SwiftUI apps mean native
+iOS is in reach either way.)*
 
 ## 3. The phased plan
 
@@ -111,7 +123,9 @@ live, badges award, journal works.
 
 ### Phase 2 — depth & governance
 Two-round advanced flow (**engine addition**: `round_stage` on pods, qualify→final),
-**Dueling** (minor-safe per D2: `duels/duel_votes/duel_ratings/voter_stats`),
+**Dueling** (full closed community vote per D2 + its safety rails; needs the
+guardian **peer-voting consent** clause legally reviewed before it ships to minors;
+tables `duels/duel_votes/duel_ratings/voter_stats`),
 **In-house tournaments** (`school_tournaments/*`), **protests/appeals** (ride the
 rollback path + a `protests` table), regional + school leaderboards, **points
 ledger + season reset**, merch shops.

@@ -12,8 +12,8 @@
   .wrap{display:flex;flex-wrap:wrap;gap:18px 8px;justify-content:center;max-width:900px;margin:0 auto}
   .cell{width:104px;text-align:center}
   .pin{width:84px;height:84px;border-radius:50%;margin:0 auto;padding:3px}
-  .disc{width:100%;height:100%;border-radius:50%;background:#0c0c0f;display:flex;align-items:center;justify-content:center}
-  .disc svg{width:84%;height:84%}
+  .disc{width:100%;height:100%;border-radius:50%;background:#0c0c0f;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .disc svg{width:95%;height:95%}
   .r-common{background:linear-gradient(155deg,#E8C79A,#B87333 55%,#6f4318);color:#E8C79A}
   .r-uncommon{background:linear-gradient(155deg,#EEF1F4,#C9CDD3 55%,#8f959c);color:#EDF0F4}
   .r-rare{background:linear-gradient(155deg,#FFE488,#E6B93F 55%,#9C7A22);color:#FFE488}
@@ -56,7 +56,7 @@ const B1=[
  ['On the Mat','rare','onTheMat'],['Nine Bows','rare','nineBows'],['Back on the Mat','uncommon','backOnMat'],['Early Bird','uncommon','earlyBird'],['Deadline Warrior','uncommon','deadline'],['Iron Will','rare','ironWill'],['Perfect Attendance','rare','attendance'],
  ['Rising Star','uncommon','risingStar'],['New Heights','uncommon','newHeights'],['Steady Climb','rare','steadyClimb'],['Comeback','uncommon','comeback'],['Breakthrough','rare','breakthrough'],['Rising Floor','uncommon','risingFloor'],['Full Circle','epic','fullCircle']
 ];
-document.getElementById('b1').innerHTML=B1.map(b=>`<div class="cell"><div class="pin r-${b[1]}"><div class="disc"><svg viewBox="0 0 60 60">${EM[b[2]]}</svg></div></div><div class="nm">${b[0]}</div><div class="rr">${b[1]}</div></div>`).join('');
+document.getElementById('b1').innerHTML=B1.map(b=>`<div class="cell"><div class="pin r-${b[1]}"><div class="disc"><svg viewBox="9 9 42 42">${EM[b[2]]}</svg></div></div><div class="nm">${b[0]}</div><div class="rr">${b[1]}</div></div>`).join('');
 </script>
 </body>
 </html>
