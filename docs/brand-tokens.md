@@ -85,15 +85,17 @@ global — "a Season 3 Ruby medallion" means the same for everyone. Rendered as 
 | 3 | Ruby | `#FF7A82` | `#FF2E3B` | `#B10D1E` |
 | 4 | Emerald | `#7DE0C0` | `#2BC79A` | `#0E7A5C` |
 | 5 | Coral | `#FF9E7A` | `#FF6A2B` | `#C43C0C` |
-| 6 | Topaz | `#FFDA7A` | `#F2B520` | `#B57E08` |
+| 6 | Onyx | `#6B6B7A` | `#1C1C24` | `#08080B` |
 | 7 | Rose | `#FF9DD0` | `#F0369B` | `#B01268` |
 | 8 | Turquoise | `#8DE8F0` | `#22C7D6` | `#0B7E8C` |
 | 9 | Peridot | `#D6F07A` | `#A7E22B` | `#6E9612` |
 | 10 | Platinum | `#F2F4F7` | `#CDD2D9` | `#8A9099` |
 
-Note: Season 6 (Topaz) sits nearest the gold rim — the physical medal that year may
-want a cooler/silver rim or a brighter amber enamel for contrast. After year 10 the
-rotation can extend (Onyx, Garnet, Aquamarine, Citrine…) or restart with a marker.
+Note: Season 6 (Onyx) is a near-black jewel — render it with a thin **iridescent /
+oil-slick sheen** (a faint spectrum rim + highlight) so it reads at small
+constellation size and doesn't look empty; physically, a polished-black enamel with
+a subtle rainbow sheen. After year 10 the rotation can extend (Garnet, Aquamarine,
+Citrine, Opal…) or restart with a marker.
 
 ## Reconcile with the frontend handoff
 
