@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO — Badge Emblems Style C (refined heroes)</title>
+<style>
+  body{margin:0;background:#0b0b0d;color:#F5F0E8;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:26px 16px 60px}
+  h1{text-align:center;font-weight:600;font-size:20px;margin:0 0 2px;font-family:Georgia,serif}
+  .sub{color:#8f887c;font-size:12px;text-align:center;margin:0 0 20px}
+  .wrap{display:flex;flex-wrap:wrap;gap:26px 14px;justify-content:center;max-width:920px;margin:0 auto}
+  .cell{width:140px;text-align:center}
+  .nm{font-size:12px;color:#EDE6D8;margin-top:8px;line-height:1.2}.rr{font-size:9px;color:#8f887c;text-transform:uppercase;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<h1>NMAO Badge Emblems — Style C, refined</h1>
+<p class="sub">cleaner geometry · dimensional shading · rim light · vignette</p>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+<!-- rarity rims -->
+<linearGradient id="rimBase" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3226"/><stop offset="1" stop-color="#0d0b07"/></linearGradient>
+<linearGradient id="rimU" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6F9FC"/><stop offset=".45" stop-color="#C9CED5"/><stop offset=".7" stop-color="#9AA0A8"/><stop offset="1" stop-color="#6E747C"/></linearGradient>
+<linearGradient id="rimR" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF3B0"/><stop offset=".4" stop-color="#F0C94E"/><stop offset=".7" stop-color="#C89A2C"/><stop offset="1" stop-color="#8C6A18"/></linearGradient>
+<linearGradient id="rimL" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FBFDFF"/><stop offset=".4" stop-color="#D6DBE2"/><stop offset=".7" stop-color="#AAB1BA"/><stop offset="1" stop-color="#7C838C"/></linearGradient>
+<linearGradient id="rimHi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset=".5" stop-color="#ffffff" stop-opacity="0"/><stop offset="1" stop-color="#ffffff" stop-opacity=".15"/></linearGradient>
+<!-- scenes -->
+<radialGradient id="scWarm" cx="50%" cy="40%" r="65%"><stop offset="0" stop-color="#6a4a16"/><stop offset=".6" stop-color="#3a2810"/><stop offset="1" stop-color="#120c04"/></radialGradient>
+<radialGradient id="scRed" cx="50%" cy="42%" r="65%"><stop offset="0" stop-color="#7a1c17"/><stop offset=".6" stop-color="#40100d"/><stop offset="1" stop-color="#150605"/></radialGradient>
+<radialGradient id="scTeal" cx="50%" cy="38%" r="68%"><stop offset="0" stop-color="#12707f"/><stop offset=".55" stop-color="#0a3d47"/><stop offset="1" stop-color="#05161a"/></radialGradient>
+<linearGradient id="scSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e2f6e"/><stop offset=".5" stop-color="#1c56b0"/><stop offset="1" stop-color="#4d90e0"/></linearGradient>
+<radialGradient id="scNight" cx="50%" cy="40%" r="65%"><stop offset="0" stop-color="#141826"/><stop offset="1" stop-color="#05060a"/></radialGradient>
+<radialGradient id="scGoldF" cx="50%" cy="40%" r="66%"><stop offset="0" stop-color="#1a1206"/><stop offset="1" stop-color="#050301"/></radialGradient>
+<!-- vignette overlay -->
+<radialGradient id="vig" cx="50%" cy="42%" r="60%"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset=".7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient>
+<!-- organic fills -->
+<radialGradient id="iris" cx="45%" cy="40%" r="65%"><stop offset="0" stop-color="#FFE39A"/><stop offset=".45" stop-color="#F0A62E"/><stop offset=".85" stop-color="#B45E10"/><stop offset="1" stop-color="#6E3606"/></radialGradient>
+<linearGradient id="sclera" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBD98A"/><stop offset="1" stop-color="#D9962E"/></linearGradient>
+<radialGradient id="flame" cx="50%" cy="72%" r="70%"><stop offset="0" stop-color="#FFF3B0"/><stop offset=".35" stop-color="#FFC33B"/><stop offset=".7" stop-color="#FF7A1E"/><stop offset="1" stop-color="#E23417"/></radialGradient>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFF4C2"/><stop offset=".45" stop-color="#F1C64C"/><stop offset="1" stop-color="#B07E1C"/></linearGradient>
+<linearGradient id="goldD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4CE5E"/><stop offset="1" stop-color="#8A5E12"/></linearGradient>
+<linearGradient id="petalO" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFC1E4"/><stop offset="1" stop-color="#DB1E8F"/></linearGradient>
+<linearGradient id="petalM" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E0A6FF"/><stop offset="1" stop-color="#7B23C6"/></linearGradient>
+<linearGradient id="petalI" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE1F1"/><stop offset="1" stop-color="#FF97C9"/></linearGradient>
+<linearGradient id="waveB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCEEFF"/><stop offset=".5" stop-color="#3E86E0"/><stop offset="1" stop-color="#154BA0"/></linearGradient>
+<linearGradient id="waveD" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2C68C4"/><stop offset="1" stop-color="#0C2C63"/></linearGradient>
+<clipPath id="cD"><circle cx="50" cy="50" r="43"/></clipPath>
+</defs></svg>
+
+<div class="wrap" id="w"></div>
+<script>
+const GL='<path d="M28,30 A32,32 0 0,1 72,30" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="4" stroke-linecap="round"/>';
+function pin(rim,scene,icon){return '<svg width="120" height="120" viewBox="0 0 100 100">'
+ +'<circle cx="50" cy="50" r="49.5" fill="url(#rimBase)"/>'
+ +'<circle cx="50" cy="50" r="49" fill="url(#'+rim+')"/>'
+ +'<circle cx="50" cy="50" r="44.5" fill="none" stroke="url(#rimHi)" stroke-width="1.1"/>'
+ +'<circle cx="50" cy="50" r="44" fill="#0b0906"/>'
+ +'<circle cx="50" cy="50" r="43" fill="url(#'+scene+')"/>'
+ +'<g clip-path="url(#cD)">'+icon+'</g>'
+ +'<circle cx="50" cy="50" r="43" fill="url(#vig)"/>'
+ +GL+'</svg>';}
+
+// shared eye base (amber tiger eye) — brow, lids, sclera, stripes
+const EYE_BASE=
+ '<g fill="#0f0803" opacity=".55">'
+ +'<path d="M12,30 C24,36 26,44 22,52 C18,44 12,40 12,30 Z"/>'
+ +'<path d="M88,30 C76,36 74,44 78,52 C82,44 88,40 88,30 Z"/>'
+ +'<path d="M14,72 C26,64 36,66 42,73 C32,74 22,76 14,72 Z"/>'
+ +'<path d="M86,72 C74,64 64,66 58,73 C68,74 78,76 86,72 Z"/></g>'
+ +'<path d="M20,50 C34,32 66,32 80,50 C66,68 34,68 20,50 Z" fill="url(#sclera)"/>'
+ +'<path d="M20,50 C34,32 66,32 80,50" fill="none" stroke="#0f0803" stroke-width="2.4" stroke-linecap="round"/>'
+ +'<path d="M24,40 C36,31 64,31 76,40" fill="none" stroke="#120a02" stroke-width="4" stroke-linecap="round" opacity=".9"/>';
+
+const IC={
+ // FEARLESS — fierce amber tiger eye
+ fearless: EYE_BASE
+  +'<circle cx="50" cy="50" r="15.5" fill="url(#iris)"/>'
+  +'<circle cx="50" cy="50" r="15.5" fill="none" stroke="#5c2c04" stroke-width="1.1"/>'
+  +'<g stroke="#8a4a0a" stroke-width=".6" opacity=".5"><line x1="50" y1="36" x2="50" y2="64"/><line x1="36" y1="50" x2="64" y2="50"/><line x1="40" y1="40" x2="60" y2="60"/><line x1="60" y1="40" x2="40" y2="60"/></g>'
+  +'<ellipse cx="50" cy="50" rx="4" ry="13.5" fill="#100702"/>'
+  +'<circle cx="45" cy="44" r="3.2" fill="#fff" opacity=".9"/><circle cx="54" cy="55" r="1.4" fill="#fff" opacity=".5"/>',
+ // SPIRIT — fire in the tiger eye
+ spirit: EYE_BASE
+  +'<circle cx="50" cy="50" r="15.5" fill="#3a1405"/>'
+  +'<path d="M50,36 C57,43 58,50 54,57 C52,61 47,61 46,56 C45,60 42,55 45,50 C43,55 44,48 49,45 C49,50 52,46 51,40 C55,43 52,38 50,36 Z" fill="url(#flame)"/>'
+  +'<path d="M50,44 C53,48 53,53 50,57 C48,53 48,48 50,44 Z" fill="#FFE79A"/>'
+  +'<ellipse cx="50" cy="52" rx="2.4" ry="6" fill="#2a0a02"/>'
+  +'<circle cx="45" cy="43" r="2.6" fill="#fff" opacity=".85"/>',
+ // UNDEFEATED — golden dragon mask
+ undefeated:
+  '<g fill="url(#gold)" opacity=".4"><path d="M50,12 C44,22 46,32 50,38 C54,32 56,22 50,12 Z"/><path d="M26,30 C30,22 40,24 44,30 C38,30 30,32 26,30 Z"/><path d="M74,30 C70,22 60,24 56,30 C62,30 70,32 74,30 Z"/></g>'
+  +'<path d="M39,32 C33,22 28,17 24,13 C27,22 31,28 36,35 Z" fill="url(#gold)" stroke="#6e4e10" stroke-width=".8"/>'
+  +'<path d="M61,32 C67,22 72,17 76,13 C73,22 69,28 64,35 Z" fill="url(#gold)" stroke="#6e4e10" stroke-width=".8"/>'
+  +'<path d="M33,40 C42,33 58,33 67,40 C72,50 69,60 62,67 C57,72 53,74 50,74 C47,74 43,72 38,67 C31,60 28,50 33,40 Z" fill="url(#gold)" stroke="#6e4e10" stroke-width="1"/>'
+  +'<path d="M36,44 C41,41 46,42 49,45 C45,45 40,46 36,49 Z" fill="#7a5410"/>'
+  +'<path d="M64,44 C59,41 54,42 51,45 C55,45 60,46 64,49 Z" fill="#7a5410"/>'
+  +'<path d="M39,45 l8,2 l-1,4.5 l-7.5,-2 Z" fill="#C21326"/><path d="M61,45 l-8,2 l1,4.5 l7.5,-2 Z" fill="#C21326"/>'
+  +'<circle cx="42.5" cy="47" r="1.2" fill="#2a0603"/><circle cx="57.5" cy="47" r="1.2" fill="#2a0603"/>'
+  +'<path d="M44,58 C47,56 53,56 56,58 C53,55 47,55 44,58 Z" fill="#6e4e10"/>'
+  +'<circle cx="46" cy="61" r="1.5" fill="#6e4e10"/><circle cx="54" cy="61" r="1.5" fill="#6e4e10"/>'
+  +'<path d="M42,66 C46,71 54,71 58,66" fill="none" stroke="#5a3e0c" stroke-width="1.6"/>'
+  +'<path d="M45,66 l1.4,4.5 l1.6,-4.2 Z" fill="#fff"/><path d="M55,66 l-1.4,4.5 l-1.6,-4.2 Z" fill="#fff"/>'
+  +'<path d="M33,52 C24,54 19,58 16,64" fill="none" stroke="url(#goldD)" stroke-width="1.6" stroke-linecap="round"/>'
+  +'<path d="M67,52 C76,54 81,58 84,64" fill="none" stroke="url(#goldD)" stroke-width="1.6" stroke-linecap="round"/>',
+ // OPEN MIND — layered colorful lotus
+ openMind:
+  '<path d="M12,63 C30,57 70,57 88,63 L88,88 L12,88 Z" fill="#0c4a58"/>'
+  +'<g stroke="#7fe4ef" stroke-width="1.2" fill="none" opacity=".55"><path d="M22,67 C30,64 38,64 46,67"/><path d="M54,67 C62,64 70,64 78,67"/></g>'
+  +'<g fill="url(#petalO)" stroke="#a01468" stroke-width=".5"><path d="M50,62 C37,58 26,47 25,35 C39,40 48,51 50,62 Z"/><path d="M50,62 C63,58 74,47 75,35 C61,40 52,51 50,62 Z"/></g>'
+  +'<g fill="url(#petalM)" stroke="#5a1795" stroke-width=".5"><path d="M50,62 C40,57 32,48 31,38 C42,43 48,52 50,62 Z"/><path d="M50,62 C60,57 68,48 69,38 C58,43 52,52 50,62 Z"/><path d="M50,62 C46,53 45,42 49,32 C53,42 54,53 50,62 Z"/></g>'
+  +'<g fill="url(#petalI)" stroke="#e77bb0" stroke-width=".4"><path d="M50,62 C45,56 43,47 46,39 C50,46 52,55 50,62 Z"/><path d="M50,62 C55,56 57,47 54,39 C50,46 48,55 50,62 Z"/></g>'
+  +'<g fill="url(#gold)"><circle cx="50" cy="54" r="2.4"/><circle cx="46" cy="56" r="1.5"/><circle cx="54" cy="56" r="1.5"/><circle cx="50" cy="58" r="1.4"/></g>',
+ // TRADITIONALIST — seated meditator in ensō
+ traditionalist:
+  '<path d="M50,20 A26,26 0 1 1 40,22" fill="none" stroke="url(#goldD)" stroke-width="3" stroke-linecap="round" opacity=".55"/>'
+  +'<circle cx="50" cy="30" r="7" fill="url(#gold)"/>'
+  +'<path d="M39,40 C43,35 57,35 61,40 C63,47 62,53 60,57 C53,53 47,53 40,57 C38,53 37,47 39,40 Z" fill="url(#gold)"/>'
+  +'<path d="M31,68 C38,60 62,60 69,68 C61,73 54,71 50,70 C46,71 39,73 31,68 Z" fill="url(#gold)"/>'
+  +'<path d="M40,50 C34,57 36,64 42,68" fill="none" stroke="url(#goldD)" stroke-width="4.5" stroke-linecap="round"/>'
+  +'<path d="M60,50 C66,57 64,64 58,68" fill="none" stroke="url(#goldD)" stroke-width="4.5" stroke-linecap="round"/>'
+  +'<circle cx="50" cy="64" r="2.4" fill="#7a5410"/>',
+ // FLOW — vibrant tsunami
+ flow:
+  '<path d="M10,66 C24,58 42,58 54,50 C68,41 80,44 90,53 L90,86 L10,86 Z" fill="url(#waveD)"/>'
+  +'<path d="M10,64 C14,42 34,26 58,31 C49,27 40,33 40,44 C46,39 55,41 55,49 C47,46 42,54 47,60 C39,55 30,59 28,68 C22,60 15,62 10,64 Z" fill="url(#waveB)"/>'
+  +'<path d="M40,44 C46,39 55,41 55,49 C50,46 45,48 42,52 C43,47 42,45 40,44 Z" fill="#fff" opacity=".7"/>'
+  +'<g fill="#fff"><path d="M41,38 C44,37 47,39 46,42 C44,40 42,40 41,38 Z"/><path d="M34,44 C37,43 39,45 38,48 C36,46 35,46 34,44 Z"/><path d="M28,52 C31,51 33,53 32,56 C30,54 29,54 28,52 Z"/></g>'
+  +'<g fill="#fff" opacity=".85"><circle cx="58" cy="29" r="1.6"/><circle cx="64" cy="33" r="1.3"/><circle cx="52" cy="26" r="1.2"/><circle cx="69" cy="30" r="1"/></g>',
+ // GOLD MEDALLION — coiled NMAO dragon (gold on dark), platinum rim
+ goldMedallion:
+  '<circle cx="50" cy="50" r="30" fill="none" stroke="#0a0906" stroke-width="1"/>'
+  +'<path d="M50,22 A28,28 0 1 1 33,30" fill="none" stroke="url(#gold)" stroke-width="8.5" stroke-linecap="round"/>'
+  +'<path d="M50,22 A28,28 0 1 1 33,30" fill="none" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".35"/>'
+  // back spikes along the coil
+  +'<g fill="url(#goldD)"><path d="M50,14 l-3.5,-6 l6,1.5 Z"/><path d="M69,25 l1,-6.5 l4.5,4 Z"/><path d="M78,50 l6,-1 l-4,5 Z" opacity=".9"/><path d="M69,74 l4.5,4.5 l-6.5,.5 Z" opacity=".85"/></g>'
+  // dragon head (top), facing inward
+  +'<path d="M50,13 C58,13 62,19 61,26 C60,31 54,32 51,29 C54,26 51,22 47,24 C48,19 45,15 50,13 Z" fill="url(#gold)" stroke="#6e4e10" stroke-width=".7"/>'
+  +'<path d="M50,13 C49,7 45,4 41,3 C45,7 46,11 47,15 Z" fill="url(#gold)"/>'
+  +'<circle cx="55" cy="21" r="1.5" fill="#2a1c04"/>'
+  +'<path d="M61,26 C68,28 71,33 71,39" fill="none" stroke="url(#goldD)" stroke-width="1.3" stroke-linecap="round"/>'
+  // flame tail (near the gap, lower-left)
+  +'<path d="M33,30 C25,25 23,17 26,9 C28,17 34,20 39,20 C33,24 33,31 38,34 C31,34 30,28 33,30 Z" fill="url(#gold)" opacity=".95"/>'
+  // center accent pearl
+  +'<circle cx="50" cy="50" r="4.5" fill="url(#gold)" stroke="#6e4e10" stroke-width=".6"/><circle cx="48.5" cy="48.5" r="1.4" fill="#fff" opacity=".8"/>'
+};
+
+const B=[
+ ['Fearless','uncommon','rimU','scWarm','fearless'],
+ ['Spirit','rare','rimR','scRed','spirit'],
+ ['Undefeated','rare','rimR','scRed','undefeated'],
+ ['Open Mind','uncommon','rimU','scTeal','openMind'],
+ ['Traditionalist','rare','rimR','scWarm','traditionalist'],
+ ['Flow','rare','rimR','scSky','flow'],
+ ['Gold Medallion','legendary','rimL','scGoldF','goldMedallion']
+];
+document.getElementById('w').innerHTML=B.map(b=>`<div class="cell">${pin(b[2],b[3],IC[b[4]])}<div class="nm">${b[0]}</div><div class="rr">${b[1]}</div></div>`).join('');
+</script>
+</body>
+</html>
