@@ -34,7 +34,7 @@ Last updated: 2026-08-08
 
 ---
 
-## The collection (~70, each unique)
+## The collection (~72, each unique)
 
 ### First steps & milestones
 1. **First Step** — a single foot on the mat — submit your first entry — *Common*
@@ -84,6 +84,8 @@ Last updated: 2026-08-08
 35. **Gold Rush x3 / x5** — stacked gold bars — multiple golds — *tiered*
 36. **Sweep** — a clean crescent arc — gold in multiple events one round — *Epic*
 37. **Undefeated** — an unbroken shield — a win streak of N — *Rare*
+71. **Podium Season** — a laurel wreath of medals — earn a **placement medal in every round** of the season — *Epic*
+72. **Gold Medallion** — a radiant solid-gold yin-yang medallion — take **gold (1st place) in every qualifying round of a season**: the perfect season — *Legendary*. The rarest emblem in the collection; a flagship pin that could ship as a special **solid-gold-finish medallion** and a marquee Grand-Finale reward.
 
 ### Championship & advancement
 38. **Semifinalist** — a bracket with a star — reach the semis — *Rare*
