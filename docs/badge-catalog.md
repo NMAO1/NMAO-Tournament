@@ -34,7 +34,7 @@ Last updated: 2026-08-08
 
 ---
 
-## The collection (~72, each unique)
+## The collection (~90, each unique)
 
 ### First steps & milestones
 1. **First Step** — a single foot on the mat — submit your first entry — *Common*
@@ -108,11 +108,26 @@ Last updated: 2026-08-08
 57. **Reflective Warrior** — a seated meditation figure — reflect every round a season — *Rare*
 58. **Goal Keeper** — an arrow in the bullseye — set and reach a season goal — *Uncommon*
 
-### Dueling (participant-vote era)
+### Dueling — a collectible series of its own (see `dueling.md`)
 59. **First Duel** — crossed swords — complete your first duel — *Common*
-60. **Duelist I/II/III** — dual silhouettes — N duels — *tiered*
-61. **People's Champion** — raised hands — win a participant vote decisively — *Rare*
-62. **Rival** — two interlocked rings — rematch a past opponent — *Uncommon*
+60. **Duelist I/II/III** — dual silhouettes — 5 / 15 / 30 duels — *tiered*
+61. **First Blood** — a single strike — win your first duel — *Uncommon*
+62. **Warpath** — a rising blade — win N duels in a row — *Rare*
+63. **People’s Champion** — raised hands — win by a **landslide** community vote — *Rare*
+64. **Road Warrior** — a map with pins — duel opponents from many states/schools — *Rare*
+65. **Rivalry** — two interlocked rings — rematch the same opponent — *Uncommon*
+66. **Undefeated Duelist** — an unbroken blade — a win streak of X with no losses — *Epic*
+67. **Iron Duelist** — a bladed hourglass — duel every week for a month — *Rare*
+68. **Duel Legend** — a crowned blade — reach #1 on a dueling leaderboard tier — *Legendary*
+
+### Voting — reward the community that judges the duels
+73. **First Vote** — a ballot — cast your first duel vote — *Common*
+74. **Voice of the People I/II/III** — a megaphone — cast 25 / 100 / 500 votes — *tiered*
+75. **Daily Voter** — a calendar flame — vote N days in a row — *Uncommon*
+76. **Sharp Eye** — an open eye — your votes match the winner at a high rate — *Rare*
+77. **Kingmaker** — a passed crown — your vote decided a razor-thin duel — *Rare*
+78. **Fair Witness** — balanced scales — vote across many divisions/categories — *Uncommon*
+79. **Trusted Voter** — a wax seal — sustain elite Sharp-Eye accuracy — *Epic*
 
 ### Community & dojo (COPPA-safe)
 63. **Dojo Pride** — a school crest/banner — your school hits a collective milestone — *Uncommon*

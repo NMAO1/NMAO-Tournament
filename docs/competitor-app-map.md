@@ -120,13 +120,20 @@ never public.
 ### Leaderboards
 Competitor + **school** stats, effort-first ordering (streaks, participation rate,
 most-improved beside medal counts), **geographic tiers — City · State · Country ·
-World** (needs profile location). Two layouts: data-overlaid + blank template (per
+World** (needs profile location). A **Dueling** scope connects here (`dueling.md`):
+duel wins / win-rate / streak / duel-rating, plus a **voter** board (votes cast,
+voting streak, Sharp-Eye accuracy). Two layouts: data-overlaid + blank template (per
 `Leaderboard stats`).
 
-### Dueling (when enabled by the school)
-Async 1-v-1 video duels; challenge same-rank/category; both upload; side-by-side
-duel page; **participant vote** (no public voting for now); badges/points; dueling
-leaderboard. Admin-gated per student. Phase 2.
+### Dueling (when enabled by the school) — see `dueling.md`
+Async, anytime 1-v-1 video duels, **separate from the monthly flow**. Challenge a
+friend or a random same-rank/category opponent (within the **school's allowed
+dueling area**); both upload; a side-by-side duel page enters the **voting pool**;
+**competitors nationwide vote** the winner ("a new duel dropped — vote now").
+Winner updates the dueling record + leaderboard + badges. **Voting is rewarded**
+(voter badges, Sharp-Eye accuracy, small capped Total Points). Minor-safe: closed
+community, guardian-gated, no free-text comments, anonymous tallies. Admin-gated per
+student. Phase 2.
 
 ### Championship (Grand Finale + Sponsor tournaments)
 The **tiered bracket** experience: Stage 1 → top 5 advance → regroup → top 3 → final

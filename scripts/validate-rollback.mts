@@ -207,6 +207,67 @@ async function main() {
     ok(await count(`select count(*) c from rating_history where round_id=$1`, [r1]) === 1, 'guard leaves the earlier round untouched on refusal');
   }
 
+  // ---- E) rollback to distribute: clear medals only; keep results + ratings ----
+  {
+    const ctx = await newSeason('RB Distribute');
+    const c = await addCompetitor(ctx.school, 60, 1);
+    const round = await addRound(ctx, 1, 'distributed', [{ id: c, before: 50, after: 60, place: 1, medal: 'gold' }]);
+    await rollbackMirror(round, 'distribute');
+    ok(await count(`select count(*) c from medals where round_id=$1`, [round]) === 0, 'rollback(distribute) clears medals');
+    ok(await count(`select count(*) c from medal_shipments where round_id=$1`, [round]) === 0, 'rollback(distribute) clears shipments');
+    ok(await count(`select count(*) c from results r join entries e on e.id=r.entry_id where e.round_id=$1`, [round]) === 1, 'rollback(distribute) KEEPS results');
+    ok(await count(`select count(*) c from rating_history where round_id=$1`, [round]) === 1, 'rollback(distribute) KEEPS rating_history');
+    ok(Number((await q1(`select rating from skill_ratings where competitor_id=$1`, [c])).rating) === 60, 'rollback(distribute) leaves ratings untouched (still 60)');
+    ok(await count(`select count(*) c from round_step_runs where round_id=$1 and step='distribute'`, [round]) === 0, 'rollback(distribute) clears only the distribute step run');
+    ok(await count(`select count(*) c from round_step_runs where round_id=$1 and step in ('divide','assign_judges','resolve')`, [round]) === 3, 'rollback(distribute) keeps earlier step runs');
+    ok((await q1(`select state from rounds where id=$1`, [round])).state === 'podded', 'rollback(distribute) resets state to podded');
+  }
+
+  // ---- F) rollback to assign_judges: clear judges+results+ratings; keep pods ----
+  {
+    const ctx = await newSeason('RB Assign');
+    const c = await addCompetitor(ctx.school, 60, 1);
+    const round = await addRound(ctx, 1, 'distributed', [{ id: c, before: 50, after: 60, place: 1, medal: 'gold' }]);
+    await rollbackMirror(round, 'assign_judges');
+    ok(await count(`select count(*) c from judge_assignments ja join entries e on e.id=ja.entry_id where e.round_id=$1`, [round]) === 0, 'rollback(assign_judges) clears judge assignments');
+    ok(await count(`select count(*) c from results r join entries e on e.id=r.entry_id where e.round_id=$1`, [round]) === 0, 'rollback(assign_judges) clears results');
+    ok(Number((await q1(`select rating from skill_ratings where competitor_id=$1`, [c])).rating) === 50, 'rollback(assign_judges) reverts rating to 50');
+    ok(await count(`select count(*) c from divisions where round_id=$1`, [round]) > 0, 'rollback(assign_judges) KEEPS divisions/pods');
+    ok(await count(`select count(*) c from round_step_runs where round_id=$1 and step='divide'`, [round]) === 1, 'rollback(assign_judges) keeps the divide step run');
+    ok(await count(`select count(*) c from round_step_runs where round_id=$1 and step in ('assign_judges','resolve','distribute')`, [round]) === 0, 'rollback(assign_judges) clears assign/resolve/distribute step runs');
+    ok((await q1(`select state from rounds where id=$1`, [round])).state === 'podded', 'rollback(assign_judges) resets state to podded');
+  }
+
+  // ---- G) finalize guard: refuse when the round is not distributed ----
+  {
+    const ctx = await newSeason('Finalize Guard');
+    const round = await addRound(ctx, 1, 'podded', [{ id: await addCompetitor(ctx.school, 60, 1), before: 50, after: 60, place: 1, medal: 'gold' }]);
+    let threw = false;
+    try { await finalizeMirror(round); } catch { threw = true; }
+    ok(threw, 'finalize refuses when round is not distributed');
+    ok((await q1(`select state from rounds where id=$1`, [round])).state === 'podded', 'finalize guard leaves state unchanged');
+  }
+
+  // ---- H) rollback allowed with NO later round + multi-competitor recompute ----
+  {
+    const ctx = await newSeason('RB Multi');
+    const a = await addCompetitor(ctx.school, 62, 2);
+    const b = await addCompetitor(ctx.school, 44, 2);
+    await addRound(ctx, 1, 'finalized', [
+      { id: a, before: 50, after: 55, place: 1, medal: 'gold' },
+      { id: b, before: 50, after: 47, place: 2, medal: 'silver' },
+    ]);
+    const r2 = await addRound(ctx, 2, 'distributed', [
+      { id: a, before: 55, after: 62, place: 1, medal: 'gold' },
+      { id: b, before: 47, after: 44, place: 2, medal: 'silver' },
+    ]);
+    await rollbackMirror(r2, 'resolve'); // latest rated round -> allowed, no throw
+    ok(Number((await q1(`select rating from skill_ratings where competitor_id=$1`, [a])).rating) === 55, 'multi: competitor A restored to 55');
+    ok(Number((await q1(`select rating from skill_ratings where competitor_id=$1`, [b])).rating) === 47, 'multi: competitor B restored to 47');
+    ok(Number((await q1(`select events_count from skill_ratings where competitor_id=$1`, [a])).events_count) === 1, 'multi: A events recount to 1');
+    ok(Number((await q1(`select events_count from skill_ratings where competitor_id=$1`, [b])).events_count) === 1, 'multi: B events recount to 1');
+  }
+
   console.log(`\n${pass} passed, ${fail} failed`);
   await DB.close();
   if (fail) process.exit(1); else console.log('Operator actions (finalize + rollback) OK.');
