@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO Tournament — School Portal (mockup)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/tabler-icons.min.css">
+<style>
+  :root{--gold:#E6B93F;--goldS:#FFE488;--ruby:#FF2E3B;--amethyst:#A32BF7;--sapphire:#1F7BFF;
+        --text:#F0EADD;--mut:#9a9488;--mut2:#6b665c;--line:#232327;--surf:#141417;--surf2:#0f0f12;--bg:#0a0a0c;
+        --spectrum:linear-gradient(90deg,#FF2E3B,#C22DE0,#A32BF7,#4B6BFF,#1F7BFF)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:13px}
+  .serif{font-family:Georgia,serif}
+  .app{display:flex;min-height:100vh;max-width:1140px;margin:0 auto}
+  /* sidebar */
+  .side{width:210px;flex:none;background:#0c0c0f;border-right:1px solid var(--line);padding:16px 12px}
+  .brand{display:flex;align-items:center;gap:9px;padding:4px 6px 16px;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .brand .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F0EADD 0 50%,#141210 0 100%);border:1px solid var(--gold)}
+  .brand b{font-size:13px}.brand small{color:var(--mut2);font-size:10px;display:block;letter-spacing:.12em;text-transform:uppercase}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;color:var(--mut);text-decoration:none;font-size:13px;margin-bottom:2px}
+  .nav a.on{background:#17161a;color:var(--text)}
+  .nav a.on i{color:var(--gold)}
+  .nav a i{font-size:18px}
+  /* main */
+  .main{flex:1;min-width:0;padding:18px 22px 60px}
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+  .top .sch{font-size:15px;font-weight:600}
+  .sel{background:var(--surf);border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:var(--text);font-size:12px}
+  .sechd{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:26px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .kpi{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .kpi .l{color:var(--mut);font-size:11px}.kpi .v{font-size:24px;font-weight:600;margin-top:3px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;color:var(--mut2);font-weight:500;font-size:11px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid #1a1a1d}
+  .chip{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+  .chip.g{color:#0b3fd6;border:none;background:linear-gradient(160deg,#66A9FF,#1F7BFF);color:#fff}
+  .chip.a{color:#fff;border:none;background:linear-gradient(160deg,#C982FF,#A32BF7)}
+  .chip.r{color:#fff;border:none;background:linear-gradient(160deg,#FF7A82,#FF2E3B)}
+  .btn{background:var(--surf);border:1px solid var(--line);color:var(--text);padding:7px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--goldS),var(--gold));font-weight:600}
+  /* toggle brand-outlined */
+  .tg{width:42px;height:24px;border-radius:99px;padding:2px;display:inline-block;vertical-align:middle}
+  .tg .k{width:18px;height:18px;border-radius:50%;background:#0a0a0c;transition:.2s}
+  .tg.off{border:1.5px solid #3a3a40}
+  .tg.on{background:var(--spectrum);position:relative}
+  .tg.on .k{margin-left:18px;background:#fff}
+  .tg.off .k{background:#4a4a50}
+  /* the controls splash panel */
+  .splash{position:relative;border-radius:16px;padding:18px;background:
+    radial-gradient(120% 90% at 15% 0%,rgba(163,43,247,.10),transparent 55%),
+    radial-gradient(120% 90% at 100% 100%,rgba(31,123,255,.10),transparent 55%),#0b0b0e;
+    border:1.5px solid transparent;background-clip:padding-box}
+  .splash::before{content:"";position:absolute;inset:0;border-radius:16px;padding:1.5px;background:var(--spectrum);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:.6}
+  .ctlrow{display:flex;align-items:center;justify-content:space-between;padding:12px 4px;border-bottom:1px solid #1c1c20;position:relative}
+  .ctlrow:last-child{border-bottom:none}
+  .ctlrow .lab{font-size:13px}.ctlrow .sub{color:var(--mut2);font-size:11px}
+  .mut{color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="side">
+    <div class="brand"><span class="yy"></span><div><b>NMAO Tournament</b><small>School Portal</small></div></div>
+    <div class="nav">
+      <a class="on" href="#"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+      <a href="#"><i class="ti ti-users"></i> Roster</a>
+      <a href="#"><i class="ti ti-adjustments"></i> Tournament Controls</a>
+      <a href="#"><i class="ti ti-clipboard-list"></i> Entries &amp; Payments</a>
+      <a href="#"><i class="ti ti-cash"></i> Payouts</a>
+      <a href="#"><i class="ti ti-shopping-bag"></i> Merch</a>
+      <a href="#"><i class="ti ti-settings"></i> Settings</a>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="top">
+      <div class="sch"><i class="ti ti-shield-check" style="color:var(--gold)"></i> Iron Crane Dojo</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="sel">Season 1 · Round 4 ▾</span>
+        <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(160deg,#C982FF,#6712C4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff">KS</div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="sechd">Dashboard</div>
+    <div class="kpis">
+      <div class="kpi"><div class="l">Roster</div><div class="v">42</div></div>
+      <div class="kpi"><div class="l">Entered · Round 4</div><div class="v">18</div></div>
+      <div class="kpi"><div class="l">Videos uploaded</div><div class="v">12 <span class="mut" style="font-size:12px">/ 18</span></div></div>
+      <div class="kpi"><div class="l">Payout · this season</div><div class="v" style="color:var(--goldS)">$540</div></div>
+    </div>
+    <div style="background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:12px;display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-weight:600">Round 4 closes in 8 days</div><div class="mut" style="font-size:12px">6 students entered but haven't uploaded — send a reminder?</div></div>
+      <button class="btn gold">Remind 6 students</button>
+    </div>
+
+    <!-- ROSTER -->
+    <div class="sechd">Roster</div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+      <span class="sel">🔍 Search students</span>
+      <div style="display:flex;gap:8px"><button class="btn"><i class="ti ti-upload"></i> Import CSV</button><button class="btn gold">Add student</button></div>
+    </div>
+    <table>
+      <tr><th>Name</th><th>Age</th><th>Belt / Class</th><th>Eligible events</th><th></th></tr>
+      <tr><td>Mia Rivera</td><td>11</td><td><span class="chip r">Red · Advanced</span></td><td><span class="chip">Trad Forms</span> <span class="chip">Open Wpn</span></td><td class="mut">Edit</td></tr>
+      <tr><td>Leo Park</td><td>9</td><td><span class="chip g">Blue · Beginner</span></td><td><span class="chip">Trad Forms</span></td><td class="mut">Edit</td></tr>
+      <tr><td>Ava Chen</td><td>13</td><td><span class="chip a">Purple · Intermediate</span></td><td><span class="chip">Open Forms</span> <span class="chip">Trad Wpn</span></td><td class="mut">Edit</td></tr>
+    </table>
+
+    <!-- TOURNAMENT CONTROLS (star) -->
+    <div class="sechd">Tournament Controls · Mia Rivera</div>
+    <div class="splash">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div class="mut" style="font-size:12px">Set per student, or apply as a group default</div>
+        <span class="sel">Applying to: Mia Rivera ▾</span>
+      </div>
+      <div class="ctlrow"><div><div class="lab">Event categories</div><div class="sub">which events she may enter</div></div>
+        <div><span class="chip r">Trad Forms</span> <span class="chip r">Open Wpn</span> <span class="chip">+ add</span></div></div>
+      <div class="ctlrow"><div><div class="lab">Class / level</div><div class="sub">from belt — instructor-set</div></div><span class="sel">Advanced ▾</span></div>
+      <div class="ctlrow"><div><div class="lab">Dueling</div><div class="sub">allow 1-v-1 challenges</div></div><span class="tg on"><span class="k"></span></span></div>
+      <div class="ctlrow"><div><div class="lab">Geo-location</div><div class="sub">compete only vs. schools &gt; 50 mi away</div></div>
+        <div style="display:flex;align-items:center;gap:8px"><span class="sel" style="padding:4px 8px">50 mi</span><span class="tg on"><span class="k"></span></span></div></div>
+      <div class="ctlrow"><div><div class="lab">Merch shop</div><div class="sub">earned storefront · revenue split</div></div><span class="tg off"><span class="k"></span></span></div>
+      <div class="ctlrow"><div><div class="lab">Reminders &amp; messages</div><div class="sub">updates, feedback, encouragement</div></div><button class="btn"><i class="ti ti-send"></i> Message</button></div>
+    </div>
+
+    <!-- ENTRIES & PAYMENTS -->
+    <div class="sechd">Entries &amp; Payments · Round 4</div>
+    <table>
+      <tr><th>Student</th><th>Event</th><th>Video</th><th>Payment</th></tr>
+      <tr><td>Mia Rivera</td><td>Trad Forms</td><td style="color:#66A9FF">judging</td><td style="color:#5DCAA5">paid</td></tr>
+      <tr><td>Mia Rivera</td><td>Open Weapons</td><td style="color:var(--gold)">entered · no video</td><td style="color:#5DCAA5">paid</td></tr>
+      <tr><td>Leo Park</td><td>Trad Forms</td><td class="mut">not entered</td><td class="mut">—</td></tr>
+    </table>
+
+    <!-- PAYOUTS -->
+    <div class="sechd">Payouts</div>
+    <div style="display:flex;gap:12px">
+      <div class="kpi" style="flex:1"><div class="l">Revenue-share tier</div><div class="v">20%</div><div class="mut" style="font-size:11px">accredited school</div></div>
+      <div class="kpi" style="flex:1"><div class="l">This round</div><div class="v" style="color:var(--goldS)">$162</div><div class="mut" style="font-size:11px">18 entries × share</div></div>
+      <div class="kpi" style="flex:1"><div class="l">Next payout</div><div class="v">Aug 20</div><div class="mut" style="font-size:11px">via Stripe Connect</div></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

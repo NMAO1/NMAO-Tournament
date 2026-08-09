@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO Mission Control — Operator Console</title>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  // Tournament project (SEPARATE from the membership platform). Anon key is public +
+  // RLS-guarded — paste it from Dashboard → Settings → API for project oxzuavpyoetchwebdejp.
+  const SUPABASE_URL = 'https://oxzuavpyoetchwebdejp.supabase.co';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94enVhdnB5b2V0Y2h3ZWJkZWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgyNjUsImV4cCI6MjEwMTU0NDI2NX0.SEBXeo_FqsyqV8xS5dwaGymXI6mYPy8-9uMAgaX4fhg';
+  window.__mc = { createClient, SUPABASE_URL, ANON };
+</script>
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b;
+    --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
+    --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22;
+    --ruby:#FF2E3B; --amethyst:#A32BF7; --sapphire:#1F7BFF;
+    --success:#5DCAA5; --danger:#E07070; --amber:#E6B93F;
+    --spectrum:linear-gradient(180deg,#1F7BFF 0%,#A32BF7 50%,#FF2E3B 100%);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#141220 0%,var(--bg) 60%);color:var(--text);
+       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;padding:22px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  a{color:inherit}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer}
+  .btn:hover{border-color:#3a3a40}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
+  .btn.danger{border-color:#4a2b2b;color:#E9A0A0;background:#1c1414}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  .badge{font-size:12px;font-weight:600;padding:4px 11px;border-radius:99px}
+  .hide{display:none!important}
+  input,select{font-family:inherit}
+
+  /* login */
+  .login{max-width:360px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .login h1{font-size:18px;margin:0 0 4px}
+  .login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .login label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+  .login input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+  .login .btn{width:100%;margin-top:16px;justify-content:center;text-align:center}
+  .msg{font-size:12.5px;margin-top:10px;min-height:16px}
+  .msg.err{color:var(--danger)} .msg.ok{color:var(--success)}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F5F0E8 0 50%,#141210 0 100%);border:1px solid var(--gold)}
+  .brand h1{font-size:16px;margin:0;letter-spacing:.02em}
+  .brand small{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .selectors{display:flex;align-items:center;gap:8px}
+  .sel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:13px;color:var(--text)}
+  .state-badge{background:linear-gradient(160deg,#2a2f4a,#171a2b);border:1px solid #33406e;color:#bcd0ff}
+
+  .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:18px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+  .kpi .l{font-size:11px;color:var(--muted)} .kpi .v{font-size:22px;font-weight:600;margin-top:2px}
+  .kpi .v small{font-size:12px;color:var(--muted);font-weight:400}
+
+  .grid{display:grid;grid-template-columns:1fr 328px;gap:16px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  .card > .hd{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd h2{font-size:14px;margin:0} .hd .sub{font-size:12px;color:var(--muted)}
+
+  .pipeline{position:relative;padding:8px 16px 14px 16px}
+  .pipeline::before{content:"";position:absolute;left:31px;top:22px;bottom:60px;width:2px;background:var(--spectrum);opacity:.5;border-radius:2px}
+  .stage{position:relative;display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:start;padding:13px 0;border-bottom:1px solid #202024}
+  .stage:last-child{border-bottom:none}
+  .dot{width:16px;height:16px;border-radius:50%;margin-top:2px;border:2px solid var(--panel);z-index:1;background:var(--muted2)}
+  .dot.done{background:var(--success)}
+  .dot.run{background:var(--amber);box-shadow:0 0 0 4px rgba(230,185,63,.18);animation:pulse 1.4s infinite}
+  .dot.next{background:var(--gold);box-shadow:0 0 0 4px rgba(230,185,63,.14)}
+  .dot.error{background:var(--danger);box-shadow:0 0 0 4px rgba(224,112,112,.18)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(230,185,63,.28)}50%{box-shadow:0 0 0 6px rgba(230,185,63,.08)}}
+  .st-title{font-size:14px;font-weight:600}
+  .st-sub{font-size:12.5px;color:var(--muted);margin-top:2px} .st-sub b{color:var(--text);font-weight:600}
+  .st-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;white-space:nowrap}
+  .time{font-size:11px;color:var(--muted2)}
+  .s-done{color:var(--success)} .s-run{color:var(--amber)} .s-next{color:var(--gold)} .s-idle{color:var(--muted2)} .s-error{color:var(--danger)}
+  .status-pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;border:1px solid var(--line)}
+
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .list{padding:6px 14px 12px}
+  .row{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #202024;font-size:12.5px}
+  .row:last-child{border-bottom:none}
+  .allclear{display:flex;align-items:center;gap:8px;color:var(--success);font-size:13px;padding:12px 14px}
+  .flag{display:flex;gap:8px;color:var(--danger);font-size:12.5px;padding:8px 14px;border-bottom:1px solid #202024}
+  .muted{color:var(--muted)} .tiny{font-size:11px;color:var(--muted2)}
+  .guard{font-size:12px;color:var(--muted);padding:2px 14px 10px;line-height:1.6;margin:0}
+  .log .row .t{color:var(--muted2);min-width:52px}
+  .tier{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .foot{margin-top:16px;color:var(--muted2);font-size:11.5px;text-align:center}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);
+         border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px}
+  .toast.err{border-color:#4a2b2b;color:#E9A0A0} .toast.ok{border-color:#2b4a3a;color:#a9f0c1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div class="login" id="loginCard">
+    <h1 class="serif">Mission Control</h1>
+    <p>Sign in with your NMAO staff account.</p>
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" />
+    <div id="pwWrap"><label>Password</label><input id="password" type="password" autocomplete="current-password" /></div>
+    <div id="codeWrap" class="hide"><label>6-digit code (emailed)</label><input id="code" inputmode="numeric" maxlength="6" /></div>
+    <button class="btn gold" id="loginBtn">Sign in</button>
+    <button class="btn" id="codeToggle" style="width:100%;margin-top:8px">Email me a code instead</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- CONSOLE -->
+  <div id="console" class="hide">
+    <header>
+      <div class="brand"><span class="yy"></span>
+        <div><h1 class="serif">NMAO Mission Control</h1><small>Operator Console</small></div></div>
+      <div class="selectors">
+        <select class="sel" id="roundSel"></select>
+        <span class="badge state-badge" id="stateBadge">—</span>
+        <button class="btn" id="refreshBtn">Refresh</button>
+        <button class="btn" id="signoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="hd"><h2 class="serif">Round pipeline</h2><div class="sub" id="pipeSub"></div></div>
+        <div class="pipeline" id="pipeline"></div>
+      </div>
+      <div class="rail" id="rail"></div>
+    </div>
+
+    <div class="foot">Steps call <code>round-controller</code> on the tournament project; statuses read <code>round_step_runs</code> (realtime). Tournament suite — separate product from the membership platform.</div>
+  </div>
+</div>
+
+<script type="module">
+const { createClient, SUPABASE_URL, ANON } = window.__mc;
+const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
+const $ = id => document.getElementById(id);
+let ROUND = null;          // current round id
+let STATE = {};            // loaded data for the current round
+let channel = null;
+
+// ---------- auth ----------
+let codeMode = false;
+$('codeToggle').onclick = async () => {
+  const email = $('email').value.trim();
+  if (codeMode) { codeMode = false; $('pwWrap').classList.remove('hide'); $('codeWrap').classList.add('hide'); $('codeToggle').textContent = 'Email me a code instead'; $('loginBtn').textContent = 'Sign in'; return; }
+  if (!email) return setMsg('loginMsg','Enter your email first.','err');
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+  if (error) return setMsg('loginMsg', error.message, 'err');
+  codeMode = true; $('pwWrap').classList.add('hide'); $('codeWrap').classList.remove('hide');
+  $('codeToggle').textContent = 'Use password instead'; $('loginBtn').textContent = 'Verify code';
+  setMsg('loginMsg','Code sent — check your email.','ok');
+};
+$('loginBtn').onclick = async () => {
+  const email = $('email').value.trim();
+  $('loginBtn').disabled = true;
+  try {
+    if (codeMode) {
+      const { error } = await sb.auth.verifyOtp({ email, token: $('code').value.trim(), type:'email' }); if (error) throw error;
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: $('password').value }); if (error) throw error;
+    }
+    await afterLogin();
+  } catch(e){ setMsg('loginMsg', e.message || 'Sign-in failed.', 'err'); }
+  finally { $('loginBtn').disabled = false; }
+};
+$('signoutBtn').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function afterLogin(){
+  // Confirm the signed-in user is staff (round-controller enforces this too).
+  const { data:{ user } } = await sb.auth.getUser();
+  if (!user) return setMsg('loginMsg','Session expired — sign in again.','err');
+  const { data: staff } = await sb.from('staff').select('id').eq('auth_user_id', user.id).maybeSingle();
+  if (!staff) return setMsg('loginMsg','This account is not NMAO staff.','err');
+  $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
+  await loadRounds();
+}
+
+// ---------- round selector ----------
+async function loadRounds(){
+  const { data } = await sb.from('rounds').select('id, seq, state, season_id, seasons(name)').order('seq', { ascending:false });
+  const rounds = data || [];
+  $('roundSel').innerHTML = rounds.map(r =>
+    `<option value="${r.id}">${(r.seasons?.name || 'Season')} · Round ${r.seq} (${r.state})</option>`).join('') || '<option>No rounds</option>';
+  if (rounds.length) { ROUND = rounds[0].id; $('roundSel').value = ROUND; await selectRound(ROUND); }
+}
+$('roundSel').onchange = e => selectRound(e.target.value);
+$('refreshBtn').onclick = () => ROUND && loadRound(ROUND);
+
+async function selectRound(id){ ROUND = id; await loadRound(id); subscribe(id); }
+
+// ---------- load one round ----------
+async function loadRound(id){
+  const [round, entries, steps, divisions, pods, ja, results, ships, audit] = await Promise.all([
+    sb.from('rounds').select('id,seq,state,closes_at,judging_deadline,seasons(name)').eq('id', id).single(),
+    sb.from('entries').select('id', { count:'exact', head:true }).eq('round_id', id).eq('status','valid'),
+    sb.from('round_step_runs').select('step,status,detail,completed_at').eq('round_id', id),
+    sb.from('divisions').select('id,event,age_key,rank_key,is_collapsed,entry_count').eq('round_id', id),
+    sb.from('pods').select('id,seq,size,state,judge_count,divisions!inner(round_id,event,rank_key)').eq('divisions.round_id', id),
+    sb.from('judge_assignments').select('state,entries!inner(round_id)').eq('entries.round_id', id),
+    sb.from('results').select('id,entries!inner(round_id)', { count:'exact', head:true }).eq('entries.round_id', id),
+    sb.from('medal_shipments').select('item_count').eq('round_id', id),
+    sb.from('engine_audit').select('action,actor_id,created_at').eq('round_id', id).order('created_at', { ascending:false }).limit(12),
+  ]);
+  const stepMap = {}; (steps.data||[]).forEach(s => stepMap[s.step] = s);
+  const jaRows = ja.data || [];
+  STATE = {
+    round: round.data || {},
+    validEntries: entries.count || 0,
+    steps: stepMap,
+    divisions: divisions.data || [],
+    pods: pods.data || [],
+    jaTotal: jaRows.length,
+    jaSubmitted: jaRows.filter(a => a.state === 'submitted').length,
+    results: results.count || 0,
+    boxes: (ships.data||[]).length,
+    medals: (ships.data||[]).reduce((s,x)=> s + (x.item_count||0), 0),
+    audit: audit.data || [],
+  };
+  render();
+}
+
+// ---------- render ----------
+const fmtTime = ts => ts ? new Date(ts).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+const TIER = k => k==='advanced' ? 'var(--ruby)' : k==='intermediate' ? 'var(--amethyst)' : 'var(--sapphire)';
+
+function render(){
+  const S = STATE, st = S.round.state || 'open';
+  $('stateBadge').textContent = '● ' + st;
+  $('pipeSub').innerHTML = `${S.round.seasons?.name || ''} · Round ${S.round.seq ?? ''} · <span class="tiny">${(S.round.id||'').slice(0,8)}</span>`;
+
+  // KPIs
+  const pct = S.jaTotal ? Math.round(S.jaSubmitted / S.jaTotal * 100) : 0;
+  $('kpis').innerHTML = [
+    ['Entries', S.validEntries], ['Divisions', S.divisions.length], ['Pods', S.pods.length],
+    ['Judges assigned', S.jaTotal], ['Judged', `${pct}<small>%</small>`], ['Medals', S.medals], ['School boxes', S.boxes],
+  ].map(([l,v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+
+  // Pipeline stages — status from round_step_runs; the first not-done step is "next".
+  const order = ['closed','divide','assign_judges','judging','resolve','distribute','finalize'];
+  const runStatus = step => (S.steps[step] || {}).status;   // done|running|error|undefined
+  const done = { closed: st !== 'open' && st !== 'collecting',
+                 divide: runStatus('divide')==='done', assign_judges: runStatus('assign_judges')==='done',
+                 judging: S.jaTotal>0 && S.jaSubmitted===S.jaTotal, resolve: runStatus('resolve')==='done',
+                 distribute: runStatus('distribute')==='done', finalize: st==='finalized' };
+  const actionable = ['divide','assign_judges','resolve','distribute','finalize'];
+  const nextStep = actionable.find(s => !done[s]);
+
+  const stage = (key, title, sub, opts={}) => {
+    const rs = runStatus(key);
+    let cls = 'idle', pill='';
+    if (done[key]) { cls='done'; pill='done'; }
+    else if (rs==='running') { cls='run'; pill='running'; }
+    else if (rs==='error') { cls='error'; pill='error'; }
+    else if (key===nextStep) cls='next';
+    const time = (S.steps[key] && S.steps[key].completed_at) ? fmtTime(S.steps[key].completed_at) : (opts.time||'');
+    let right = `<span class="status-pill s-${cls}">${pill||cls}</span>`;
+    if (opts.action && (cls==='next' || cls==='error')) right = `<button class="btn ${opts.gold?'gold':''}" data-run="${key}">${opts.action}</button>`;
+    else if (opts.view && done[key]) right = `<button class="btn" data-view="${key}">${opts.view}</button>`;
+    return `<div class="stage"><span class="dot ${cls}"></span>
+      <div><div class="st-title">${title}${opts.muted?` <span class="muted">— ${opts.muted}</span>`:''}</div>
+        <div class="st-sub">${sub}</div></div>
+      <div class="st-right">${right}${time?`<span class="time">${time}</span>`:''}</div></div>`;
+  };
+
+  const collapsed = S.divisions.filter(d => d.is_collapsed).length;
+  $('pipeline').innerHTML =
+    stage('closed', 'Entries closed', `<b>${S.validEntries}</b> valid entries`) +
+    stage('divide', 'Divide', `<b>${S.divisions.length}</b> divisions · <b>${S.pods.length}</b> pods${collapsed?` · ${collapsed} collapsed`:''}`, { muted:'classify → collapse → form pods', action:'Run divide', view:'View divisions' }) +
+    stage('assign_judges', 'Assign judges', `<b>${S.jaTotal}</b> assignments`, { action:'Run assign', view:'View judges' }) +
+    stage('judging', 'Judging window', `<b>${S.jaSubmitted} / ${S.jaTotal}</b> scored · ${pct}%`) +
+    stage('resolve', 'Resolve', `<b>${S.results}</b> results · ratings updated`, { muted:'placements + ratings', action:'Run resolve', view:'View results' }) +
+    stage('distribute', 'Distribute', `<b>${S.medals}</b> medals · <b>${S.boxes}</b> boxes`, { muted:'medals + ship list', action:'Run distribute', view:'View medals' }) +
+    stage('finalize', 'Finalize round', 'Freeze scheme, publish results, archive.', { action:'Finalize ✓', gold:true });
+
+  // wire run buttons
+  $('pipeline').querySelectorAll('[data-run]').forEach(b => b.onclick = () => runStep(b.dataset.run));
+
+  // right rail
+  const flagList = Object.values(S.steps).flatMap(s => Array.isArray(s.detail?.flags) ? s.detail.flags : []);
+  const divRows = S.divisions.map(d => {
+    const pod = S.pods.find(p => p.divisions && p.rank_key === d.rank_key && (p.divisions.event===d.event));
+    return `<div class="row"><span><span class="tier" style="background:${TIER(d.rank_key)}"></span>${d.event} · ${d.rank_key}</span>
+      <span class="muted" style="margin-left:auto">${d.entry_count||0} entries</span></div>`;
+  }).join('') || '<div class="row muted">No divisions yet.</div>';
+  const auditRows = S.audit.map(a =>
+    `<div class="row"><span class="t">${new Date(a.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span><span>${a.action}${a.actor_id?' · <span class="muted">operator</span>':''}</span></div>`
+  ).join('') || '<div class="row muted">No activity yet.</div>';
+
+  $('rail').innerHTML = `
+    <div class="card"><div class="hd"><h2>Exceptions &amp; guardrails</h2></div>
+      ${flagList.length ? flagList.map(f=>`<div class="flag">▲ ${f}</div>`).join('') : '<div class="allclear">● All clear — no flags.</div>'}
+      <ul class="guard"><li>Can't divide with 0 valid entries.</li><li>Can't distribute with a pod unresolved.</li><li>Finalize only from <i>distributed</i>.</li></ul>
+    </div>
+    <div class="card"><div class="hd"><h2>Divisions &amp; pods</h2><span class="sub">${S.divisions.length}</span></div><div class="list">${divRows}</div></div>
+    <div class="card"><div class="hd"><h2>Activity log</h2><span class="sub">audit</span></div><div class="list log">${auditRows}</div>
+      <div style="padding:0 14px 14px;display:flex;gap:8px">
+        <select class="sel" id="rbTo" style="flex:1"><option value="">Roll back to…</option><option value="distribute">distribute</option><option value="resolve">resolve</option><option value="assign_judges">assign judges</option><option value="divide">divide</option></select>
+        <button class="btn danger" id="rbBtn">Roll back</button>
+      </div>
+    </div>`;
+  $('rbBtn').onclick = () => { const to = $('rbTo').value; if (to) rollback(to); };
+}
+
+// ---------- actions (round-controller) ----------
+async function callController(body){
+  const { data:{ session } } = await sb.auth.getSession();
+  const token = session?.access_token || ANON;
+  const r = await fetch(SUPABASE_URL + '/functions/v1/round-controller', {
+    method:'POST', headers:{ 'Content-Type':'application/json', apikey: ANON, Authorization:'Bearer '+token }, body: JSON.stringify(body) });
+  const d = await r.json().catch(()=>({}));
+  if (!r.ok || d.ok === false) throw new Error(d.error || `Failed (${r.status})`);
+  return d;
+}
+async function runStep(step){
+  if (step === 'finalize' && !confirm('Finalize this round? This freezes the scheme and publishes results.')) return;
+  toast('Running ' + step + '…');
+  try {
+    const d = await callController({ roundId: ROUND, step });
+    const oc = Array.isArray(d.outcome) ? d.outcome[d.outcome.length-1] : d.outcome;
+    const flags = (oc && oc.flags && oc.flags.length) ? ' · flags: ' + oc.flags.join(', ') : '';
+    toast((oc && oc.ran === false) ? `${step}: ${oc.detail||'already done'}` : `${step} done${flags}`, oc && oc.flags && oc.flags.length ? 'err':'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast(step + ': ' + e.message, 'err'); }
+}
+async function rollback(to){
+  if (!confirm(`Roll back to ${to}? This clears everything from that stage forward (and reverts ratings).`)) return;
+  toast('Rolling back to ' + to + '…');
+  try { await callController({ roundId: ROUND, step:'rollback', to }); toast('Rolled back to ' + to, 'ok'); await loadRound(ROUND); }
+  catch(e){ toast('Rollback: ' + e.message, 'err'); }
+}
+
+// ---------- realtime ----------
+function subscribe(id){
+  if (channel) sb.removeChannel(channel);
+  let t; const reload = () => { clearTimeout(t); t = setTimeout(() => loadRound(id), 400); };
+  channel = sb.channel('mc-' + id);
+  ['round_step_runs','judge_assignments','results','engine_audit','rounds','pods'].forEach(tbl =>
+    channel.on('postgres_changes', { event:'*', schema:'public', table: tbl }, reload));
+  channel.subscribe();
+}
+
+// ---------- helpers ----------
+function setMsg(id, t, k){ const e=$(id); e.textContent=t||''; e.className='msg'+(t?(' '+k):''); }
+let toastTimer;
+function toast(t, k){ let e=document.querySelector('.toast'); if(!e){ e=document.createElement('div'); e.className='toast'; document.body.appendChild(e); }
+  e.className='toast'+(k?(' '+k):''); e.textContent=t; clearTimeout(toastTimer); toastTimer=setTimeout(()=>e.remove(), 4200); }
+
+// resume an existing session
+(async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
+</script>
+</body>
+</html>
