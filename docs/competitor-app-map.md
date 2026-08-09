@@ -55,11 +55,14 @@ Mockup: `competitor_app…_imprint`.
 
 ## 3. Compete — enter + submit
 
-- **Flow:** pick event(s) (Traditional/Open × Forms/Weapons) → on-screen
-  **guidance** (framing, full-body, unedited, 30s–2min, clear area, the **speech +
-  on-screen tournament password** per `Video guidelines`) → record/upload **up to 2
-  angles** (resumable) → **pay** entry fee (Stripe) → confirmation. Then a per-event
-  **status chip**: submitted → judging → results.
+- **Flow (enter and upload are decoupled):** pick event(s) → **Enter now** (pay the
+  fee, Stripe) — a competitor can **sign up anytime and upload the video anytime
+  before the deadline**; never blocked from entering for lack of a video. Then,
+  before the 15th: on-screen **guidance** (framing, full-body, unedited, 30s–2min,
+  clear area) → record/upload **up to 2 angles** (resumable). The **password is a
+  single martial-arts word** issued per round (e.g. "Zanshin"), spoken on camera +
+  shown on screen, so a clip can't be reused. Per-event **status**: entered → video
+  added → judging → results.
 - **Validation:** duration/format/angle-count checks; password issued per round
   (anti-reuse); name/date/category/password shown pre-form.
 - **Championship mode:** shows your current **bracket stage** and the **next form
@@ -84,9 +87,11 @@ Mockup: `competitor_app…_imprint`.
 ## 5. Profile — the shelf
 
 - Photo framed by a **belt-color rank ring** (red/blue/purple = the tier spectrum),
-  **school/team symbol**, rating gauge + **points/leaderboard standing**, **medal
-  shelf**, **Badges** entry (→ Badges page), personal bests, **physical-medal
-  shipment tracking** ("Round 3 medal shipped"), and settings + **guardian
+  **school/team symbol**, and three metrics: **rating** (skill), **season points +
+  standing** (placement-based, resets seasonally), and **total points earned**
+  (lifetime — grows with **every event entered**; the effort accumulator that also
+  drives the Mastery Path). Plus **medal shelf**, **Badges** entry (→ Badges page),
+  personal bests, **physical-medal shipment tracking**, and settings + **guardian
   controls** (sharing off by default, data/video delete).
 - **Data:** `competitors`, `skill_ratings`, `medals`, `medal_shipments`,
   `badge_awards`, guardian/consent.
@@ -114,8 +119,9 @@ never public.
 
 ### Leaderboards
 Competitor + **school** stats, effort-first ordering (streaks, participation rate,
-most-improved beside medal counts), **regional tiers** (city → world; needs profile
-location). Two layouts: data-overlaid + blank template (per `Leaderboard stats`).
+most-improved beside medal counts), **geographic tiers — City · State · Country ·
+World** (needs profile location). Two layouts: data-overlaid + blank template (per
+`Leaderboard stats`).
 
 ### Dueling (when enabled by the school)
 Async 1-v-1 video duels; challenge same-rank/category; both upload; side-by-side

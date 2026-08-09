@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO — Badge Gallery (mockup)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/tabler-icons.min.css">
+<style>
+  body{margin:0;background:#0b0b0d;color:#F5F0E8;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:26px 16px 60px}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  h1{font-weight:600;font-size:22px;text-align:center;margin:0 0 4px}
+  .sub{color:#8f887c;font-size:12px;text-align:center;margin:0 0 18px}
+  .wrap{max-width:920px;margin:0 auto}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px}
+  .lg{font-size:11px;padding:4px 11px;border-radius:99px;border:1px solid #26262b}
+  .cat{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#C9A84C;margin:22px 0 12px;border-bottom:1px solid #1c1c1f;padding-bottom:6px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:16px 10px}
+  .cell{text-align:center}
+  .pin{width:64px;height:64px;border-radius:50%;margin:0 auto;padding:3px;position:relative}
+  .disc{width:100%;height:100%;border-radius:50%;background:#0c0c0f;display:flex;align-items:center;justify-content:center}
+  .disc i{font-size:27px}
+  .pname{font-size:10px;margin-top:6px;color:#E7DEceb;line-height:1.25;color:#DAD3C6}
+  .rar{font-size:8.5px;color:#6b655c;margin-top:1px}
+  .r-common{background:linear-gradient(160deg,#E0B27A,#B87333 55%,#7a4a1e)}
+  .r-uncommon{background:linear-gradient(160deg,#EEF1F4,#C9CDD3 55%,#9aa0a8)}
+  .r-rare{background:linear-gradient(160deg,#FFE488,#E6B93F 55%,#9C7A22)}
+  .r-epic{background:conic-gradient(from 130deg,#FF2E3B,#C22DE0,#A32BF7,#4B6BFF,#1F7BFF,#A32BF7,#FF2E3B)}
+  .r-legendary{background:linear-gradient(160deg,#F2F4F7,#CDD2D9 55%,#8A9099)}
+  .locked .disc i{color:#26262b!important}
+  .locked .pin{background:#1a1a1e!important;opacity:.75}
+  .locked .pname{color:#4a4a4e}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="serif">NMAO Badge Collection</h1>
+  <p class="sub">~70 unique emblems · rarity = finish (digital &amp; pin) · locked ones stay shadowed until earned</p>
+
+  <div class="legend">
+    <span class="lg" style="color:#C8843E">● Common · bronze</span>
+    <span class="lg" style="color:#C9CDD3">● Uncommon · silver</span>
+    <span class="lg" style="color:#E6B93F">● Rare · gold</span>
+    <span class="lg" style="color:#C982FF">● Epic · spectrum</span>
+    <span class="lg" style="color:#CDD2D9">● Legendary · platinum</span>
+  </div>
+
+  <div id="cats"></div>
+
+  <div class="cat">Imprint &amp; the Gem Series — one per season, sold as pins</div>
+  <div class="grid" id="gems"></div>
+</div>
+
+<script>
+const ic = {common:'#E0B27A',uncommon:'#DDE1E6',rare:'#FFE488',epic:'#E0C8FF',legendary:'#EAF0F5'};
+const cats = {
+ 'First steps & milestones':[
+   ['First Step','ti-shoe','common'],['First Bow','ti-yoga','common'],['First Reveal','ti-yin-yang','common'],
+   ['First Reflection','ti-feather','common'],['First Medal','ti-medal','uncommon'],['First Gold','ti-medal-2','rare'],
+ ],
+ 'Effort & consistency':[
+   ['On the Mat','ti-checkbox','rare'],['Nine Bows','ti-award','rare'],['Back on the Mat','ti-arrow-back-up','uncommon'],
+   ['Early Bird','ti-sunrise','uncommon'],['Deadline Warrior','ti-hourglass','uncommon'],['Iron Will','ti-shield-bolt','rare'],
+   ['Perfect Attendance','ti-calendar-check','rare'],
+ ],
+ 'Growth & improvement':[
+   ['Rising Star','ti-star','uncommon'],['New Heights','ti-mountain','uncommon'],['Steady Climb','ti-stairs-up','rare'],
+   ['Comeback','ti-flare','uncommon'],['Breakthrough','ti-hammer','rare'],['Rising Floor','ti-ripple','uncommon'],
+   ['Full Circle','ti-hexagon','epic'],
+ ],
+ 'Mastery — per criterion':[
+   ['Precision','ti-target-arrow','rare'],['Kime','ti-bolt','rare'],['Rooted','ti-plant-2','rare'],
+   ['Flow','ti-wave-sine','rare'],['Spirit','ti-flame','rare'],['Innovator','ti-sparkles','rare'],
+   ['Grandmaster','ti-crown','legendary'],
+ ],
+ 'Events & exploration':[
+   ['Both Hands','ti-karate','uncommon'],['Open Mind','ti-flower','uncommon'],['Traditionalist','ti-building-arch','rare'],
+   ['Weapon Master','ti-swords','rare'],['Style Explorer','ti-compass','uncommon'],['Fearless','ti-paw','uncommon'],
+ ],
+ 'Placement & podium':[
+   ['Podium','ti-stairs','uncommon'],['Gold Rush','ti-coins','rare'],['Sweep','ti-wind','epic'],['Undefeated','ti-shield-check','rare'],
+ ],
+ 'Championship & advancement':[
+   ['Semifinalist','ti-tournament','rare'],['Finalist','ti-git-fork','epic'],['Grand Champion','ti-trophy','legendary'],
+   ['Sponsor Champion','ti-rosette','legendary'],['Giant Slayer','ti-sword','epic'],
+ ],
+ 'Journal & reflection':[
+   ['Journaler','ti-book','rare'],['Reflective','ti-brain','rare'],['Goal Keeper','ti-target','uncommon'],
+ ],
+ 'Dueling':[
+   ['First Duel','ti-swords','common'],['Duelist','ti-sword','rare'],['People’s Champ','ti-thumb-up','rare'],['Rival','ti-circles','uncommon'],
+ ],
+ 'Community & dojo':[
+   ['Dojo Pride','ti-shield-star','uncommon'],['Teammate','ti-users','common'],['Encourager','ti-heart-handshake','uncommon'],
+ ],
+ 'Legendary · hidden · charter':[
+   ['Perfect Score','ti-rosette','legendary'],['Zen','ti-circle','epic',1],['Ghost','ti-ghost','rare',1],
+   ['Charter Member','ti-certificate','legendary'],['Trailblazer','ti-flag','legendary'],['Decade','ti-diamonds','legendary'],
+ ],
+};
+function pin(n,icon,rar,hidden){
+  if(hidden) return `<div class="cell locked"><div class="pin" style="background:#1a1a1e"><div class="disc"><span style="color:#2a2a2e;font-weight:700;font-size:24px">?</span></div></div><div class="pname">Hidden</div><div class="rar">${rar}</div></div>`;
+  return `<div class="cell"><div class="pin r-${rar}"><div class="disc"><i class="ti ${icon}" style="color:${ic[rar]}"></i></div></div><div class="pname">${n}</div><div class="rar">${rar}</div></div>`;
+}
+document.getElementById('cats').innerHTML = Object.entries(cats).map(([c,list])=>
+  `<div class="cat">${c}</div><div class="grid">${list.map(b=>pin(b[0],b[1],b[2],b[3])).join('')}</div>`).join('');
+
+// Gem Series
+const g=[['S1 Sapphire','#66A9FF','#0B3FD6'],['S2 Amethyst','#C982FF','#6712C4'],['S3 Ruby','#FF7A82','#B10D1E'],['S4 Emerald','#7DE0C0','#0E7A5C'],['S5 Coral','#FF9E7A','#C43C0C'],['S6 Onyx','#6B6B7A','#08080B'],['S7 Rose','#FF9DD0','#B01268'],['S8 Turquoise','#8DE8F0','#0B7E8C'],['S9 Peridot','#D6F07A','#6E9612'],['S10 Platinum','#F2F4F7','#8A9099']];
+document.getElementById('gems').innerHTML = g.map((c,i)=>`
+ <div class="cell"><svg width="60" height="60" viewBox="0 0 60 60"><defs><linearGradient id="gg${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c[1]}"/><stop offset="1" stop-color="${c[2]}"/></linearGradient></defs><circle cx="30" cy="30" r="26" fill="#0c0c0f" stroke="#C9A84C" stroke-width="2.5"/><path d="M30,4 A26,26 0 0,1 30,56 A13,13 0 0,1 30,30 A13,13 0 0,0 30,4 Z" fill="url(#gg${i})"/><circle cx="30" cy="17" r="4" fill="#0c0c0f"/><circle cx="30" cy="43" r="4" fill="url(#gg${i})"/></svg><div class="pname">${c[0]}</div></div>`).join('');
+</script>
+</body>
+</html>
