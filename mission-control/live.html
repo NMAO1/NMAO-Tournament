@@ -286,8 +286,9 @@ function render(){
     stage('distribute', 'Distribute', `<b>${S.medals}</b> medals · <b>${S.boxes}</b> boxes`, { muted:'medals + ship list', action:'Run distribute', view:'View medals' }) +
     stage('finalize', 'Finalize round', 'Freeze scheme, publish results, archive.', { action:'Finalize ✓', gold:true });
 
-  // wire run buttons
+  // wire run + view buttons
   $('pipeline').querySelectorAll('[data-run]').forEach(b => b.onclick = () => runStep(b.dataset.run));
+  $('pipeline').querySelectorAll('[data-view]').forEach(b => b.onclick = () => openView(b.dataset.view));
 
   // right rail
   const flagList = Object.values(S.steps).flatMap(s => Array.isArray(s.detail?.flags) ? s.detail.flags : []);
@@ -341,6 +342,54 @@ async function rollback(to){
   toast('Rolling back to ' + to + '…');
   try { await callController({ roundId: ROUND, step:'rollback', to }); toast('Rolled back to ' + to, 'ok'); await loadRound(ROUND); }
   catch(e){ toast('Rollback: ' + e.message, 'err'); }
+}
+
+// ---------- stage drill-downs (View buttons) ----------
+const vItem = (hd, sub) => `<div style="padding:9px 12px;border-bottom:1px solid var(--line,#26262b)"><div style="display:flex;align-items:center;gap:8px;font-size:13px">${hd}</div>${sub?`<div style="font-size:12px;color:var(--muted-2,#7a7060);margin-top:3px">${sub}</div>`:''}</div>`;
+async function openView(key){
+  const S = STATE;
+  showModal('Loading…', '<div style="padding:20px;color:var(--muted-2,#7a7060)">Loading…</div>');
+  try {
+    let title = '', body = '';
+    if (key === 'divide'){
+      title = 'Divisions & pods';
+      body = S.divisions.map(d => {
+        const dp = S.pods.filter(p => p.divisions && p.divisions.event===d.event && p.divisions.rank_key===d.rank_key);
+        const pods = dp.map(p => `Pod ${p.seq} · ${p.size} entries · ${p.judge_count} judge${p.judge_count===1?'':'s'} · ${p.state}`).join('<br>') || 'no pods';
+        return vItem(`<span class="tier" style="width:8px;height:8px;border-radius:2px;background:${TIER(d.rank_key)}"></span><b>${d.event}</b> · ${d.rank_key} · ${d.age_key}${d.is_collapsed?' · <span style="color:var(--muted-2,#7a7060)">collapsed</span>':''}<span style="margin-left:auto;color:var(--muted-2,#7a7060)">${d.entry_count||0} entries</span>`, pods);
+      }).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No divisions yet.</div>';
+    } else if (key === 'assign_judges'){
+      title = 'Judge assignments';
+      const { data } = await sb.from('judge_assignments').select('state,pod_id,judges(first_name,last_name),entries!inner(round_id)').eq('entries.round_id', ROUND);
+      const seq = {}; S.pods.forEach(p => seq[p.id]=p.seq);
+      const byPod = {}; (data||[]).forEach(a => (byPod[a.pod_id]=byPod[a.pod_id]||[]).push(a));
+      body = Object.keys(byPod).sort((a,b)=>(seq[a]??0)-(seq[b]??0)).map(pid => {
+        const rows = byPod[pid], sub = rows.filter(r=>r.state==='submitted').length;
+        const names = rows.map(r => `${(r.judges?.first_name||'')} ${(r.judges?.last_name||'')}`.trim()||'Judge').join(', ');
+        return vItem(`<b>Pod ${seq[pid]??'?'}</b><span style="margin-left:auto;color:var(--muted-2,#7a7060)">${sub}/${rows.length} scored</span>`, names);
+      }).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No assignments yet.</div>';
+    } else if (key === 'resolve'){
+      title = 'Results & placements';
+      const { data } = await sb.from('results').select('placement,score,rating_after,entries!inner(round_id,event,competitors(first_name,last_name))').eq('entries.round_id', ROUND).order('placement');
+      body = (data||[]).map(r => vItem(`<b>#${r.placement}</b> ${(r.entries?.competitors?.first_name||'')} ${(r.entries?.competitors?.last_name||'')}<span style="margin-left:auto;color:var(--muted-2,#7a7060)">${r.entries?.event||''} · score ${r.score} · rating ${r.rating_after}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No results yet.</div>';
+    } else if (key === 'distribute'){
+      title = 'Medal ship list';
+      const { data } = await sb.from('medal_shipments').select('item_count,ship_status,schools(name)').eq('round_id', ROUND).order('item_count', { ascending:false });
+      body = (data||[]).map(m => vItem(`<b>${m.schools?.name||'School'}</b><span style="margin-left:auto;color:var(--muted-2,#7a7060)">${m.item_count} items · ${m.ship_status}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No shipments yet.</div>';
+    }
+    showModal(title, body);
+  } catch(e){ showModal('Error', `<div style="padding:16px;color:var(--danger,#e07070)">${e.message}</div>`); }
+}
+function showModal(title, html){
+  let ov = document.querySelector('.mc-modal');
+  if (!ov){ ov = document.createElement('div'); ov.className='mc-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px';
+    document.body.appendChild(ov); }
+  ov.innerHTML = `<div style="background:var(--surface,#141416);border:1px solid var(--border,#26262b);border-radius:12px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border,#26262b)"><h2 style="margin:0;font-size:16px;color:var(--text,#f5f0e8)">${title}</h2><button class="mc-modal-x" style="margin-left:auto;background:none;border:none;color:var(--muted-2,#7a7060);font-size:18px;cursor:pointer">✕</button></div>
+    <div style="overflow:auto">${html}</div></div>`;
+  ov.style.display='flex';
+  ov.onclick = e => { if (e.target===ov || e.target.classList.contains('mc-modal-x')) ov.style.display='none'; };
 }
 
 // ---------- realtime ----------

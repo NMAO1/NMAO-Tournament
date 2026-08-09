@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO — Judge App (mockup)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/tabler-icons.min.css">
+<style>
+  :root{--gold:#E6B93F;--goldS:#FFE488;--text:#F5F0E8;--mut:#B8B0A4;--mut2:#7A7060;--line:#222226;--surf:#141416;
+        --sapphire:#1F7BFF;--success:#5DCAA5}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0d0d0f;color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:26px 14px 60px}
+  .serif{font-family:Georgia,serif}
+  h1{text-align:center;font-weight:600;font-size:20px;margin:0 0 20px}
+  .grid{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;align-items:flex-start}
+  .col{width:306px}
+  .cap{color:var(--mut);font-size:12px;letter-spacing:.14em;text-transform:uppercase;text-align:center;margin-bottom:8px}
+  .phone{background:#070708;border:1px solid #1f1f22;border-radius:28px;padding:14px 12px;box-shadow:0 0 0 3px #101012}
+  .ph-h{font-family:Georgia,serif;font-size:16px;font-weight:600;margin:2px 2px 12px;display:flex;justify-content:space-between;align-items:baseline}
+  .card{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px;margin-bottom:9px}
+  .mut{color:var(--mut)}.mut2{color:var(--mut2)}.lbl{color:var(--mut2);font-size:11px}
+  .gbtn{width:100%;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:600;color:#141210;background:linear-gradient(160deg,var(--goldS),var(--gold) 55%,#9C7A22)}
+  .chip{display:inline-block;font-size:10.5px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+  .bar{height:6px;background:#1b1b1d;border-radius:99px;overflow:hidden}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,#1F7BFF,#66A9FF)}
+  .vid{height:88px;border-radius:10px;background:linear-gradient(150deg,#161620,#0e0e11);display:flex;align-items:center;justify-content:center;border:1px solid #26262b;position:relative}
+  .vid i{font-size:22px;color:#6b655c}
+  .vid span{position:absolute;top:5px;left:7px;font-size:9px;color:var(--mut2)}
+  .crit{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .crit .n{width:78px;font-size:11.5px}.crit .w{font-size:9px;color:var(--mut2)}
+  .crit .v{width:26px;text-align:right;font-size:12px;font-weight:600}
+  .tabbar{display:flex;justify-content:space-around;padding:11px 0 4px;margin-top:10px;border-top:1px solid #17171a;font-size:10px;color:var(--mut2)}
+  .tabbar i{font-size:18px;display:block}.tabbar .on{color:var(--gold)}
+</style>
+</head>
+<body>
+<h1 class="serif">Judge App</h1>
+<div class="grid">
+
+  <!-- QUEUE -->
+  <div class="col">
+    <div class="cap">Queue</div>
+    <div class="phone">
+      <div class="ph-h">Your queue <span class="mut2" style="font-size:11px;font-weight:400">12 to score</span></div>
+
+      <div class="card" style="border-color:#3a3320;background:linear-gradient(150deg,rgba(230,185,63,.12),transparent 70%)">
+        <div style="font-weight:600;font-size:13px">New division ready</div>
+        <div class="mut" style="font-size:12px;margin:2px 0 9px">Trad Forms · 13–15 · Advanced · 6 videos · needs a 3-judge panel</div>
+        <div style="display:flex;gap:8px"><span class="chip" style="flex:1;text-align:center;padding:8px">Recuse</span><span class="chip" style="flex:1;text-align:center;padding:8px;color:#141210;background:linear-gradient(160deg,var(--goldS),var(--gold));border:none;font-weight:600">Accept</span></div>
+      </div>
+
+      <div class="lbl" style="margin:12px 0 6px">In progress</div>
+      <div class="card"><div style="display:flex;justify-content:space-between"><b style="font-size:13px">Trad Forms · 10–12 · Adv</b><span class="lbl">due in 2d</span></div>
+        <div class="bar" style="margin:8px 0 4px"><i style="width:38%"></i></div><div class="lbl">3 of 8 scored</div></div>
+      <div class="card"><div style="display:flex;justify-content:space-between"><b style="font-size:13px">Open Forms · 10–12 · Adv</b><span class="lbl">due in 3d</span></div>
+        <div class="bar" style="margin:8px 0 4px"><i style="width:0%"></i></div><div class="lbl">not started · 6 videos</div></div>
+
+      <div class="tabbar"><span class="on"><i class="ti ti-list-check"></i>Queue</span><span><i class="ti ti-history"></i>History</span><span><i class="ti ti-user"></i>Profile</span></div>
+    </div>
+  </div>
+
+  <!-- SCORE (star) -->
+  <div class="col">
+    <div class="cap">Score a video</div>
+    <div class="phone">
+      <div class="ph-h">Trad Forms · 10–12 · Adv <span class="mut2" style="font-size:11px;font-weight:400">3 / 8</span></div>
+      <div class="lbl" style="margin-bottom:8px">Entry 3 of 8 · anonymized</div>
+
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <div class="vid" style="flex:1"><span>Front</span><i class="ti ti-player-play"></i></div>
+        <div class="vid" style="flex:1"><span>Side</span><i class="ti ti-player-play"></i></div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:12px">
+        <span class="chip"><i class="ti ti-zoom-in"></i> Zoom</span><span class="chip"><i class="ti ti-player-track-next"></i> Slow-mo</span><span class="chip"><i class="ti ti-repeat"></i> Replay</span>
+      </div>
+
+      <div class="lbl" style="margin-bottom:8px">Traditional rubric · 0–10</div>
+      <div class="crit"><div class="n">Technical <div class="w">25%</div></div><div class="bar" style="flex:1"><i style="width:90%;background:linear-gradient(90deg,#E6B93F,#FFE488)"></i></div><div class="v">9.0</div></div>
+      <div class="crit"><div class="n">Power/Kime <div class="w">20%</div></div><div class="bar" style="flex:1"><i style="width:85%;background:linear-gradient(90deg,#E6B93F,#FFE488)"></i></div><div class="v">8.5</div></div>
+      <div class="crit"><div class="n">Balance <div class="w">20%</div></div><div class="bar" style="flex:1"><i style="width:92%;background:linear-gradient(90deg,#E6B93F,#FFE488)"></i></div><div class="v">9.2</div></div>
+      <div class="crit"><div class="n">Timing <div class="w">15%</div></div><div class="bar" style="flex:1"><i style="width:88%;background:linear-gradient(90deg,#E6B93F,#FFE488)"></i></div><div class="v">8.8</div></div>
+      <div class="crit"><div class="n">Spirit <div class="w">12%</div></div><div class="bar" style="flex:1"><i style="width:80%;background:linear-gradient(90deg,#E6B93F,#FFE488)"></i></div><div class="v">8.0</div></div>
+      <div class="crit"><div class="n">Difficulty <div class="w">8%</div></div><div class="bar" style="flex:1"><i style="width:75%;background:linear-gradient(90deg,#E6B93F,#FFE488)"></i></div><div class="v">7.5</div></div>
+
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 9px;border-color:#3a3320">
+        <span class="lbl">Weighted score</span><span class="serif" style="font-size:22px;font-weight:600;color:var(--goldS)">8.67</span>
+      </div>
+      <div class="card" style="padding:9px 11px"><div class="lbl" style="margin-bottom:3px"><i class="ti ti-message-dots"></i> Feedback (optional) · <span style="color:var(--sapphire)">prompt: what stood out in their balance?</span></div><div class="mut2" style="font-size:12px">Add a note…</div></div>
+      <button class="gbtn">Submit &amp; next →</button>
+    </div>
+  </div>
+
+  <!-- PROFILE -->
+  <div class="col">
+    <div class="cap">Profile · conflicts</div>
+    <div class="phone">
+      <div class="ph-h">Profile</div>
+      <div class="card" style="text-align:center">
+        <div style="width:58px;height:58px;border-radius:50%;margin:4px auto;background:linear-gradient(160deg,#66A9FF,#0B3FD6);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:#fff">JM</div>
+        <div style="font-weight:600">Sensei J. Marsh</div>
+        <div class="lbl">Willow Kwan Dojo · <span style="color:var(--success)">cleared</span></div>
+      </div>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px"><i class="ti ti-shield-x" style="color:#E07070"></i> Conflicts of interest</span><span class="lbl">2 declared ›</span></div>
+      <div class="lbl" style="margin:2px 2px 8px">Own-school entries are auto-excluded. Declare relatives, recent students (24 mo), or financial ties.</div>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px"><i class="ti ti-bell"></i> Assignment alerts</span><span class="chip" style="color:#141210;background:linear-gradient(160deg,var(--goldS),var(--gold));border:none">On</span></div>
+      <div class="tabbar"><span><i class="ti ti-list-check"></i>Queue</span><span><i class="ti ti-history"></i>History</span><span class="on"><i class="ti ti-user"></i>Profile</span></div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

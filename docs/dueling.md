@@ -145,9 +145,10 @@ default; the school's geo rules prevent uncomfortable local match-ups.
 ## 11. Phase & open questions
 
 - **Phase 2** (after the monthly tournament + competitor-app core + portal Phase 1).
-- **Min voters = 3** (decided); tie protocol = majority → sudden-death → deadlock
-  draw (decided). Still open: exact **voting-window length** (e.g. 48–72h) and the
-  **overtime length**.
+- **Durations (defaults, tunable):** challenge response **48h** → both upload
+  within **72h** of acceptance → **voting window 48h** → **sudden-death overtime
+  24h**; if a duel hasn't reached the **3-vote** minimum by close, **auto-extend
+  once (+24h)**. Tie protocol = majority → sudden-death → deadlock draw (decided).
 - Open: **duel rating** formula (simple Elo) — separate from tournament rating (yes).
 - Open: **cross-school/state** friendlies vs. strict same-area exclusion — governed
   by each school's dueling-area setting.
