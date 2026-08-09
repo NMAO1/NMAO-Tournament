@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO Competitor App — remaining screens (mockup)</title>
+<style>
+  :root{--gold:#E6B93F;--goldS:#FFE488;--goldD:#9C7A22;--ruby:#FF2E3B;--amethyst:#A32BF7;--sapphire:#1F7BFF;
+        --text:#F5F0E8;--mut:#B8B0A4;--mut2:#7A7060;--line:#222226;--surf:#141416;--surf2:#101012}
+  *{box-sizing:border-box}
+  body{margin:0;background:#0d0d0f;color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:26px 14px}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  h1{font-weight:600;font-size:20px;text-align:center;margin:0 0 20px}
+  .grid{display:flex;flex-wrap:wrap;gap:26px;justify-content:center;align-items:flex-start}
+  .col{width:306px}
+  .cap{color:var(--mut);font-size:12px;letter-spacing:.14em;text-transform:uppercase;text-align:center;margin-bottom:8px}
+  .phone{background:#070708;border:1px solid #1f1f22;border-radius:28px;padding:14px 12px;box-shadow:0 0 0 3px #101012}
+  .ph-h{font-family:Georgia,serif;font-size:16px;font-weight:600;margin:2px 2px 12px}
+  .tag{display:inline-block;font-size:11px;font-weight:600;color:#141210;background:var(--gold);padding:3px 10px;border-radius:99px;margin-bottom:8px}
+  .card{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:12px}
+  .mut{color:var(--mut)} .mut2{color:var(--mut2)}
+  .gbtn{width:100%;border:none;padding:12px;border-radius:12px;font-size:14px;font-weight:600;color:#141210;
+        background:linear-gradient(160deg,var(--goldS),var(--gold) 55%,var(--goldD));box-shadow:inset 0 1px 0 rgba(255,255,255,.5);cursor:pointer}
+  .chip{display:inline-block;font-size:12px;padding:6px 11px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+  .chip.on{color:#0b3fd6;background:linear-gradient(160deg,#66A9FF,#1F7BFF 60%,#0B3FD6);border:none;color:#fff}
+  .tabbar{display:flex;justify-content:space-around;padding:11px 0 4px;margin-top:10px;border-top:1px solid #17171a;font-size:10px;color:var(--mut2)}
+  .tabbar i{font-size:18px;display:block}
+  .tabbar .on{color:var(--gold)}
+  .lbl{font-size:11px;color:var(--mut2)}
+  .divi{height:1px;background:#1a1a1d;margin:12px 0}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/tabler-icons.min.css">
+</head>
+<body>
+<h1 class="serif">NMAO Competitor App — remaining screens</h1>
+<div class="grid">
+
+  <!-- ============ ONBOARDING / CONSENT ============ -->
+  <div class="col">
+    <div class="cap">Onboarding · COPPA gate</div>
+    <div class="phone">
+      <div class="ph-h">Welcome to NMAO</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <span style="flex:1;height:4px;border-radius:9px;background:var(--gold)"></span>
+        <span style="flex:1;height:4px;border-radius:9px;background:var(--gold)"></span>
+        <span style="flex:1;height:4px;border-radius:9px;background:#26262b"></span>
+      </div>
+      <div class="tag" style="background:linear-gradient(160deg,#C982FF,#A32BF7);color:#fff">Step 2 of 3 · Guardian consent</div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-weight:600;font-size:14px;margin-bottom:6px"><i class="ti ti-shield-lock" style="color:var(--amethyst)"></i> Video consent &amp; waiver</div>
+        <div class="mut" style="font-size:12px;line-height:1.5">A parent or guardian must review and sign the media consent before a minor can compete. Private video, guardian-controlled, deletable anytime.</div>
+      </div>
+      <div class="card" style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <i class="ti ti-writing-sign" style="font-size:22px;color:var(--gold)"></i>
+        <div style="flex:1;font-size:13px">Guardian signature</div>
+        <span style="font-size:11px;color:#5DCAA5"><i class="ti ti-clock"></i> pending</span>
+      </div>
+      <div class="lbl" style="margin-bottom:10px">Then: profile · class &amp; belt (from your school) · how to film.</div>
+      <button class="gbtn">Sign &amp; continue</button>
+      <div class="lbl" style="text-align:center;margin-top:8px"><i class="ti ti-lock"></i> Competing is locked until consent is signed.</div>
+    </div>
+  </div>
+
+  <!-- ============ COMPETE ============ -->
+  <div class="col">
+    <div class="cap">Compete · submit</div>
+    <div class="phone">
+      <div class="ph-h">Round 4 · Compete <span class="mut2" style="font-size:11px;font-weight:400">· 8 days left</span></div>
+
+      <div class="lbl" style="margin-bottom:6px">Choose your events</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        <span class="chip on">Traditional Forms</span>
+        <span class="chip on">Open Weapons</span>
+        <span class="chip">Open Forms</span>
+        <span class="chip">Trad Weapons</span>
+      </div>
+
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px"><i class="ti ti-video" style="color:var(--gold)"></i> Filming guide</div>
+        <div class="mut" style="font-size:12px;line-height:1.6">Full body in frame · unedited · 30s–2min · clean, brand-free area · up to 2 angles (front + side).</div>
+        <div style="margin-top:8px;background:#0e0e11;border:1px dashed #3a3320;border-radius:9px;padding:8px 10px;font-size:12px">
+          <span class="mut2">Say on camera:</span> <b style="color:var(--goldS)">“My password is 7F3K”</b>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div class="card" style="flex:1;text-align:center;padding:14px 8px"><i class="ti ti-circle-check" style="font-size:22px;color:#5DCAA5"></i><div style="font-size:12px;margin-top:4px">Front angle</div><div class="lbl">uploaded</div></div>
+        <div class="card" style="flex:1;text-align:center;padding:14px 8px;border-style:dashed"><i class="ti ti-upload" style="font-size:22px;color:var(--mut)"></i><div style="font-size:12px;margin-top:4px">Side angle</div><div class="lbl">optional</div></div>
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div><div class="lbl">Entry fee</div><div style="font-size:18px;font-weight:600">$45</div></div>
+        <button class="gbtn" style="width:auto;padding:10px 18px">Pay &amp; submit</button>
+      </div>
+
+      <div class="lbl" style="margin-bottom:4px">Status this round</div>
+      <div style="display:flex;gap:6px">
+        <span class="chip" style="color:#66A9FF;border-color:#1e2a3d">Trad Forms · judging</span>
+        <span class="chip" style="color:var(--mut)">Open Weapons · submitted</span>
+      </div>
+      <div class="tabbar"><span class="on"><i class="ti ti-video"></i>Compete</span><span><i class="ti ti-layout-dashboard"></i>Home</span><span><i class="ti ti-yin-yang"></i>Imprint</span><span><i class="ti ti-route"></i>Journey</span><span><i class="ti ti-user"></i>Profile</span></div>
+    </div>
+  </div>
+
+  <!-- ============ PROFILE ============ -->
+  <div class="col">
+    <div class="cap">Profile · the shelf</div>
+    <div class="phone">
+      <div style="text-align:center;padding:6px 0 12px">
+        <div style="width:78px;height:78px;border-radius:50%;margin:0 auto;padding:4px;background:conic-gradient(#FF2E3B,#B10D1E,#FF7A82,#FF2E3B)">
+          <div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(160deg,#C982FF,#6712C4);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:600;color:#fff">MR</div>
+        </div>
+        <div style="font-size:16px;font-weight:600;margin-top:8px">Mia Rivera</div>
+        <div class="lbl"><i class="ti ti-shield-check"></i> Iron Crane Dojo · <span style="color:var(--ruby)">Advanced · Red belt</span></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div class="card" style="padding:10px"><div class="lbl">Rating</div><div style="font-size:20px;font-weight:600">57</div></div>
+        <div class="card" style="padding:10px"><div class="lbl">Points · standing</div><div style="font-size:20px;font-weight:600">1,240 <span class="mut2" style="font-size:12px">· 3rd</span></div></div>
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="lbl">Medal shelf</div>
+        <div style="display:flex;gap:14px">
+          <span style="font-weight:600"><span style="color:#FFD35A">●</span> 2</span>
+          <span style="font-weight:600"><span style="color:#C9CDD3">●</span> 1</span>
+          <span style="font-weight:600"><span style="color:#C8843E">●</span> 1</span>
+        </div>
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px"><i class="ti ti-award" style="color:var(--gold)"></i> Badges</div>
+        <div class="mut" style="font-size:13px">14 of 42 <i class="ti ti-chevron-right"></i></div>
+      </div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:13px"><i class="ti ti-truck-delivery" style="color:#5DCAA5"></i> Round 3 medal</div>
+        <div style="font-size:12px;color:#5DCAA5">shipped</div>
+      </div>
+
+      <div style="display:flex;gap:8px">
+        <span class="chip" style="flex:1;text-align:center"><i class="ti ti-settings"></i> Settings</span>
+        <span class="chip" style="flex:1;text-align:center"><i class="ti ti-users"></i> Guardian</span>
+      </div>
+      <div class="tabbar"><span><i class="ti ti-layout-dashboard"></i>Home</span><span><i class="ti ti-yin-yang"></i>Imprint</span><span><i class="ti ti-video"></i>Compete</span><span><i class="ti ti-route"></i>Journey</span><span class="on"><i class="ti ti-user"></i>Profile</span></div>
+    </div>
+  </div>
+
+  <!-- ============ BADGES ============ -->
+  <div class="col">
+    <div class="cap">Badges · collection</div>
+    <div class="phone">
+      <div class="ph-h">Badges <span class="mut2" style="font-size:12px;font-weight:400">· 14 of 42</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <span class="chip on" style="font-size:11px;padding:4px 9px">All</span>
+        <span class="chip" style="font-size:11px;padding:4px 9px">Effort</span>
+        <span class="chip" style="font-size:11px;padding:4px 9px">Growth</span>
+        <span class="chip" style="font-size:11px;padding:4px 9px">Mastery</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px" id="badges"></div>
+      <div class="tabbar"><span><i class="ti ti-layout-dashboard"></i>Home</span><span><i class="ti ti-yin-yang"></i>Imprint</span><span><i class="ti ti-video"></i>Compete</span><span><i class="ti ti-route"></i>Journey</span><span class="on"><i class="ti ti-user"></i>Profile</span></div>
+    </div>
+  </div>
+
+  <!-- ============ JOURNAL ============ -->
+  <div class="col">
+    <div class="cap">Journal · reflection</div>
+    <div class="phone">
+      <div class="ph-h">Journal</div>
+      <div class="card" style="border-left:3px solid var(--amethyst);margin-bottom:10px">
+        <div class="lbl" style="margin-bottom:4px">Reflection · after Round 3</div>
+        <div class="serif" style="font-style:italic;color:#E7DECB;font-size:14px;line-height:1.5;margin-bottom:8px">“What is one thing you did better this round than last?”</div>
+        <div style="background:#0e0e11;border:1px solid var(--line);border-radius:9px;padding:9px;color:var(--mut2);font-size:12px">Write your thoughts…</div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span class="mut"><i class="ti ti-target-arrow"></i> Season goal · improve Balance</span><span style="color:#5DCAA5;font-weight:600">on track</span></div>
+        <div style="height:7px;background:#1b1b1d;border-radius:99px;overflow:hidden"><div style="height:100%;width:72%;background:linear-gradient(90deg,#1F7BFF,#66A9FF)"></div></div>
+      </div>
+      <div class="lbl" style="margin-bottom:6px">Past entries</div>
+      <div class="card" style="padding:10px 12px;margin-bottom:7px">
+        <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600">Round 2</span><span class="chip" style="font-size:10px;padding:2px 8px;color:#F5F0E8;border-color:#3a2d52">Perseverance</span></div>
+        <div class="mut" style="font-size:12px;margin-top:3px">Kept my stances lower even when tired…</div>
+      </div>
+      <div class="card" style="padding:10px 12px">
+        <div style="display:flex;justify-content:space-between"><span style="font-size:12px;font-weight:600">Round 1</span><span class="chip" style="font-size:10px;padding:2px 8px;color:#F5F0E8;border-color:#2d5248">Focus</span></div>
+        <div class="mut" style="font-size:12px;margin-top:3px">First submission — nervous but proud.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LEADERBOARDS ============ -->
+  <div class="col">
+    <div class="cap">Leaderboards · effort-first</div>
+    <div class="phone">
+      <div class="ph-h">Leaderboards</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <span class="chip on" style="flex:1;text-align:center;font-size:11px">Me</span>
+        <span class="chip" style="flex:1;text-align:center;font-size:11px">School</span>
+        <span class="chip" style="flex:1;text-align:center;font-size:11px">Region</span>
+      </div>
+      <div class="lbl" style="margin-bottom:6px">Effort &amp; growth</div>
+      <div class="card" style="padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px"><i class="ti ti-flame" style="color:var(--gold)"></i> Participation streak</span><span style="font-weight:600">4 · <span class="mut2" style="font-size:12px">top 12%</span></span></div>
+      <div class="card" style="padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px"><i class="ti ti-trending-up" style="color:#5DCAA5"></i> Most improved</span><span style="font-weight:600">+16 <span class="mut2" style="font-size:12px">· 2nd</span></span></div>
+      <div class="card" style="padding:8px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px"><i class="ti ti-checkbox" style="color:#66A9FF"></i> Participation rate</span><span style="font-weight:600">100%</span></div>
+      <div class="lbl" style="margin-bottom:6px">Standings <span class="mut2">· City → World</span></div>
+      <div class="card" style="padding:8px 12px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px"><span class="mut2">3.</span> Mia R. · rating</span><span style="font-weight:600">57</span></div>
+      <div class="card" style="padding:8px 12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px"><span class="mut2">1.</span> Iron Crane <span class="lbl">(school)</span></span><span style="font-weight:600"><span style="color:#FFD35A">●</span> 22</span></div>
+    </div>
+  </div>
+
+  <!-- ============ CHAMPIONSHIP BRACKET ============ -->
+  <div class="col">
+    <div class="cap">Championship · finale bracket</div>
+    <div class="phone" style="background:radial-gradient(120% 70% at 50% 0%,#1a1420 0%,#070708 60%)">
+      <div class="ph-h">Grand Finale <span class="mut2" style="font-size:11px;font-weight:400">· presented by [Sponsor]</span></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:14px;font-size:11px">
+        <span style="flex:1;text-align:center;color:#5DCAA5;border:1px solid #1f3a30;border-radius:8px;padding:6px 2px">Stage 1 ✓</span>
+        <i class="ti ti-chevron-right mut2"></i>
+        <span style="flex:1;text-align:center;color:#141210;background:linear-gradient(160deg,var(--goldS),var(--gold));border-radius:8px;padding:6px 2px;font-weight:600">Stage 2</span>
+        <i class="ti ti-chevron-right mut2"></i>
+        <span style="flex:1;text-align:center;color:var(--mut2);border:1px solid var(--line);border-radius:8px;padding:6px 2px">Final</span>
+      </div>
+
+      <div class="card" style="text-align:center;margin-bottom:12px;border-color:#3a3320">
+        <div class="lbl">You advanced!</div>
+        <div class="serif" style="font-size:17px;font-weight:600;margin:2px 0 2px">Stage 2 · Pod B</div>
+        <div class="mut" style="font-size:12px">Top 3 of 5 advance to the Final</div>
+      </div>
+
+      <div class="lbl" style="margin-bottom:6px">Your pod · current standing</div>
+      <div class="card" style="padding:8px 12px;margin-bottom:5px;display:flex;justify-content:space-between;border-color:#3a3320"><span style="font-size:13px"><span style="color:#FFD35A">1.</span> Mia R. <span class="lbl">(you)</span></span><span style="font-weight:600">66.3</span></div>
+      <div class="card" style="padding:8px 12px;margin-bottom:5px;display:flex;justify-content:space-between"><span style="font-size:13px"><span class="mut2">2.</span> Kenji T.</span><span class="mut">64.5</span></div>
+      <div class="card" style="padding:8px 12px;margin-bottom:12px;display:flex;justify-content:space-between"><span style="font-size:13px"><span class="mut2">3.</span> Aisha B.</span><span class="mut">62.8</span></div>
+
+      <div class="card" style="display:flex;align-items:center;justify-content:space-between;border-color:#3a3320">
+        <div><div class="lbl">Next form due</div><div style="font-weight:600;font-size:14px;color:var(--goldS)">in 3 days</div></div>
+        <button class="gbtn" style="width:auto;padding:10px 16px">Submit final</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const badges = [
+ ['ti-shoe','First Step','#5DCAA5',1],['ti-flame','Nine Bows','#E6B93F',1],['ti-trending-up','Rising Star','#66A9FF',1],
+ ['ti-target','Precision','#E6B93F',1],['ti-shield','Composure','#A32BF7',1],['ti-bolt','Kime','#FF2E3B',1],
+ ['ti-mountain','Fearless','#5DCAA5',1],['ti-book','Journaler','#66A9FF',1],['ti-arrow-up-right','Comeback','#E6B93F',1],
+ ['ti-medal','First Gold','#2b2b2e',0],['ti-crown','Champion','#2b2b2e',0],['ti-diamond','Master','#2b2b2e',0],
+];
+document.getElementById('badges').innerHTML = badges.map(b=>`
+ <div style="text-align:center">
+   <div style="width:100%;aspect-ratio:1;border-radius:14px;display:flex;align-items:center;justify-content:center;
+        background:${b[3]?'#141416':'#0e0e11'};border:1px solid ${b[3]?'#33301f':'#1c1c1f'}">
+     <i class="ti ${b[0]}" style="font-size:24px;color:${b[2]}"></i>
+   </div>
+   <div style="font-size:10px;color:${b[3]?'#F5F0E8':'#5F5A52'};margin-top:3px">${b[1]}</div>
+ </div>`).join('');
+</script>
+</body>
+</html>
