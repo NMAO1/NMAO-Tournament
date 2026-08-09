@@ -70,6 +70,31 @@ The hero identity element — logo lockup, section headers, the reveal energy bu
 - Don't put the vibrant hues behind large bodies of text — use them as accents, edges, and moments. Gold and the spectrum are seasoning, black is the plate.
 - Accessibility: keep text on `--bg`/`--surface` at AA contrast (the warm `--text` passes); use gold/white text on the vibrant chips, never vibrant-on-vibrant.
 
+## Season colors (medallion enamel + digital constellation) — LOCKED, first 10 years
+
+Each season has a signature gemstone color used for **both** the physical
+collectible medal's enamel (`physical-medal.md` §5) and the digital Imprint /
+lifetime-constellation medallion (`competitor-growth-and-badges.md` §3b). Fixed and
+global — "a Season 3 Ruby medallion" means the same for everyone. Rendered as a
+3-stop metallic gradient on the black core with the gold rim.
+
+| Season | Gemstone | Highlight | Base | Shadow |
+|---|---|---|---|---|
+| 1 | Sapphire | `#66A9FF` | `#1F7BFF` | `#0B3FD6` |
+| 2 | Amethyst | `#C982FF` | `#A32BF7` | `#6712C4` |
+| 3 | Ruby | `#FF7A82` | `#FF2E3B` | `#B10D1E` |
+| 4 | Emerald | `#7DE0C0` | `#2BC79A` | `#0E7A5C` |
+| 5 | Coral | `#FF9E7A` | `#FF6A2B` | `#C43C0C` |
+| 6 | Topaz | `#FFDA7A` | `#F2B520` | `#B57E08` |
+| 7 | Rose | `#FF9DD0` | `#F0369B` | `#B01268` |
+| 8 | Turquoise | `#8DE8F0` | `#22C7D6` | `#0B7E8C` |
+| 9 | Peridot | `#D6F07A` | `#A7E22B` | `#6E9612` |
+| 10 | Platinum | `#F2F4F7` | `#CDD2D9` | `#8A9099` |
+
+Note: Season 6 (Topaz) sits nearest the gold rim — the physical medal that year may
+want a cooler/silver rim or a brighter amber enamel for contrast. After year 10 the
+rotation can extend (Onyx, Garnet, Aquamarine, Citrine…) or restart with a marker.
+
 ## Reconcile with the frontend handoff
 
 `docs/frontend-handoff.md` §3 lists the base black + gold tokens; **this file extends them** with the metallic red/purple/blue spectrum. Where they overlap (bg, surface, border, gold, text), the values match. Treat this file as the source of truth for the tournament app's color.

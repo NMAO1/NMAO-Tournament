@@ -79,8 +79,12 @@ toggle:
   hexagon is complete (a long, always-visible arc).
 - **Difficulty climbing** — reward daring harder material.
 - **Climbing the ladder** — division → semis → finals → city → national → world.
-- **Seasons as chapters** — completed Imprints stack into a lifetime constellation;
-  a veteran's profile looks *richer* over time, never flatter.
+- **Seasons as chapters** — completed Imprints stack into a lifetime constellation,
+  **each season rendered in its own signature color** (a rotating metallic hue —
+  sapphire, amethyst, ruby, emerald, gold…). This mirrors the physical collectible's
+  changing **season-color enamel** (`physical-medal.md` §5), so a competitor's
+  in-app constellation and their shelf of real medallions match, year over year.
+  A veteran's profile looks *richer and more colorful* over time, never flatter.
 
 The app says it out loud: **growth doesn't stop at the ceiling — it changes shape**
 (from "climb higher" to "hold it, widen it, deepen it, test it against the best").
