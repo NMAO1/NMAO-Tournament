@@ -12,10 +12,36 @@ Flow + Video docs, and the Conflict-of-Interest regulation.
 
 ## Who & auth
 
-Invited judges — often **remote expert instructors** (a paid role, part- or
-full-time). Magic-link sign-in (like the rest of the suite); only **active +
-background-check-cleared** judges get assignments. Each judge carries a **school**
-for conflict exclusion.
+Judges are **independent contractors (1099), not employees** — often remote expert
+instructors who judge on their own schedule and are paid **per assignment**.
+Magic-link sign-in (like the rest of the suite); only judges who have completed
+onboarding (below) and are **active + background-check-cleared** get assignments.
+Each judge carries a **school** for conflict exclusion.
+
+## 0. Sign-up — becoming a judge (independent-contractor onboarding)
+
+A public **judge sign-up / application** page onboards judges as **independent
+contractors**. Steps, each gating the next:
+
+1. **Apply** — contact info + bio/credentials (style(s) studied, years of training,
+   notable mentions) + references.
+2. **Independent Contractor Agreement** — review + **e-sign**. Establishes the 1099
+   relationship: per-assignment pay, own schedule/equipment, no employee benefits,
+   confidentiality, feedback/IP terms, and termination. *(Draft with counsel;
+   classification rests on real control factors — judges set their own hours, use
+   their own gear, are paid per assignment — which support IC status.)*
+3. **Tax & payout** — **Stripe Connect Express** onboarding collects tax info (W-9)
+   + bank and issues the year-end **1099**; NMAO never stores raw bank/tax data.
+4. **Background-check consent** — consent; a provider runs it
+   (`background_check_status`: pending → cleared/rejected).
+5. **Integrity Creed** — affirm and sign (§4).
+6. **Review & activation** — NMAO reviews credentials + clearance, then grants
+   **judge-app access** (`status` → active).
+
+**Gate:** no assignments until the ICA is signed, the creed affirmed, payout
+connected, and the background check cleared. New `judges` field:
+`ic_agreement_accepted_at`. **Legal note:** the ICA and contractor classification
+must be reviewed by counsel before launch.
 
 ## Screens
 
