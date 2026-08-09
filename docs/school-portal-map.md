@@ -79,9 +79,14 @@ Per-competitor and school storefronts (branded items, **badge pins/patches** fro
 the badge catalog — the Gem Series + Grand-Finale pins), Stripe checkout, revenue
 split.
 
-### G. In-house tournaments  *(Phase 2–3)*
-Create private tournaments (name, date, categories, prizes), register students, post
-results to the **public NMAO page or school-only**.
+### G. In-house tournaments  *(Phase 2)* — see `in-house-tournaments.md`
+Schools host their **own** tournaments for their students: **free to host,
+self-judged, school-defined prizes**. NMAO provides the flow — the same engine
+(divisioning → pods → judging → placements) runs it, but with **no entry fees, no
+global rating/points/medals, and the school's own judges**. Create → invite/enter
+(free) → divide → judge (video or live) → results → prizes → publish (school-only or
+public). A major between-rounds engagement driver. Full spec in
+`docs/in-house-tournaments.md`.
 
 ### H. Communication & engagement
 Announcements/news, event calendar, gallery — all minor-safe (no public discovery;

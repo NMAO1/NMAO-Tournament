@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO Tournament — In-House Tournaments (mockup)</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/tabler-icons.min.css">
+<style>
+  :root{--gold:#E6B93F;--goldS:#FFE488;--ruby:#FF2E3B;--amethyst:#A32BF7;--sapphire:#1F7BFF;
+        --text:#F0EADD;--mut:#9a9488;--mut2:#6b665c;--line:#232327;--surf:#141417;--bg:#0a0a0c;
+        --spectrum:linear-gradient(90deg,#FF2E3B,#C22DE0,#A32BF7,#4B6BFF,#1F7BFF)}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:13px;padding:24px 16px 60px}
+  .serif{font-family:Georgia,serif}
+  .wrap{max-width:1000px;margin:0 auto}
+  h1{font-size:20px;font-weight:600;margin:0 0 4px}
+  .sub{color:#8f887c;font-size:12px;margin:0 0 20px}
+  .sechd{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:26px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .grid{display:grid;gap:14px}
+  .card{background:var(--surf);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .btn{background:var(--surf);border:1px solid var(--line);color:var(--text);padding:8px 13px;border-radius:8px;font-size:12px;cursor:pointer}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--goldS),var(--gold));font-weight:600}
+  .chip{display:inline-block;font-size:10.5px;padding:2px 9px;border-radius:99px;border:1px solid var(--line);color:var(--mut)}
+  .chip.live{color:#5DCAA5;border-color:#1f3a30}.chip.draft{color:var(--mut)}.chip.done{color:var(--gold);border-color:#3a3320}
+  .mut{color:var(--mut)}.mut2{color:var(--mut2)}
+  .in{background:#0e0e11;border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--text);font-size:12px;width:100%}
+  .lbl{color:var(--mut2);font-size:11px;margin-bottom:4px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;color:var(--mut2);font-weight:500;font-size:11px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:9px 10px;border-bottom:1px solid #1a1a1d}
+  .medal{font-weight:600}
+  .step{display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:11px;color:var(--mut2)}
+  .step .on{color:#141210;background:linear-gradient(160deg,var(--goldS),var(--gold));padding:4px 10px;border-radius:99px;font-weight:600}
+  .step .d{border:1px solid var(--line);padding:4px 10px;border-radius:99px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 class="serif">In-House Tournaments</h1>
+  <p class="sub">Host your own tournament for your students — free, self-judged, your prizes. We provide the flow.</p>
+
+  <!-- LIST -->
+  <div class="sechd">Your tournaments</div>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="btn gold"><i class="ti ti-plus"></i> Create tournament</button></div>
+  <div class="grid" style="grid-template-columns:repeat(2,1fr)">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start"><b>Spring Belt Classic</b><span class="chip live">● judging</span></div>
+      <div class="mut" style="font-size:12px;margin:4px 0 10px">Apr 20 · 34 entrants · Forms &amp; Weapons</div>
+      <div style="display:flex;gap:8px"><button class="btn">Manage</button><button class="btn">Judge</button></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start"><b>Little Dragons Cup</b><span class="chip done">● complete</span></div>
+      <div class="mut" style="font-size:12px;margin:4px 0 10px">Mar 2 · 21 entrants · school-only</div>
+      <div style="display:flex;gap:8px"><button class="btn">Results</button><button class="btn">Publish</button></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start"><b>Summer Open (live)</b><span class="chip draft">● draft</span></div>
+      <div class="mut" style="font-size:12px;margin:4px 0 10px">Jun 14 · live scoring · not yet open</div>
+      <div style="display:flex;gap:8px"><button class="btn">Edit</button><button class="btn gold">Open entry</button></div>
+    </div>
+  </div>
+
+  <!-- CREATE -->
+  <div class="sechd">Create a tournament</div>
+  <div class="card">
+    <div class="step"><span class="on">1 · Details</span><i class="ti ti-chevron-right"></i><span class="d">2 · Divisions</span><i class="ti ti-chevron-right"></i><span class="d">3 · Judges</span><i class="ti ti-chevron-right"></i><span class="d">4 · Prizes</span></div>
+    <div class="grid" style="grid-template-columns:1fr 1fr">
+      <div><div class="lbl">Name</div><input class="in" value="Spring Belt Classic"></div>
+      <div><div class="lbl">Date</div><input class="in" value="April 20, 2026"></div>
+      <div><div class="lbl">Event categories</div><div style="margin-top:2px"><span class="chip" style="color:#fff;background:linear-gradient(160deg,#66A9FF,#1F7BFF);border:none">Trad Forms</span> <span class="chip" style="color:#fff;background:linear-gradient(160deg,#66A9FF,#1F7BFF);border:none">Trad Weapons</span> <span class="chip">+ add</span></div></div>
+      <div><div class="lbl">Judging mode</div>
+        <div style="display:flex;gap:8px;margin-top:2px"><span class="chip" style="color:#141210;background:var(--gold);border:none">Video submission</span><span class="chip">Live / manual</span></div></div>
+      <div><div class="lbl">Divisions</div><div style="margin-top:2px"><span class="chip">Clone NMAO scheme</span> <span class="chip" style="color:#fff;background:linear-gradient(160deg,#C982FF,#A32BF7);border:none">Custom brackets</span></div></div>
+      <div><div class="lbl">Visibility</div><div style="display:flex;gap:8px;margin-top:2px"><span class="chip" style="color:#141210;background:var(--gold);border:none">School-only</span><span class="chip">Public NMAO page</span></div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:14px"><span class="mut2" style="font-size:11px;align-self:center"><i class="ti ti-cash-off"></i> No entry fees — hosting is free</span><button class="btn gold">Next: Divisions</button></div>
+  </div>
+
+  <!-- JUDGE / MANAGE -->
+  <div class="sechd">Judge · Spring Belt Classic</div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+      <div class="mut" style="font-size:12px">Trad Forms · 10–12 · Advanced · Pod A</div>
+      <div class="mut" style="font-size:12px">Judged 4 / 6 · <span style="color:#5DCAA5">2 left</span></div>
+    </div>
+    <table>
+      <tr><th>Competitor</th><th>Judge</th><th>Score</th><th>Status</th></tr>
+      <tr><td>Mia Rivera</td><td class="mut">Sensei K</td><td class="medal">9.1</td><td style="color:#5DCAA5">scored</td></tr>
+      <tr><td>Leo Park</td><td class="mut">Sensei K</td><td class="medal">8.4</td><td style="color:#5DCAA5">scored</td></tr>
+      <tr><td>Ava Chen</td><td class="mut">Sensei M</td><td class="mut2">—</td><td style="color:var(--gold)">watch &amp; score</td></tr>
+    </table>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn">Assign judges</button><button class="btn gold">Finalize pod</button></div>
+  </div>
+
+  <!-- RESULTS & PRIZES -->
+  <div class="sechd">Results &amp; prizes · Little Dragons Cup</div>
+  <div class="card">
+    <div class="mut" style="font-size:12px;margin-bottom:8px">Trad Forms · 7–9 · Beginner</div>
+    <table>
+      <tr><th>Place</th><th>Competitor</th><th>Score</th><th>Prize</th></tr>
+      <tr><td class="medal" style="color:#FFD35A">1st</td><td>Kai Tanaka</td><td>8.9</td><td><input class="in" style="width:auto;padding:5px 8px" value="Gold trophy + new belt"></td></tr>
+      <tr><td class="medal" style="color:#C9CDD3">2nd</td><td>Sara Lee</td><td>8.5</td><td><input class="in" style="width:auto;padding:5px 8px" value="Silver trophy"></td></tr>
+      <tr><td class="medal" style="color:#C8843E">3rd</td><td>Noah Kim</td><td>8.1</td><td><input class="in" style="width:auto;padding:5px 8px" value="Bronze trophy"></td></tr>
+      <tr><td class="mut2">4th</td><td>Emma Diaz</td><td>7.7</td><td class="mut2">Participation ribbon</td></tr>
+    </table>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+      <span class="mut2" style="font-size:11px"><i class="ti ti-info-circle"></i> In-house results stay local — no effect on NMAO rating, points, or medals.</span>
+      <div style="display:flex;gap:8px"><button class="btn">Print certificates</button><button class="btn gold">Publish results</button></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
