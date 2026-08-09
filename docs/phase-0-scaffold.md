@@ -11,8 +11,12 @@ shared tokens). Run the commands below to stand up the skeletons.*
   RLS, **verified applying cleanly on PGlite**.
 - ✅ **Shared design tokens** — `packages/design-tokens/tokens.ts` (metallic hues,
   tier map, neutrals, spectrum) — one source of truth for web + native.
-- ⬜ **App skeletons** — run the commands below.
-- ⬜ **CI** — add the workflow below.
+- ✅ **App skeletons** — `web/` (Next.js, **builds clean**) + `app/` (Expo RN,
+  **typechecks clean**); both wired with Supabase clients (password + implicit auth)
+  and the shared `@nmao/design-tokens` package; branded starter screens in each.
+- ✅ **CI** — `.github/workflows/ci.yml` (backend `validate` + web `build` + app typecheck).
+- ⬜ **Your turn:** add the anon key to `web/.env.local` + `app/.env`; apply the
+  Phase-1 migration to the live project (or regenerate `reset_and_apply.sql`).
 
 ## Target repo layout (light monorepo)
 ```
