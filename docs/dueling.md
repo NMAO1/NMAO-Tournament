@@ -58,8 +58,16 @@ Last updated: 2026-08-08
   pre-set encouragements only ("Great kime!", "Strong stance!"), never free text.
 - **Anti-brigading:** hide the running tally until near close (reduces bandwagon),
   rate-limit, one-account-one-vote, flag collusion patterns.
-- **Ties:** decided by the higher dueling rank, else declared a **draw** (both keep
-  their streak). Configurable.
+- **Certification:** a result needs **≥ 3 votes** to count (3 is odd, so a minimal
+  result never ties). If a duel can't reach 3 by close, auto-extend the window once;
+  still under 3 → a rare **no-contest / draw**.
+- **Winner:** simple majority when the window closes.
+- **Tie → Sudden Death:** an even, deadlocked tally at close flips the duel into a
+  short **overtime** — the next tie-breaking vote wins it (a "⚔️ Sudden Death — cast
+  the deciding vote!" push drives the vote feed). Self-resolving in almost every case.
+- **Deadlock draw (final backstop):** if overtime still expires tied (very rare),
+  it's an honest **draw** — both keep their streaks and each earns the **Deadlock**
+  badge. No artificial winner is forced.
 
 ## 5. Notifications
 
@@ -137,7 +145,9 @@ default; the school's geo rules prevent uncomfortable local match-ups.
 ## 11. Phase & open questions
 
 - **Phase 2** (after the monthly tournament + competitor-app core + portal Phase 1).
-- Open: exact **voting window** length and **min voters** for a valid result.
+- **Min voters = 3** (decided); tie protocol = majority → sudden-death → deadlock
+  draw (decided). Still open: exact **voting-window length** (e.g. 48–72h) and the
+  **overtime length**.
 - Open: **duel rating** formula (simple Elo) — separate from tournament rating (yes).
 - Open: **cross-school/state** friendlies vs. strict same-area exclusion — governed
   by each school's dueling-area setting.

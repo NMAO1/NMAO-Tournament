@@ -119,6 +119,7 @@ Last updated: 2026-08-08
 66. **Undefeated Duelist** — an unbroken blade — a win streak of X with no losses — *Epic*
 67. **Iron Duelist** — a bladed hourglass — duel every week for a month — *Rare*
 68. **Duel Legend** — a crowned blade — reach #1 on a dueling leaderboard tier — *Legendary*
+80. **Deadlock** — two blades locked edge-to-edge — a duel ends in a true deadlock draw (survives sudden death) — *Epic* (rare by nature)
 
 ### Voting — reward the community that judges the duels
 73. **First Vote** — a ballot — cast your first duel vote — *Common*
