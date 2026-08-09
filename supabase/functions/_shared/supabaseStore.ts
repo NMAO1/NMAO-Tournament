@@ -539,6 +539,9 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore & Divi
         }
       }
       if (medalRows.length) await db.from('medals').insert(medalRows);
+      // Assign a motivational saying to each non-placer for the reveal (idempotent:
+      // only fills results.saying_id where null; non-repeating per competitor).
+      await db.rpc('assign_reveal_sayings', { p_round_id: roundId });
       await db.from('rounds').update({ state: 'distributed' }).eq('id', roundId);
     },
   };
