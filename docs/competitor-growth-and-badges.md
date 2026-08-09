@@ -54,6 +54,37 @@ win every month, because it's them vs their past self.
   per-criterion averages from `submission_scores` joined across the competitor's
   entries. Recharts line chart with selectable series.
 
+## 3b. Sustaining growth past the ceiling — the Mastery Path
+
+A 0-100 score/rating *will* plateau near the top, and a strong competitor is
+exactly who most embodies "constant growth" — so a capped line must not be the
+whole story. In martial arts, mastery isn't a higher number; it's holding higher,
+wider, deeper, and against stronger. Two layers:
+
+- **Skill (rating, 0-100)** — a *snapshot* of current ability, expected to plateau
+  (like a black belt's forms not getting "more correct"). Healthy, not a failure.
+- **The Mastery Path (lifetime, unbounded, never resets across seasons)** — the
+  number that always answers "am I still growing?" with yes. It only ever accrues,
+  from: competing, personal bests, consistency (rising floor), mastering criteria
+  (the Mirror filling), attempting higher **difficulty**, and advancing stages /
+  beating higher-rated opponents. Surfaced as **Mastery Degrees** (like dan grades)
+  — you don't cap, you earn the next degree.
+
+**The chart evolves with the athlete.** Early: the score line climbs. Near the
+ceiling, the Growth view shifts what it celebrates, via a **This Season / Lifetime**
+toggle:
+
+- **Rising floor, not just peak** — "your *worst* round is now a 60" is growth.
+- **The Mirror radar filling** — closing the gaps across all six criteria until the
+  hexagon is complete (a long, always-visible arc).
+- **Difficulty climbing** — reward daring harder material.
+- **Climbing the ladder** — division → semis → finals → city → national → world.
+- **Seasons as chapters** — completed Imprints stack into a lifetime constellation;
+  a veteran's profile looks *richer* over time, never flatter.
+
+The app says it out loud: **growth doesn't stop at the ceiling — it changes shape**
+(from "climb higher" to "hold it, widen it, deepen it, test it against the best").
+
 ## 4. Earned Virtues (fixing the "arbitrary" problem)
 
 The virtue must be *earned from what you actually did*, not assigned at random.
@@ -185,6 +216,10 @@ direction.
   on `results`)* — the earned virtue per round for Imprint + Journey.
 - Growth graph reads `rating_history`, `results`, and per-criterion
   `submission_scores`; no new table needed.
+- `mastery_path (competitor_id, points, degree, updated_at)` + a
+  `mastery_events` ledger (source, points, round_id?) — the lifetime, never-reset
+  progression; degrees are thresholds on cumulative points. Lifetime "constellation"
+  reads completed Imprints per season from `results`/`medals`.
 
 ## 9. Guardrails
 
