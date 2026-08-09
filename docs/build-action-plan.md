@@ -101,8 +101,11 @@ bento → **Compete** (enter + pay Stripe; **2-angle resumable video upload**;
 per-round **spoken password**) → **Reveal** (effort-first) → **Imprint** → Journey/
 Growth (Recharts + the Mirror) → Profile. **Backend:** `create-entry` +
 `create-entry-checkout` (Stripe), `sign-video-upload` (Storage signed URLs),
-`issue-round-password`, new tables `round_virtues`, `mastery_path`+`mastery_events`,
-`journal_entries`; reveal sayings (done). **DoD:** a competitor enters → uploads →
+**`get-playback-url` — the VIDEO SEAM** (app never hardcodes a storage URL; this
+returns a signed playback URL today and swaps to **Mux** later with zero app
+changes — and it's the single hook where a **sponsor pre-roll** ref is attached to
+a clip), `issue-round-password`, new tables `round_virtues`,
+`mastery_path`+`mastery_events`, `journal_entries`; reveal sayings (done). **DoD:** a competitor enters → uploads →
 is judged → reveals → Imprint fills. *(Mockups: `competitor-app-screens.html`,
 `competitor-hero-screens.html`, `competitor-growth-lifetime.html`.)*
 
@@ -181,3 +184,49 @@ dueling raffle is ever enabled).
   core of the growth-first pillar).
 - **Auth** — resist magic-link-primary (D6); we have the scars.
 - **Legal** — the IC agreement + video consent gate public launch; start counsel now.
+
+## 9. Sponsorship & Grand-Finale strategy (Phase 3 — but design the inventory in early)
+
+**The pitch (lead with this):** a hyper-engaged, hard-to-reach niche — martial-arts
+*families* nationwide (parents = buyers, kids = fans); a **video-native** product
+(everyone films themselves → camera brands fit perfectly); and a **character/growth
+mission** (effort over winning) that is **CSR gold** and commands more than a plain
+ad buy.
+
+**Brand-safety filter (hard rule, kids' app):** no alcohol, gambling/betting,
+vape/tobacco, junk food to kids, weight-loss/supplements, MLM, or political. Sponsor
+content is **non-behavioral, no data collection, clearly labeled "Sponsor,"
+frequency-capped** — same legal-review list as the dueling consent.
+
+**Sponsor-video revenue model (offset/negate video cost):**
+- Sell **sponsorship, not CPM** — curated, exclusive, tiered.
+- Put the flagship bumper on the **duel voting feed**: watch-to-vote = **guaranteed,
+  verified completed views** → the strongest thing you can sell, and it converts your
+  #1 cost center (duel egress) into your #1 ad inventory. (This is a reason **Mux**
+  earns its place sooner — its analytics *prove* completed views for renewals.)
+- **Keep sponsor video OFF the Reveal** (a tasteful "presented by" frame only) — never
+  cheapen the crown-jewel moment.
+
+**Grand-Finale multi-sponsor structure (more prizes *and* more revenue):**
+- **Title sponsor** — names the finale + funds the headline prize.
+- **Prize co-sponsors** — each funds a division's prize; align prize to brand.
+- **Character-award sponsors** — "Most Improved / Sportsmanship, presented by X"
+  (on-mission, lets smaller sponsors in).
+- **In-kind sponsors** — product prizes (gear, cameras, belts, seminars) instead of
+  cash → lowers fulfillment cost while they get placement.
+
+**Target sponsors (ranked by fit):**
+1. **Endemic martial-arts** (warmest): Century Martial Arts (prime title target),
+   Adidas Martial Arts, Macho, ProForce, Revgear, Fuji, Elite Sports; bodies/media
+   NASKA, ATA, Black Belt Magazine.
+2. **Camera/filming** (destined fit — the product requires filming; great prizes):
+   GoPro, Insta360, DJI Osmo.
+3. **Aspirational athletic:** Adidas, Under Armour, Nike; hydration (tasteful).
+4. **Scholarship / family-finance for a marquee prize** (parent magnet, low cash
+   outlay): a 529 provider, bank, or local **credit union** funding a college fund.
+5. **Wellness / mindfulness:** Calm, Headspace (mental-discipline tie-in).
+6. **Local/regional (the geo-tier sleeper):** credit unions, pediatric/orthodontic
+   practices, family restaurants, car dealerships — "sponsor the [City] division."
+
+**Prize ideas (align to sponsor):** camera + filmmaker kit · custom gi + gear kit ·
+**college scholarship/529** (marquee) · cash · a **seminar with a renowned master**.
