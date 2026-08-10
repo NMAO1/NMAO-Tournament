@@ -337,6 +337,7 @@ export default function SchoolPortal() {
                     </div>
                   );
                 })()}
+                <Hint on={hintsOn}>These apply per competitor. <b>Class/level</b> sets their competition tier; <b>Dueling</b> allows 1-v-1 challenges, matched according to your <b>Geo-location</b> setting — which only pairs them against schools beyond a set distance.</Hint>
                 {!roster.length && <p style={{ color: neutrals.muted2 }}>Add athletes to your roster first.</p>}
               </>
             )}
@@ -359,7 +360,12 @@ export default function SchoolPortal() {
                 </div>
                 <Field label="Logo URL"><input style={inpF} placeholder="https://…" value={profile.logo_url ?? ""} onChange={(e) => setProfile({ ...profile, logo_url: e.target.value })} /></Field>
 
-                <div style={{ fontSize: 12.5, color: profile.lat != null ? status.success : neutrals.muted2, marginTop: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, paddingTop: 14, borderTop: `1px solid ${neutrals.border}` }}>
+                  <div><div style={{ fontSize: 14 }}>Show hints</div><div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>Inline 💡 tips that explain the nuanced features</div></div>
+                  <Toggle on={hintsOn} onChange={toggleHints} />
+                </div>
+
+                <div style={{ fontSize: 12.5, color: profile.lat != null ? status.success : neutrals.muted2, marginTop: 16 }}>
                   {profile.lat != null ? `📍 Located at ${Number(profile.lat).toFixed(3)}, ${Number(profile.lng).toFixed(3)}` : "Not geocoded yet — Save & locate to place this school on the map."}
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
@@ -385,7 +391,8 @@ export default function SchoolPortal() {
                     <div style={{ color: neutrals.muted2, fontSize: 11 }}>via Stripe Connect</div>
                   </div>
                 </div>
-                <div style={{ ...card, padding: 18 }}>
+                <Hint on={hintsOn}>Your revenue-share tier is set by your accreditation level. Payouts run through Stripe — you enter bank details on Stripe&apos;s page and NMAO never sees or stores them.</Hint>
+                <div style={{ ...card, padding: 18, marginTop: 14 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>Bank account</div>
                   <div style={{ color: neutrals.muted2, fontSize: 13, marginBottom: 14, maxWidth: 520, lineHeight: 1.5 }}>
                     {connect?.payouts_enabled
@@ -448,12 +455,44 @@ export default function SchoolPortal() {
 
             {section === "dashboard" && (
               <>
+                {deadline && (
+                  <div style={{ ...card, padding: "12px 16px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: neutrals.muted2, letterSpacing: 1, textTransform: "uppercase" }}>Next submission closes in</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: hues.gold.hi, marginTop: 2 }}>{nowTs ? countdown(deadline, nowTs) : "…"}</div>
+                    </div>
+                    <div style={{ color: neutrals.muted, fontSize: 12, textAlign: "right" }}>{new Date(deadline).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</div>
+                  </div>
+                )}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 16 }}>
-                  <Kpi label="Roster" value={String(roster.length)} />
-                  <Kpi label="Entered" value={String(paidCount)} />
-                  <Kpi label="Videos in" value={`${withVideoCount} / ${paidCount}`} />
-                  <Kpi label="Payout tier" value={school.payout_tier != null ? `${school.payout_tier}%` : "—"} />
+                  <Kpi label="Roster" value={String(roster.length)} onClick={() => setDrill(drill === "roster" ? null : "roster")} active={drill === "roster"} />
+                  <Kpi label="Entered" value={String(paidCount)} sub={`${entries.length} total`} onClick={() => setDrill(drill === "entered" ? null : "entered")} active={drill === "entered"} />
+                  <Kpi label="Videos in" value={`${withVideoCount} / ${paidCount}`} onClick={() => setDrill(drill === "videos" ? null : "videos")} active={drill === "videos"} />
+                  <Kpi label="Projected income" value={money(projectedCents)} sub={tier ? `at ${tier}% payout tier` : "payout tier not set"} onClick={() => setDrill(drill === "income" ? null : "income")} active={drill === "income"} />
                 </div>
+                <Hint on={hintsOn}>Tap any tile for the breakdown. <b>Projected income</b> = paid entries × your payout tier × the entry fee.</Hint>
+
+                {drill && (
+                  <div style={{ ...card, padding: 14, marginBottom: 16 }}>
+                    {drill === "roster" && (roster.length === 0 ? <p style={{ color: neutrals.muted2, fontSize: 13, margin: 0 }}>No competitors yet.</p> :
+                      roster.map((a) => <DrillRow key={a.id} left={`${a.first_name} ${a.last_name}`} right={`Age ${ageOf(a.dob)} · ${cap(a.declared_rank ?? "beginner")}`} />))}
+                    {drill === "entered" && (entries.length === 0 ? <p style={{ color: neutrals.muted2, fontSize: 13, margin: 0 }}>No entries yet.</p> :
+                      entries.map((en) => <DrillRow key={en.id} left={`${nameOf(en.competitor_id)} · ${EVENTS.find((e) => e.code === en.event)?.name ?? en.event}`}
+                        right={en.payment_status === "paid" ? "Registered ✓" : "Awaiting finalization"} good={en.payment_status === "paid"} warn={en.payment_status !== "paid"} />))}
+                    {drill === "videos" && (paidEntries.length === 0 ? <p style={{ color: neutrals.muted2, fontSize: 13, margin: 0 }}>No paid entries yet.</p> :
+                      paidEntries.map((en) => <DrillRow key={en.id} left={`${nameOf(en.competitor_id)} · ${EVENTS.find((e) => e.code === en.event)?.name ?? en.event}`}
+                        right={en.video_url ? "Video in ✓" : "No video yet"} good={!!en.video_url} warn={!en.video_url} />))}
+                    {drill === "income" && (
+                      paidCount === 0 ? <p style={{ color: neutrals.muted2, fontSize: 13, margin: 0 }}>No paid entries yet — projected income is $0.</p> : <>
+                        {paidEntries.map((en) => <DrillRow key={en.id} left={`${nameOf(en.competitor_id)} · ${EVENTS.find((e) => e.code === en.event)?.name ?? en.event}`} right={money(perPaidCents)} />)}
+                        <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 2px 2px", marginTop: 4, borderTop: `1px solid ${neutrals.border}` }}>
+                          <span style={{ fontWeight: 700 }}>Projected total</span><span style={{ fontWeight: 700, color: "#7ED0A0" }}>{money(projectedCents)}</span>
+                        </div>
+                        <div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 6 }}>Your {tier}% payout tier × {money(entryFeeCents)} entry fee, per paid entry. Set by accreditation.</div>
+                      </>
+                    )}
+                  </div>
+                )}
                 {noVideoCount > 0 ? (
                   <div style={{ ...card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14 }}>
                     <div>
@@ -479,6 +518,21 @@ export default function SchoolPortal() {
             )}
           </>
         )}
+
+        {importOpen && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(6,6,8,0.8)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setImportOpen(false)}>
+            <div onClick={(e) => e.stopPropagation()} style={{ ...card, width: "100%", maxWidth: 480, padding: 22 }}>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Import competitors</div>
+              <div style={{ color: neutrals.muted2, fontSize: 13, margin: "4px 0 12px" }}>One per line: <code>First, Last, YYYY-MM-DD, rank</code>. Date &amp; rank are optional (rank defaults to beginner).</div>
+              <textarea value={importText} onChange={(e) => setImportText(e.target.value)} rows={8} placeholder={"Maya, Ortiz, 2013-04-02, intermediate\nLiam, Chen, 2011-09-15"}
+                style={{ ...inp, width: "100%", fontFamily: "monospace", resize: "vertical" }} />
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 14 }}>
+                <button onClick={() => setImportOpen(false)} style={{ border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 10, padding: "10px 18px", cursor: "pointer", fontWeight: 600 }}>Cancel</button>
+                <button onClick={importCompetitors} disabled={saving || !importText.trim()} style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 20px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: saving || !importText.trim() ? 0.5 : 1 }}>{saving ? "Importing…" : "Import"}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
     </main>
   );
@@ -487,12 +541,34 @@ export default function SchoolPortal() {
 function SecHd({ children }: { children: React.ReactNode }) {
   return <div style={{ fontSize: 12, letterSpacing: 2, textTransform: "uppercase", color: hues.gold.base, margin: "0 0 16px", borderBottom: `1px solid ${neutrals.border}`, paddingBottom: 8 }}>{children}</div>;
 }
-function Kpi({ label, value }: { label: string; value: string }) {
+function Kpi({ label, value, sub, onClick, active }: { label: string; value: string; sub?: string; onClick?: () => void; active?: boolean }) {
   return (
-    <div style={{ background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 12, padding: "12px 14px" }}>
-      <div style={{ color: neutrals.muted, fontSize: 11 }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 600, marginTop: 3 }}>{value}</div>
+    <button onClick={onClick} disabled={!onClick} style={{ textAlign: "left", width: "100%", background: active ? "#17161a" : neutrals.surface, border: `1px solid ${active ? hues.gold.shadow : neutrals.border}`, borderRadius: 12, padding: "12px 14px", cursor: onClick ? "pointer" : "default" }}>
+      <div style={{ color: neutrals.muted, fontSize: 11, display: "flex", justifyContent: "space-between" }}>{label}{onClick && <span style={{ color: neutrals.muted2 }}>›</span>}</div>
+      <div style={{ fontSize: 24, fontWeight: 600, marginTop: 3, color: neutrals.text }}>{value}</div>
+      {sub && <div style={{ color: neutrals.muted2, fontSize: 11, marginTop: 2 }}>{sub}</div>}
+    </button>
+  );
+}
+function DrillRow({ left, right, good, warn }: { left: string; right: string; good?: boolean; warn?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 2px", borderBottom: `1px solid ${neutrals.surface2}`, fontSize: 13, gap: 12 }}>
+      <span style={{ color: neutrals.text }}>{left}</span>
+      <span style={{ color: good ? "#7ED0A0" : warn ? hues.gold.hi : neutrals.muted, whiteSpace: "nowrap" }}>{right}</span>
     </div>
+  );
+}
+function Hint({ on, children, align = "left" }: { on: boolean; children: React.ReactNode; align?: "left" | "right" }) {
+  const [open, setOpen] = useState(false);
+  if (!on) return null;
+  return (
+    <span style={{ position: "relative", display: "inline-flex", verticalAlign: "middle" }}>
+      <button onClick={() => setOpen((o) => !o)} title="Show hint"
+        style={{ background: open ? neutrals.surface2 : "transparent", border: `1px solid ${neutrals.border}`, borderRadius: 999, cursor: "pointer", fontSize: 12, lineHeight: 1, padding: "3px 8px", color: neutrals.muted2 }}>💡</button>
+      {open && (
+        <div style={{ position: "absolute", zIndex: 50, top: "145%", ...(align === "right" ? { right: 0 } : { left: 0 }), width: 260, background: neutrals.surface2, border: `1px solid ${neutrals.border}`, borderRadius: 10, padding: "10px 12px", color: neutrals.text, fontSize: 12, lineHeight: 1.55, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>{children}</div>
+      )}
+    </span>
   );
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
