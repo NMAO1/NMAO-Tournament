@@ -10,12 +10,12 @@ Last updated: 2026-08-10
 
 ## Current state
 
-- **93 / 100 badge medallions are final** — cropped, transparent-background PNGs in
+- **92 / 100 badge medallions are final** — cropped, transparent-background PNGs in
   `docs/badge-art/final/<n>-<slug>.png` (1024², medallion only, no background).
-- **7 pending art** (spec exists, art not yet made — safe to seed as rows now, art drops
+- **8 pending art** (spec exists, art not yet made — safe to seed as rows now, art drops
   in later at the same filename): `71-podium-season`, `41-sponsors-champion`,
   `48-gem-s4-emerald`, `56-consistent-journaler`, `81-dojo-pride`, `87-mentor`,
-  `90-globetrotter`.
+  `90-globetrotter`, `70-trailblazer` (torch — earlier render was off-center, redo).
 - **One asset to regenerate:** `72-gold-medallion-nmao-dragon.png` still has baked-in
   "Perfect-Season Champion" text (predates the text-free rule) — will be replaced in
   place; no code impact.

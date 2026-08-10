@@ -84,7 +84,7 @@ file_name,art_status,code,name,category,rarity,tiered,hidden,trigger_event,earn_
 85-zen.png,ready,zen,Zen,Hidden,Epic,,yes,on_result_finalized,"A flawless, composed performance (hidden)",
 86-ghost.png,ready,ghost,Ghost,Hidden,Rare,,yes,special,A fun secret condition (hidden),
 69-charter-member.png,ready,charter-member,Charter Member,Charter,Legendary,,,on_onboarding_complete,Competed in the very first season (limited),
-70-trailblazer.png,ready,trailblazer,Trailblazer,Charter,Legendary,,,on_onboarding_complete,Among the first N competitors ever (limited),
+70-trailblazer.png,pending,trailblazer,Trailblazer,Charter,Legendary,,,on_onboarding_complete,Among the first N competitors ever (limited),
 season-champion-s1.png,ready,season-champion-s1,Season Champion S1 (Sapphire),Championship,Legendary,,,on_season_rollup,Awarded to season S1 overall champion; dragon medallion colored to the Sapphire gem,letter with letter_champion.py S{s[1:]}
 season-champion-s2.png,ready,season-champion-s2,Season Champion S2 (Amethyst),Championship,Legendary,,,on_season_rollup,Awarded to season S2 overall champion; dragon medallion colored to the Amethyst gem,letter with letter_champion.py S{s[1:]}
 season-champion-s3.png,ready,season-champion-s3,Season Champion S3 (Ruby),Championship,Legendary,,,on_season_rollup,Awarded to season S3 overall champion; dragon medallion colored to the Ruby gem,letter with letter_champion.py S{s[1:]}
