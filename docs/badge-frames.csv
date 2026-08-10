@@ -1,0 +1,101 @@
+code,name,rarity,tier,border,glow,anim,particle_kind,particle_color,particle_count,motif
+first-step,First Step,Common,1,solid-bronze,none,none,none,,0,
+first-bow,First Bow,Common,1,solid-bronze,none,none,none,,0,
+first-reveal,First Reveal,Common,1,solid-bronze,none,none,none,,0,
+first-reflection,First Reflection,Common,1,solid-bronze,none,none,none,,0,
+first-medal,First Medal,Uncommon,2,solid-silver,soft,none,none,,0,
+first-gold,First Gold,Rare,3,gold,soft,shimmer,none,,0,
+on-the-mat,On the Mat I/II/III,Common>Rare,3,gold,soft,shimmer,none,,0,
+nine-bows,Nine Bows,Rare,3,gold,soft,shimmer,none,,0,
+back-on-the-mat,Back on the Mat,Uncommon,2,solid-silver,soft,none,none,,0,
+early-bird,Early Bird,Uncommon,2,solid-silver,soft,none,none,,0,
+deadline-warrior,Deadline Warrior,tiered,3,gold,soft,shimmer,none,,0,
+iron-will,Iron Will,Rare,3,gold,soft,shimmer,none,,0,
+perfect-attendance,Perfect Attendance,Rare,3,gold,soft,shimmer,none,,0,
+rising-star,Rising Star,Uncommon,2,solid-silver,soft,none,none,,0,
+new-heights,New Heights,Uncommon,2,solid-silver,soft,none,none,,0,
+steady-climb,Steady Climb,Rare,3,gold,soft,shimmer,none,,0,
+comeback,Comeback,Uncommon,2,solid-silver,soft,none,none,,0,
+breakthrough,Breakthrough,Rare,3,gold,soft,shimmer,none,,0,
+rising-floor,Rising Floor,Uncommon,2,solid-silver,soft,none,none,,0,
+full-circle,Full Circle,Epic,4,spectrum,strong,rotating,sparkle,#a32bf7,8,
+precision,Precision (Technical),tiered,3,gold,soft,shimmer,none,,0,
+kime,Kime (Power),tiered,3,gold,soft,shimmer,none,,0,
+rooted,Rooted (Balance),tiered,3,gold,soft,breathing,none,,0,
+flow,Flow (Timing),tiered,3,ripple,soft,ripple,bubble,#bfe0ff,8,
+spirit,Spirit (Presentation),tiered,3,flame,strong,flame-flicker,ember,#ff9e2a,9,
+innovator,Innovator (Difficulty),tiered,3,gold,soft,shimmer,sparkle,#e0a0ff,6,
+grandmaster,Grandmaster,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,11,crown
+both-hands,Both Hands,Uncommon,2,solid-silver,soft,none,none,,0,
+open-mind,Open Mind,Uncommon,2,solid-silver,soft,none,none,,0,
+traditionalist,Traditionalist,Rare,3,gold,soft,shimmer,none,,0,
+weapon-master,Weapon Master,Rare,3,gold,soft,shimmer,none,,0,
+style-explorer,Style Explorer,Uncommon,2,solid-silver,soft,none,none,,0,
+fearless,Fearless Challenger,Uncommon,2,solid-amber,soft,pulse,none,,0,
+podium,Podium,Uncommon,2,solid-silver,soft,none,none,,0,
+gold-rush,Gold Rush x3/x5,tiered,3,gold,soft,shimmer,none,,0,
+sweep,Sweep,Epic,4,spectrum,strong,rotating,sparkle,#a32bf7,8,
+undefeated,Undefeated,Rare,3,gold,soft,shimmer,sparkle,#ffe9a8,7,dragon-coil
+podium-season,Podium Season,Epic,4,spectrum,strong,rotating,sparkle,#a32bf7,8,
+gold-medallion,Gold Medallion,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,12,dragon-coil
+semifinalist,Semifinalist,Rare,3,gold,soft,shimmer,none,,0,
+finalist,Finalist,Epic,4,spectrum,strong,rotating,sparkle,#a32bf7,8,
+grand-champion,Grand Champion,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,11,laurel
+sponsors-champion,Sponsor's Champion,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,11,star-ribbon
+giant-slayer,Giant Slayer,Epic,4,spectrum,strong,rotating,sparkle,#a32bf7,8,
+imprint-complete,Imprint Complete,Rare,3,gold,soft,shimmer,none,,0,
+season-keepsake,Season Keepsake,Rare,3,gold,soft,shimmer,none,,0,
+gem-s1,Gem Series S1 (Sapphire),flagship,5,gemstone,radiant,rotating,sparkle,#1f7bff,10,gem-shine
+gem-s2,Gem Series S2 (Amethyst),flagship,5,gemstone,radiant,rotating,sparkle,#a32bf7,10,gem-shine
+gem-s3,Gem Series S3 (Ruby),flagship,5,gemstone,radiant,rotating,sparkle,#ff2e3b,10,gem-shine
+gem-s4,Gem Series S4 (Emerald),flagship,5,gemstone,radiant,rotating,sparkle,#1d9e75,10,gem-shine
+gem-s5,Gem Series S5 (Coral),flagship,5,gemstone,radiant,rotating,sparkle,#d85a30,10,gem-shine
+gem-s6,Gem Series S6 (Onyx),flagship,5,gemstone,radiant,rotating,sparkle,#3a3a48,10,gem-shine
+gem-s7,Gem Series S7 (Rose),flagship,5,gemstone,radiant,rotating,sparkle,#d4537e,10,gem-shine
+gem-s8,Gem Series S8 (Turquoise),flagship,5,gemstone,radiant,rotating,sparkle,#1db0c4,10,gem-shine
+gem-s9,Gem Series S9 (Peridot),flagship,5,gemstone,radiant,rotating,sparkle,#97c459,10,gem-shine
+gem-s10,Gem Series S10 (Platinum),flagship,5,gemstone,radiant,rotating,sparkle,#d6dbe2,10,gem-shine
+decade-of-dedication,Decade of Dedication,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,11,ten-stars
+consistent-journaler,Consistent Journaler I/II/III,tiered,3,gold,soft,shimmer,none,,0,
+reflective-warrior,Reflective Warrior,Rare,3,gold,soft,shimmer,none,,0,
+goal-keeper,Goal Keeper,Uncommon,2,solid-silver,soft,none,none,,0,
+first-duel,First Duel,Common,1,solid-bronze,none,none,none,,0,
+duelist,Duelist I/II/III,tiered,3,gold,soft,shimmer,none,,0,
+first-blood,First Blood,Uncommon,2,solid-silver,soft,none,none,,0,
+warpath,Warpath,Rare,3,gold,soft,shimmer,none,,0,
+peoples-champion,People's Champion,Rare,3,gold,soft,shimmer,none,,0,
+road-warrior,Road Warrior,Rare,3,gold,soft,shimmer,none,,0,
+rivalry,Rivalry,Uncommon,2,solid-silver,soft,none,none,,0,twin-rings
+undefeated-duelist,Undefeated Duelist,Epic,4,spectrum,strong,rotating,sparkle,#7f77dd,8,
+iron-duelist,Iron Duelist,Rare,3,gold,soft,shimmer,none,,0,
+duel-legend,Duel Legend,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,11,crowned-blade
+deadlock,Deadlock,Epic,4,electric,strong,lightning,none,,0,clash-lightning
+first-vote,First Vote,Common,1,solid-bronze,none,none,none,,0,
+voice-of-the-people,Voice of the People I/II/III,tiered,3,gold,soft,shimmer,none,,0,
+daily-voter,Daily Voter,Uncommon,2,solid-silver,soft,none,none,,0,
+sharp-eye,Sharp Eye,Rare,3,gold,soft,shimmer,none,,0,
+kingmaker,Kingmaker,Rare,3,gold,soft,shimmer,none,,0,
+fair-witness,Fair Witness,Uncommon,2,solid-silver,soft,none,none,,0,
+trusted-voter,Trusted Voter,Epic,4,spectrum,strong,rotating,sparkle,#a32bf7,8,
+dojo-pride,Dojo Pride,Uncommon,2,solid-silver,soft,none,none,,0,
+teammate,Teammate,Common,1,solid-bronze,none,none,none,,0,
+encourager,Encourager,Uncommon,2,solid-silver,soft,none,none,,0,
+perfect-score,Perfect Score,Legendary,5,enso,radiant,rotating,sparkle,#fff3b0,11,enso-radiant
+zen,Zen,Epic,4,solid-jade,soft,breathing,none,,0,
+ghost,Ghost,Rare,3,gold,soft,shimmer,none,,0,
+charter-member,Charter Member,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,11,wax-seal
+trailblazer,Trailblazer,Legendary,5,platinum,radiant,rotating,sparkle,#fff3b0,11,torch-flame
+season-champion-s1,Season Champion S1 (Sapphire),Legendary,5,gemstone,radiant,rotating,sparkle,#1f7bff,10,season-gem-shine
+season-champion-s2,Season Champion S2 (Amethyst),Legendary,5,gemstone,radiant,rotating,sparkle,#a32bf7,10,season-gem-shine
+season-champion-s3,Season Champion S3 (Ruby),Legendary,5,gemstone,radiant,rotating,sparkle,#ff2e3b,10,season-gem-shine
+season-champion-s4,Season Champion S4 (Emerald),Legendary,5,gemstone,radiant,rotating,sparkle,#1d9e75,10,season-gem-shine
+season-champion-s5,Season Champion S5 (Coral),Legendary,5,gemstone,radiant,rotating,sparkle,#d85a30,10,season-gem-shine
+season-champion-s6,Season Champion S6 (Onyx),Legendary,5,gemstone,radiant,rotating,sparkle,#3a3a48,10,season-gem-shine
+season-champion-s7,Season Champion S7 (Rose),Legendary,5,gemstone,radiant,rotating,sparkle,#d4537e,10,season-gem-shine
+season-champion-s8,Season Champion S8 (Turquoise),Legendary,5,gemstone,radiant,rotating,sparkle,#1db0c4,10,season-gem-shine
+season-champion-s9,Season Champion S9 (Peridot),Legendary,5,gemstone,radiant,rotating,sparkle,#97c459,10,season-gem-shine
+season-champion-s10,Season Champion S10 (Platinum),Legendary,5,gemstone,radiant,rotating,sparkle,#d6dbe2,10,season-gem-shine
+mentor,Mentor,Rare,3,gold,soft,shimmer,none,,0,
+anniversary,Anniversary,Uncommon,2,solid-silver,soft,none,none,,0,
+well-rounded,Well-Rounded,Rare,3,gold,soft,shimmer,none,,0,
+globetrotter,Globetrotter,Rare,3,gold,soft,shimmer,none,,0,

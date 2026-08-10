@@ -60,6 +60,18 @@ the frame — e.g. a golden dragon coiling the border (Undefeated / Gold Medalli
 laurel that grows (Grand Champion), a torch flame (Trailblazer), the season-gem shine
 (Season Champions).
 
+## Locked principle: escalate with rarity
+
+**Common badges are plain; ornamentation and animation increase with rarity.** A Common
+frame is a flat colored border with no motion; each tier up adds glow, then movement,
+then particles, then a full aura with a signature motif at Legendary. Rarity is legible
+at a glance from the frame alone.
+
+The recipe for every badge is generated to this rule and lives in **`badge-frames.csv`**
+(editable, joins on `code`) and **`badge-frames.json`** (seed-ready `frame_spec`). Fields:
+`border, glow, anim, particle_{kind,color,count}, motif`. Tweak any row; Common rows stay
+intentionally empty of effects.
+
 ## Rarity → effect ladder (the read-at-a-glance tier)
 
 | Rarity | Frame recipe |

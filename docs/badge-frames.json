@@ -1,0 +1,962 @@
+{
+ "first-step": {
+  "tier": 1,
+  "border": "solid-bronze",
+  "glow": "none",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "first-bow": {
+  "tier": 1,
+  "border": "solid-bronze",
+  "glow": "none",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "first-reveal": {
+  "tier": 1,
+  "border": "solid-bronze",
+  "glow": "none",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "first-reflection": {
+  "tier": 1,
+  "border": "solid-bronze",
+  "glow": "none",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "first-medal": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "first-gold": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "on-the-mat": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "nine-bows": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "back-on-the-mat": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "early-bird": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "deadline-warrior": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "iron-will": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "perfect-attendance": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "rising-star": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "new-heights": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "steady-climb": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "comeback": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "breakthrough": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "rising-floor": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "full-circle": {
+  "tier": 4,
+  "border": "spectrum",
+  "glow": "strong",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 8
+  },
+  "motif": null
+ },
+ "precision": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "kime": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "rooted": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "breathing",
+  "particle": null,
+  "motif": null
+ },
+ "flow": {
+  "tier": 3,
+  "border": "ripple",
+  "glow": "soft",
+  "anim": "ripple",
+  "particle": {
+   "kind": "bubble",
+   "color": "#bfe0ff",
+   "count": 8
+  },
+  "motif": null
+ },
+ "spirit": {
+  "tier": 3,
+  "border": "flame",
+  "glow": "strong",
+  "anim": "flame-flicker",
+  "particle": {
+   "kind": "ember",
+   "color": "#ff9e2a",
+   "count": 9
+  },
+  "motif": null
+ },
+ "innovator": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#e0a0ff",
+   "count": 6
+  },
+  "motif": null
+ },
+ "grandmaster": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "crown"
+ },
+ "both-hands": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "open-mind": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "traditionalist": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "weapon-master": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "style-explorer": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "fearless": {
+  "tier": 2,
+  "border": "solid-amber",
+  "glow": "soft",
+  "anim": "pulse",
+  "particle": null,
+  "motif": null
+ },
+ "podium": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "gold-rush": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "sweep": {
+  "tier": 4,
+  "border": "spectrum",
+  "glow": "strong",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 8
+  },
+  "motif": null
+ },
+ "undefeated": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#ffe9a8",
+   "count": 7
+  },
+  "motif": "dragon-coil"
+ },
+ "podium-season": {
+  "tier": 4,
+  "border": "spectrum",
+  "glow": "strong",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 8
+  },
+  "motif": null
+ },
+ "gold-medallion": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 12
+  },
+  "motif": "dragon-coil"
+ },
+ "semifinalist": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "finalist": {
+  "tier": 4,
+  "border": "spectrum",
+  "glow": "strong",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 8
+  },
+  "motif": null
+ },
+ "grand-champion": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "laurel"
+ },
+ "sponsors-champion": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "star-ribbon"
+ },
+ "giant-slayer": {
+  "tier": 4,
+  "border": "spectrum",
+  "glow": "strong",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 8
+  },
+  "motif": null
+ },
+ "imprint-complete": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "season-keepsake": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "gem-s1": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#1f7bff",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s2": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s3": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#ff2e3b",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s4": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#1d9e75",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s5": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#d85a30",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s6": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#3a3a48",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s7": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#d4537e",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s8": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#1db0c4",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s9": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#97c459",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "gem-s10": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#d6dbe2",
+   "count": 10
+  },
+  "motif": "gem-shine"
+ },
+ "decade-of-dedication": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "ten-stars"
+ },
+ "consistent-journaler": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "reflective-warrior": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "goal-keeper": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "first-duel": {
+  "tier": 1,
+  "border": "solid-bronze",
+  "glow": "none",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "duelist": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "first-blood": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "warpath": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "peoples-champion": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "road-warrior": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "rivalry": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": "twin-rings"
+ },
+ "undefeated-duelist": {
+  "tier": 4,
+  "border": "spectrum",
+  "glow": "strong",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#7f77dd",
+   "count": 8
+  },
+  "motif": null
+ },
+ "iron-duelist": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "duel-legend": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "crowned-blade"
+ },
+ "deadlock": {
+  "tier": 4,
+  "border": "electric",
+  "glow": "strong",
+  "anim": "lightning",
+  "particle": null,
+  "motif": "clash-lightning"
+ },
+ "first-vote": {
+  "tier": 1,
+  "border": "solid-bronze",
+  "glow": "none",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "voice-of-the-people": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "daily-voter": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "sharp-eye": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "kingmaker": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "fair-witness": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "trusted-voter": {
+  "tier": 4,
+  "border": "spectrum",
+  "glow": "strong",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 8
+  },
+  "motif": null
+ },
+ "dojo-pride": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "teammate": {
+  "tier": 1,
+  "border": "solid-bronze",
+  "glow": "none",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "encourager": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "perfect-score": {
+  "tier": 5,
+  "border": "enso",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "enso-radiant"
+ },
+ "zen": {
+  "tier": 4,
+  "border": "solid-jade",
+  "glow": "soft",
+  "anim": "breathing",
+  "particle": null,
+  "motif": null
+ },
+ "ghost": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "charter-member": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "wax-seal"
+ },
+ "trailblazer": {
+  "tier": 5,
+  "border": "platinum",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#fff3b0",
+   "count": 11
+  },
+  "motif": "torch-flame"
+ },
+ "season-champion-s1": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#1f7bff",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s2": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#a32bf7",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s3": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#ff2e3b",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s4": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#1d9e75",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s5": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#d85a30",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s6": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#3a3a48",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s7": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#d4537e",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s8": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#1db0c4",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s9": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#97c459",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "season-champion-s10": {
+  "tier": 5,
+  "border": "gemstone",
+  "glow": "radiant",
+  "anim": "rotating",
+  "particle": {
+   "kind": "sparkle",
+   "color": "#d6dbe2",
+   "count": 10
+  },
+  "motif": "season-gem-shine"
+ },
+ "mentor": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "anniversary": {
+  "tier": 2,
+  "border": "solid-silver",
+  "glow": "soft",
+  "anim": "none",
+  "particle": null,
+  "motif": null
+ },
+ "well-rounded": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ },
+ "globetrotter": {
+  "tier": 3,
+  "border": "gold",
+  "glow": "soft",
+  "anim": "shimmer",
+  "particle": null,
+  "motif": null
+ }
+}
