@@ -188,7 +188,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
             style={{ textAlign: "left", background: selected === t.id ? neutrals.surface2 : neutrals.surface, border: `1px solid ${selected === t.id ? hues.gold.shadow : neutrals.border}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", minWidth: 200 }}>
             <div style={{ color: neutrals.text, fontWeight: 600, fontSize: 15 }}>{t.name}</div>
             <div style={{ marginTop: 4, fontSize: 12, color: neutrals.muted }}>
-              {t.event_date ?? "no date"} · <span style={{ color: stateColor(t.state), fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{t.state}</span>
+              {t.event_date ?? "no date"} · <span style={{ color: stateColor(t.state), fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>{stateLabel(t.state)}</span>
               {t.entry_fee_cents ? ` · $${dollars(t.entry_fee_cents)}` : " · free"}
             </div>
           </button>
