@@ -31,6 +31,18 @@ const NAV = [
 type SectionKey = (typeof NAV)[number]["key"];
 const cap = (r: string) => r.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const ageOf = (dob: string) => { const d = new Date(dob + "T00:00:00Z"); const n = new Date(); let a = n.getUTCFullYear() - d.getUTCFullYear(); const m = n.getUTCMonth() - d.getUTCMonth(); if (m < 0 || (m === 0 && n.getUTCDate() < d.getUTCDate())) a--; return a; };
+const DEADLINE_KEYS = ["submission_deadline", "closes_at", "close_at", "collect_ends_at", "collect_until", "ends_at", "deadline"];
+function pickDeadline(r: Record<string, unknown> | null): string | null {
+  if (!r) return null;
+  for (const k of DEADLINE_KEYS) { const v = r[k]; if (typeof v === "string" && v) return v; }
+  return null;
+}
+function countdown(iso: string, now: number): string {
+  const ms = new Date(iso).getTime() - now;
+  if (ms <= 0) return "closed";
+  const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  return d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
 
 export default function SchoolPortal() {
   const supabase = createClient();
@@ -51,6 +63,19 @@ export default function SchoolPortal() {
   const [connect, setConnect] = useState<{ connected: boolean; payouts_enabled: boolean; details_submitted: boolean } | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [entryForm, setEntryForm] = useState({ competitor: "", event: "trad_forms" });
+  const [entryFeeCents, setEntryFeeCents] = useState(4500);
+  const [deadline, setDeadline] = useState<string | null>(null);
+  const [nowTs, setNowTs] = useState(0);
+  const [ctlSearch, setCtlSearch] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [hintsOn, setHintsOn] = useState(true);
+  const [drill, setDrill] = useState<null | "roster" | "entered" | "videos" | "income">(null);
+
+  // Hints preference (per-browser) + a ticking clock for the submission countdown.
+  useEffect(() => { setHintsOn(localStorage.getItem("nmao_hints") !== "off"); }, []);
+  useEffect(() => { setNowTs(Date.now()); const t = setInterval(() => setNowTs(Date.now()), 30000); return () => clearInterval(t); }, []);
+  function toggleHints(v: boolean) { setHintsOn(v); localStorage.setItem("nmao_hints", v ? "on" : "off"); }
 
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getSession();
@@ -59,6 +84,12 @@ export default function SchoolPortal() {
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
     setProfile(sch as School);
+
+    // Projected-income inputs + the current round's submission deadline (best-effort; RLS/columns may vary).
+    supabase.from("app_settings").select("value").eq("key", "entry_fee_cents").maybeSingle()
+      .then(({ data }) => { const v = data ? Number((data as { value: unknown }).value) : NaN; if (!Number.isNaN(v)) setEntryFeeCents(v); });
+    supabase.from("rounds").select("*").in("state", ["open", "collecting"]).order("opens_at", { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => setDeadline(pickDeadline(data as Record<string, unknown> | null)));
 
     const { data: comps } = await supabase.from("competitors")
       .select("id, first_name, last_name, dob, declared_rank").eq("school_id", (sch as School).id).order("last_name");
@@ -140,6 +171,27 @@ export default function SchoolPortal() {
     if (error) { setErr(error.message); return; }
     setForm({ first: "", last: "", dob: "", rank: "beginner" }); load();
   }
+  async function importCompetitors() {
+    if (!school) return;
+    const lines = importText.split("\n").map((l) => l.trim()).filter(Boolean);
+    const rows: { school_id: string; first_name: string; last_name: string; dob: string; declared_rank: string; status: string }[] = [];
+    for (const line of lines) {
+      const parts = line.split(",").map((p) => p.trim());
+      let first = "", last = "", dob = "", rank = "beginner";
+      if (parts.length >= 2) {
+        first = parts[0]; last = parts[1]; dob = parts[2] || "";
+        if (parts[3] && RANKS.includes(parts[3].toLowerCase())) rank = parts[3].toLowerCase();
+      } else { const sp = line.split(/\s+/); first = sp[0] || ""; last = sp.slice(1).join(" "); }
+      if (!first || !last) continue;
+      rows.push({ school_id: school.id, first_name: first, last_name: last, dob: dob || "2000-01-01", declared_rank: rank, status: "active" });
+    }
+    if (!rows.length) { setErr("No valid rows. Use one per line: First, Last, YYYY-MM-DD, rank"); return; }
+    setSaving(true); setErr("");
+    const { error } = await supabase.from("competitors").insert(rows);
+    setSaving(false);
+    if (error) { setErr(error.message); return; }
+    setImportText(""); setImportOpen(false); setSavedMsg(`Imported ${rows.length} competitor${rows.length === 1 ? "" : "s"}.`); load();
+  }
   async function setRank(id: string, rank: string) {
     setRoster((r) => r.map((a) => (a.id === id ? { ...a, declared_rank: rank } : a)));
     const { error } = await supabase.from("competitors").update({ declared_rank: rank }).eq("id", id);
@@ -190,6 +242,11 @@ export default function SchoolPortal() {
   const paidCount = paidEntries.length;
   const withVideoCount = paidEntries.filter((e) => e.video_url).length;
   const noVideoCount = paidCount - withVideoCount;
+  const tier = school?.payout_tier ?? 0;
+  const perPaidCents = Math.round((entryFeeCents * tier) / 100);
+  const projectedCents = paidCount * perPaidCents;
+  const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+  const nameOf = (id: string) => { const a = roster.find((r) => r.id === id); return a ? `${a.first_name} ${a.last_name}` : "Athlete"; };
 
   return (
     <main style={{ minHeight: "100vh", background: neutrals.bg, color: neutrals.text, fontFamily: "Inter, system-ui, sans-serif", display: "flex" }}>
@@ -243,10 +300,11 @@ export default function SchoolPortal() {
 
             {section === "controls" && (
               <>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                  <span style={{ color: neutrals.muted, fontSize: 13 }}>Applying to</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                  <span style={{ color: neutrals.muted, fontSize: 13 }}>Competitor</span>
+                  <input style={{ ...inp, width: 170 }} placeholder="Search…" value={ctlSearch} onChange={(e) => setCtlSearch(e.target.value)} />
                   <select style={inp} value={selStudent} onChange={(e) => setSelStudent(e.target.value)}>
-                    {roster.map((a) => <option key={a.id} value={a.id}>{a.first_name} {a.last_name}</option>)}
+                    {roster.filter((a) => `${a.first_name} ${a.last_name}`.toLowerCase().includes(ctlSearch.trim().toLowerCase())).map((a) => <option key={a.id} value={a.id}>{a.first_name} {a.last_name}</option>)}
                   </select>
                 </div>
                 {selStudent && (() => {

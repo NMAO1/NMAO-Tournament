@@ -10,7 +10,7 @@ import { uploadInhouseVideo, PickedVideo } from "../lib/upload";
 const EXPORT_PRESET = ImagePicker.VideoExportPreset.H264_1920x1080;
 const MAX_MB = 500;
 
-export type VideoTask = { entrant_id: string; competitor_id: string; tournament_name: string; event: string | null; division: string | null };
+export type VideoTask = { entrant_id: string; competitor_id: string; tournament_name: string; event: string | null; division: string | null; prize?: string | null };
 
 // Mirrors the championship submit flow: pick a 1080p clip, upload to the private
 // bucket, record it on the in-house entry via submit-inhouse-video.

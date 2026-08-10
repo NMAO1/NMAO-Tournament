@@ -8,7 +8,7 @@ import { myCompetitors, MyCompetitor as Competitor } from "../lib/competitors";
 import Reveal, { RevealResult } from "./Reveal";
 import InHouseUpload, { VideoTask } from "./InHouseUpload";
 type Entry = { event: string; age_bracket: string; status: string; created_at: string };
-type Due = { entrant_id: string; tournament_name: string; event: string | null; division: string | null; amount_cents: number; format: string };
+type Due = { entrant_id: string; tournament_name: string; event: string | null; division: string | null; amount_cents: number; format: string; prize: string | null };
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
 const EVENT_NAME: Record<string, string> = {
@@ -146,6 +146,7 @@ export default function Home({ onCompete }: { onCompete: () => void }) {
             <Text style={{ color: hues.gold.hi, fontSize: 11, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" }}>{d.tournament_name}</Text>
             <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 15, marginTop: 3 }}>Finalize {d.event || "your"} registration</Text>
             <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{[d.division, money(d.amount_cents)].filter(Boolean).join(" · ")}</Text>
+            {d.prize ? <Text style={{ color: hues.gold.hi, fontSize: 12, marginTop: 4 }}>🏆 {d.prize}</Text> : null}
           </View>
           <TouchableOpacity onPress={() => payDue(d)} disabled={payingId === d.entrant_id} activeOpacity={0.85}>
             <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 }}>
@@ -161,6 +162,7 @@ export default function Home({ onCompete }: { onCompete: () => void }) {
             <Text style={{ color: "#9Fc0E0", fontSize: 11, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" }}>{v.tournament_name}</Text>
             <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 15, marginTop: 3 }}>Submit your {v.event || "entry"} video</Text>
             <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{v.division || "Tap to upload your clip"}</Text>
+            {v.prize ? <Text style={{ color: hues.gold.hi, fontSize: 12, marginTop: 4 }}>🏆 {v.prize}</Text> : null}
           </View>
           <TouchableOpacity onPress={() => setUploadTask(v)} activeOpacity={0.85}>
             <View style={{ paddingHorizontal: 18, paddingVertical: 10, borderRadius: 10, backgroundColor: "#5C86AE" }}>

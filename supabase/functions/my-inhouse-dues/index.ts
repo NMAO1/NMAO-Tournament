@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
 
     const tids = Array.from(new Set((ents as any[]).map((e) => e.tournament_id)));
     const { data: tours } = await svc.from("in_house_tournaments")
-      .select("id, name, entry_fee_cents, format, state").in("id", tids);
+      .select("id, name, entry_fee_cents, format, state, prize").in("id", tids);
     const tmap = new Map((tours ?? []).map((t: any) => [t.id, t]));
     const live = (s: string) => s !== "complete" && s !== "draft"; // only created tournaments prompt
 
@@ -68,12 +68,12 @@ Deno.serve(async (req) => {
       const key = `${e.tournament_id}|${e.competitor_id}|${e.event ?? ""}`;
       if (e.payment_status === "unpaid" && fee > 0 && !seenDue.has(key)) {
         seenDue.add(key);
-        dues.push({ entrant_id: e.id, tournament_name: t.name, event: e.event, division: e.division, amount_cents: fee, format: t.format });
+        dues.push({ entrant_id: e.id, tournament_name: t.name, event: e.event, division: e.division, amount_cents: fee, format: t.format, prize: t.prize ?? null });
       }
       // Video due: video-format tournament, entry finalized, no video submitted yet.
       if (t.format === "video" && finalized && !e.video_url && !seenVid.has(key)) {
         seenVid.add(key);
-        videos.push({ entrant_id: e.id, competitor_id: e.competitor_id, tournament_name: t.name, event: e.event, division: e.division });
+        videos.push({ entrant_id: e.id, competitor_id: e.competitor_id, tournament_name: t.name, event: e.event, division: e.division, prize: t.prize ?? null });
       }
     }
     return json({ ok: true, dues, videos });

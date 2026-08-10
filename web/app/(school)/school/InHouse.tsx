@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import { neutrals, hues, status } from "@nmao/design-tokens";
 import RunTournament from "./RunTournament";
 
-type Tournament = { id: string; name: string; event_date: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean };
+type Tournament = { id: string; name: string; event_date: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean; prize: string | null };
 type Entrant = { id: string; competitor_id: string | null; display_name: string | null; event: string | null; division: string | null; score: number | null; placement: number | null; prize: string | null; payment_status: string; self_registered: boolean; video_url: string | null; scores: Record<string, number> | null };
 type RosterLite = { id: string; first_name: string; last_name: string };
 
@@ -33,9 +33,12 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
   const [entrants, setEntrants] = useState<Entrant[]>([]);
   const [newName, setNewName] = useState("");
   const [newDate, setNewDate] = useState("");
-  const [entrantForm, setEntrantForm] = useState({ event: "", division: "" });
   const [search, setSearch] = useState("");
   const [selComps, setSelComps] = useState<string[]>([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [batchEvents, setBatchEvents] = useState<string[]>([]);
+  const [batchDivision, setBatchDivision] = useState("");
+  const [customEvt, setCustomEvt] = useState("");
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState("");
   const [running, setRunning] = useState(false);
@@ -46,9 +49,10 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
   const ghost: React.CSSProperties = { border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 9, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 };
 
   const loadTournaments = useCallback(async () => {
-    const { data } = await supabase.from("in_house_tournaments")
-      .select("id, name, event_date, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid")
+    const { data, error } = await supabase.from("in_house_tournaments")
+      .select("id, name, event_date, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid, prize")
       .eq("school_id", schoolId).order("created_at", { ascending: false });
+    if (error) { setErr(`Couldn't load tournaments: ${error.message}. You may be missing a database migration.`); return; }
     setTournaments((data ?? []) as Tournament[]);
   }, [supabase, schoolId]);
   useEffect(() => { loadTournaments(); }, [loadTournaments]);
@@ -98,28 +102,26 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
     updateTournament(t.id, { state: "draft" });
   }
   function toggleComp(id: string) { setSelComps((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id])); }
-  async function addEntrants() {
+  function toggleBatchEvent(ev: string) { setBatchEvents((s) => (s.includes(ev) ? s.filter((x) => x !== ev) : [...s, ev])); }
+  function addCustomEvent() { const v = customEvt.trim(); if (v && !batchEvents.includes(v)) setBatchEvents((s) => [...s, v]); setCustomEvt(""); }
+  function openAdd() { if (selComps.length) { setBatchEvents([]); setBatchDivision(""); setCustomEvt(""); setAddOpen(true); } }
+  async function confirmAdd() {
     if (!selected || selComps.length === 0) return;
-    const t = tournaments.find((x) => x.id === selected);
-    const evKey = entrantForm.event.trim() || null;
-    // Skip anyone already entered in this same event — avoids a duplicate finalize reminder.
-    const already = new Set(entrants.filter((e) => (e.event ?? null) === evKey && e.competitor_id).map((e) => e.competitor_id as string));
-    const toAdd = selComps.filter((cid) => !already.has(cid));
-    const skipped = selComps.length - toAdd.length;
-    if (toAdd.length === 0) { setErr("Everyone selected is already entered in that event."); setSelComps([]); return; }
-    const n = toAdd.length;
-    if (!window.confirm(`Add ${n} competitor${n === 1 ? "" : "s"} to “${t?.name ?? "this tournament"}”?${skipped ? ` (${skipped} already entered — skipping)` : ""}\n\nThey'll be entered as unpaid and prompted to finalize their registration in the app.`)) return;
-    const rows = toAdd.map((cid) => {
+    // One entrant per (competitor × chosen event); no events chosen → a single generic entry.
+    const evs: (string | null)[] = batchEvents.length ? batchEvents.map((e) => e.trim()).filter(Boolean) : [null];
+    const existing = new Set(entrants.filter((e) => e.competitor_id).map((e) => `${e.competitor_id}|${e.event ?? ""}`));
+    const rows: { tournament_id: string; competitor_id: string; display_name: string | null; event: string | null; division: string | null }[] = [];
+    for (const cid of selComps) {
       const a = roster.find((r) => r.id === cid);
-      return {
-        tournament_id: selected, competitor_id: cid,
-        display_name: a ? `${a.first_name} ${a.last_name}` : null,
-        event: evKey, division: entrantForm.division || null,
-      };
-    });
+      for (const ev of evs) {
+        if (existing.has(`${cid}|${ev ?? ""}`)) continue;
+        rows.push({ tournament_id: selected, competitor_id: cid, display_name: a ? `${a.first_name} ${a.last_name}` : null, event: ev, division: batchDivision.trim() || null });
+      }
+    }
+    if (rows.length === 0) { setErr("Those competitors are already entered in the selected event(s)."); return; }
     const { error } = await supabase.from("ih_entrants").insert(rows);
     if (error) { setErr(error.message); return; }
-    setErr(""); setSelComps([]); setSearch(""); setEntrantForm((f) => ({ ...f, division: "" }));
+    setErr(""); setAddOpen(false); setSelComps([]); setSearch(""); setBatchEvents([]); setBatchDivision("");
     loadEntrants(selected);
   }
   async function updateEntrant(id: string, patch: Partial<Entrant>) {
@@ -207,7 +209,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {isDraft ? (
-                <div style={{ display: "flex", border: `1px solid ${neutrals.border}`, borderRadius: 9, overflow: "hidden" }}>
+                <div style={{ display: "flex", border: "1px solid #3a3944", background: neutrals.surface, borderRadius: 9, overflow: "hidden" }}>
                   {[{ v: "in_person", l: "In-person" }, { v: "video", l: "Video" }].map((o) => (
                     <button key={o.v} onClick={() => updateTournament(cur.id, { format: o.v })}
                       style={{ border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "8px 13px", background: cur.format === o.v ? hues.gold.base : "transparent", color: cur.format === o.v ? "#141210" : neutrals.muted }}>{o.l}</button>
@@ -251,13 +253,18 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                     Public sign-ups
                   </label>
                 </div>
+                <label style={{ display: "block", fontSize: 13, color: neutrals.muted, marginTop: 14 }}>
+                  Prize <span style={{ color: neutrals.muted2 }}>(optional — shown to competitors)</span>
+                  <input style={{ ...inp, width: "100%", marginTop: 5 }} placeholder="e.g. 1st place trophy + $100 · medals for top 3" defaultValue={cur.prize ?? ""}
+                    onBlur={(e) => updateTournament(cur.id, { prize: e.target.value.trim() || null })} />
+                </label>
               </div>
 
               {/* editable config: scoring */}
               <div style={{ background: "#0e0e11", border: `1px solid ${neutrals.border}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
                 <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2, marginBottom: 12 }}>Scoring &amp; judging</div>
                 <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ display: "flex", border: `1px solid ${neutrals.border}`, borderRadius: 9, overflow: "hidden" }}>
+                  <div style={{ display: "flex", border: "1px solid #3a3944", background: neutrals.surface, borderRadius: 9, overflow: "hidden" }}>
                     {[{ v: "nmao", l: "NMAO criteria" }, { v: "custom", l: "Custom" }].map((o) => (
                       <button key={o.v} onClick={() => updateTournament(cur.id, { scoring_mode: o.v })}
                         style={{ border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "8px 13px", background: cur.scoring_mode === o.v ? hues.gold.base : "transparent", color: cur.scoring_mode === o.v ? "#141210" : neutrals.muted }}>{o.l}</button>
@@ -277,7 +284,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                         <button onClick={() => removeCriterion(idx)} style={{ ...ghost, padding: "6px 12px" }}>Remove</button>
                       </div>
                     ))}
-                    {(cur.criteria?.length ?? 0) < MAX_CRITERIA && <button onClick={addCriterion} style={{ ...ghost }}>+ Add criterion</button>}
+                    {(cur.criteria?.length ?? 0) < MAX_CRITERIA && <button onClick={addCriterion} style={{ ...ghost, border: "1px solid #3a3944", background: neutrals.surface }}>+ Add criterion</button>}
                     {(cur.criteria?.length ?? 0) === 0 && <div style={{ color: hues.gold.hi, fontSize: 12, marginTop: 8 }}>Add at least one criterion.</div>}
                   </div>
                 ) : (
@@ -298,6 +305,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                 <div><div style={sumLbl}>Scoring</div><div style={sumVal}>{isCustom ? `Custom · ${cur.criteria?.length ?? 0} criteria` : "NMAO rubric"}</div></div>
                 <div><div style={sumLbl}>Public sign-ups</div><div style={sumVal}>{isPublic ? "On" : "Off"}</div></div>
                 <div><div style={sumLbl}>Unpaid compete</div><div style={sumVal}>{cur.include_unpaid ? "Yes" : "No"}</div></div>
+                {cur.prize && <div style={{ flexBasis: "100%" }}><div style={sumLbl}>Prize</div><div style={sumVal}>{cur.prize}</div></div>}
               </div>
 
               {/* public link (operational) */}
@@ -330,11 +338,6 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
             <div style={{ fontSize: 12, letterSpacing: 1, textTransform: "uppercase", color: neutrals.muted2 }}>Add Competitors</div>
             {selComps.length > 0 && <button onClick={() => setSelComps([])} style={{ background: "none", border: "none", color: neutrals.muted2, cursor: "pointer", fontSize: 12 }}>Clear ({selComps.length})</button>}
           </div>
-          <datalist id="ih-challenges">{challengeOpts.map((c) => <option key={c} value={c} />)}</datalist>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-            <input style={inp} list="ih-challenges" placeholder="Event / challenge (applies to all selected)" value={entrantForm.event} onChange={(e) => setEntrantForm({ ...entrantForm, event: e.target.value })} />
-            <input style={inp} placeholder="Division (optional)" value={entrantForm.division} onChange={(e) => setEntrantForm({ ...entrantForm, division: e.target.value })} />
-          </div>
           <input style={{ ...inp, width: "100%", marginBottom: 8 }} placeholder="Search your roster…" value={search} onChange={(e) => setSearch(e.target.value)} />
           {!roster.length ? (
             <p style={{ color: neutrals.muted2, fontSize: 13 }}>Add athletes to your roster first (Roster tab).</p>
@@ -354,8 +357,8 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
               })}
             </div>
           )}
-          <button onClick={addEntrants} disabled={!selComps.length} style={{ ...gold, opacity: selComps.length ? 1 : 0.5, marginBottom: 16 }}>
-            {selComps.length ? `Add ${selComps.length} Competitor${selComps.length === 1 ? "" : "s"}` : "Add Competitors"}
+          <button onClick={openAdd} disabled={!selComps.length} style={{ ...gold, opacity: selComps.length ? 1 : 0.5, marginBottom: 16 }}>
+            {selComps.length ? `Add ${selComps.length} Competitor${selComps.length === 1 ? "" : "s"}…` : "Add Competitors"}
           </button>
 
           {/* entrants table */}
@@ -372,7 +375,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                   <tr style={{ color: neutrals.muted2, textAlign: "left" }}>
                     <th style={{ padding: "8px 6px", fontWeight: 500 }}>Athlete</th><th style={{ fontWeight: 500 }}>Event</th><th style={{ fontWeight: 500 }}>Division</th>
                     {isVideo && <th style={{ fontWeight: 500 }}>Video</th>}
-                    <th style={{ fontWeight: 500 }}>Payment</th><th style={{ fontWeight: 500 }}>Score</th><th style={{ fontWeight: 500 }}>Place</th><th style={{ fontWeight: 500 }}>Prize</th><th></th>
+                    <th style={{ fontWeight: 500 }}>Payment</th><th style={{ fontWeight: 500 }}>Score</th><th style={{ fontWeight: 500 }}>Place</th><th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -407,7 +410,6 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                       </td>
                       <td><input style={cellInp} defaultValue={en.score ?? ""} placeholder="—" onBlur={(e) => updateEntrant(en.id, { score: e.target.value === "" ? null : Number(e.target.value) })} /></td>
                       <td><input style={cellInp} defaultValue={en.placement ?? ""} placeholder="—" onBlur={(e) => updateEntrant(en.id, { placement: e.target.value === "" ? null : Number(e.target.value) })} /></td>
-                      <td><input style={{ ...inp, padding: "6px 8px", fontSize: 13, width: 150 }} defaultValue={en.prize ?? ""} placeholder="Prize" onBlur={(e) => updateEntrant(en.id, { prize: e.target.value || null })} /></td>
                       <td><button onClick={() => removeEntrant(en.id)} style={{ background: "none", border: "none", color: neutrals.muted2, cursor: "pointer", fontSize: 12 }}>Remove</button></td>
                     </tr>
                   ))}
@@ -416,6 +418,34 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
             </div>
           )}
           </>)}
+        </div>
+      )}
+
+      {addOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(6,6,8,0.8)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setAddOpen(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 460, background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 16, padding: 22 }}>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>Add {selComps.length} competitor{selComps.length === 1 ? "" : "s"}</div>
+            <div style={{ color: neutrals.muted2, fontSize: 13, margin: "4px 0 14px" }}>Which event{selComps.length === 1 ? "" : "s"} are they entering? Pick one or more — an entry is created for each.</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              {Array.from(new Set([...batchEvents, ...challengeOpts])).map((c) => {
+                const on = batchEvents.includes(c);
+                return (
+                  <button key={c} onClick={() => toggleBatchEvent(c)}
+                    style={{ cursor: "pointer", fontSize: 13, fontWeight: 600, borderRadius: 999, padding: "7px 13px", border: `1px solid ${on ? hues.gold.base : neutrals.border}`, background: on ? hues.gold.base : "transparent", color: on ? "#141210" : neutrals.text }}>{c}</button>
+                );
+              })}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+              <input style={{ ...inp, flex: 1 }} placeholder="Add a custom event" value={customEvt} onChange={(e) => setCustomEvt(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomEvent(); } }} />
+              <button onClick={addCustomEvent} style={ghost}>Add</button>
+            </div>
+            <input style={{ ...inp, width: "100%", marginBottom: 16 }} placeholder="Division (optional — applies to all)" value={batchDivision} onChange={(e) => setBatchDivision(e.target.value)} />
+            <div style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 14 }}>They&apos;ll be entered as unpaid and prompted to finalize their registration in the app.</div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button onClick={() => setAddOpen(false)} style={ghost}>Cancel</button>
+              <button onClick={confirmAdd} style={gold}>Add{batchEvents.length > 1 ? ` · ${batchEvents.length} events` : ""}</button>
+            </div>
+          </div>
         </div>
       )}
 
