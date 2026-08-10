@@ -14,8 +14,8 @@ export type Scheme = {
     | { key: 'rank'; type: 'tier'; active: boolean; tiers: string[]; mergeable: boolean }
     | { key: 'event'; type: 'category'; active: boolean; values: string[]; mergeable: boolean }
   >;
-  podCap: number;            // 20
-  podSplitThreshold: number; // 22
+  podCap: number;            // 15
+  podSplitThreshold: number; // 16
   podFloor: number;          // 6
   collapseOrder: string[];   // e.g. ['rank','age'] — which axis to merge first
 };

@@ -51,6 +51,19 @@ export default function JudgeQueue() {
     return () => { supabase.removeChannel(ch); };
   }, [load, supabase]);
 
+  async function recuse(entryId: string) {
+    if (!confirm("Recuse yourself from this entry? It leaves your queue and staff will reassign it to another judge.")) return;
+    const { data: sess } = await supabase.auth.getSession();
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/recuse-assignment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${sess.session?.access_token}` },
+      body: JSON.stringify({ entry_id: entryId }),
+    });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.ok) { alert(j.error || "Could not recuse."); return; }
+    load();
+  }
+
   const todo = rows.filter((r) => r.state === "assigned" || r.state === "reopened");
   const done = rows.filter((r) => r.state === "submitted");
 
@@ -85,11 +98,17 @@ export default function JudgeQueue() {
                       {e ? `${e.age_bracket} · ${e.declared_rank}` : ""}{a.state === "reopened" ? " · reopened" : ""}
                     </div>
                   </div>
-                  <button onClick={() => router.push(`/judge/score/${a.id}`)}
-                    style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 18px",
-                      background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})` }}>
-                    Score
-                  </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <button onClick={() => recuse(a.entry_id)}
+                      style={{ background: "none", border: "none", color: neutrals.muted2, fontSize: 12, cursor: "pointer", textDecoration: "underline" }}>
+                      Recuse
+                    </button>
+                    <button onClick={() => router.push(`/judge/score/${a.id}`)}
+                      style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 18px",
+                        background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})` }}>
+                      Score
+                    </button>
+                  </div>
                 </Card>
               );
             })}

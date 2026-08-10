@@ -62,7 +62,7 @@ begin
       {"key":"rank","type":"tier","active":true,"mergeable":true,"tiers":["beginner","intermediate","advanced"]},
       {"key":"event","type":"category","active":true,"mergeable":false,"values":["trad_forms","trad_weapons","open_forms","open_weapons"]}
     ]'::jsonb,
-    20, 22, 6, '["rank","age"]'::jsonb, true
+    15, 16, 6, '["rank","age"]'::jsonb, true
   ) returning id into v_scheme;
 
   update seasons set active_scheme_id = v_scheme where id = v_season;

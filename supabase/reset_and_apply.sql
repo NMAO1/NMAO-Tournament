@@ -261,8 +261,8 @@ on conflict (style, criterion_code) do nothing;
 insert into app_settings (key, value) values
   ('entry_fee_cents',      '4500'::jsonb),
   ('currency',             '"usd"'::jsonb),
-  ('pod_cap',              '20'::jsonb),
-  ('pod_split_threshold',  '22'::jsonb),
+  ('pod_cap',              '15'::jsonb),
+  ('pod_split_threshold',  '16'::jsonb),
   ('provisional_rounds',   '3'::jsonb),
   ('championship_setaside_pct', '8'::jsonb)
 on conflict (key) do nothing;
@@ -325,8 +325,8 @@ create table division_schemes (
   season_id            uuid not null references seasons(id) on delete cascade,
   version              int  not null,
   axes                 jsonb not null,                    -- see engine spec §5
-  pod_cap              int  not null default 20,
-  pod_split_threshold  int  not null default 22,
+  pod_cap              int  not null default 15,
+  pod_split_threshold  int  not null default 16,
   pod_floor            int  not null default 6,
   collapse_order       jsonb not null default '["rank","age"]'::jsonb,
   locked               boolean not null default false,
@@ -1173,3 +1173,11 @@ alter table student_tournament_settings enable row level security;
 -- matching the "engine writes as service role" convention.
 create policy sts_read on student_tournament_settings for select to authenticated
   using (nmao.is_staff() or competitor_id in (select nmao.competitor_ids()));
+
+-- ===================== 20260810100000_entry_second_angle.sql =====================
+alter table entries add column if not exists video_url_2 text;
+
+-- ===================== 20260810200000_entry_videos_bucket.sql =====================
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('entry-videos','entry-videos', false, 524288000, array['video/mp4','video/quicktime','video/webm'])
+on conflict (id) do nothing;

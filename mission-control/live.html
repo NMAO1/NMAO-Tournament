@@ -256,8 +256,9 @@ function render(){
                  divide: runStatus('divide')==='done', assign_judges: runStatus('assign_judges')==='done',
                  judging: S.jaTotal>0 && S.jaSubmitted===S.jaTotal, resolve: runStatus('resolve')==='done',
                  distribute: runStatus('distribute')==='done', finalize: st==='finalized' };
+  const canClose = !done.closed;   // round still open/collecting — close entries before divide
   const actionable = ['divide','assign_judges','resolve','distribute','finalize'];
-  const nextStep = actionable.find(s => !done[s]);
+  const nextStep = canClose ? null : actionable.find(s => !done[s]);
 
   const stage = (key, title, sub, opts={}) => {
     const rs = runStatus(key);
@@ -265,10 +266,10 @@ function render(){
     if (done[key]) { cls='done'; pill='done'; }
     else if (rs==='running') { cls='run'; pill='running'; }
     else if (rs==='error') { cls='error'; pill='error'; }
-    else if (key===nextStep) cls='next';
+    else if (key===nextStep || (opts.force && !done[key])) cls='next';
     const time = (S.steps[key] && S.steps[key].completed_at) ? fmtTime(S.steps[key].completed_at) : (opts.time||'');
     let right = `<span class="status-pill s-${cls}">${pill||cls}</span>`;
-    if (opts.action && (cls==='next' || cls==='error')) right = `<button class="btn ${opts.gold?'gold':''}" data-run="${key}">${opts.action}</button>`;
+    if (opts.action && !done[key] && (opts.force || cls==='next' || cls==='error')) right = `<button class="btn ${opts.gold?'gold':''}" data-run="${opts.runAs||key}">${opts.action}</button>`;
     else if (opts.view && done[key]) right = `<button class="btn" data-view="${key}">${opts.view}</button>`;
     return `<div class="stage"><span class="dot ${cls}"></span>
       <div><div class="st-title">${title}${opts.muted?` <span class="muted">— ${opts.muted}</span>`:''}</div>
@@ -278,7 +279,7 @@ function render(){
 
   const collapsed = S.divisions.filter(d => d.is_collapsed).length;
   $('pipeline').innerHTML =
-    stage('closed', 'Entries closed', `<b>${S.validEntries}</b> valid entries`) +
+    stage('closed', 'Entries closed', `<b>${S.validEntries}</b> valid entries`, canClose ? { action:'Close entries', runAs:'close', force:true } : {}) +
     stage('divide', 'Divide', `<b>${S.divisions.length}</b> divisions · <b>${S.pods.length}</b> pods${collapsed?` · ${collapsed} collapsed`:''}`, { muted:'classify → collapse → form pods', action:'Run divide', view:'View divisions' }) +
     stage('assign_judges', 'Assign judges', `<b>${S.jaTotal}</b> assignments`, { action:'Run assign', view:'View judges' }) +
     stage('judging', 'Judging window', `<b>${S.jaSubmitted} / ${S.jaTotal}</b> scored · ${pct}%`) +

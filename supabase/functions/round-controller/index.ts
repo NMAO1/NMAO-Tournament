@@ -26,7 +26,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { createSupabaseStore, finalizeRound, rollbackRound } from '../_shared/supabaseStore.ts';
+import { createSupabaseStore, closeRound, finalizeRound, rollbackRound } from '../_shared/supabaseStore.ts';
 import { stepDivide, stepAssignJudges, stepResolve, stepDistribute, runPipelineTail } from '../_shared/engine.ts';
 
 const cors = {
@@ -92,6 +92,11 @@ Deno.serve(async (req: Request) => {
       case 'tail':          outcome = await runPipelineTail(store, roundId); break;
       case 'all':           outcome = [await stepDivide(store, roundId), ...await runPipelineTail(store, roundId)]; break;
       // Operator actions (Mission Control). Use a fresh service client, not the step store.
+      case 'close': {
+        const svc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+        outcome = await closeRound(svc, roundId, az.actorId);
+        break;
+      }
       case 'finalize': {
         const svc = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
         outcome = await finalizeRound(svc, roundId, az.actorId);

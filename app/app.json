@@ -1,15 +1,17 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "NMAO Compete",
+    "slug": "nmao-compete",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "us.nmao.compete"
     },
     "android": {
+      "package": "us.nmao.compete",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -22,7 +24,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NMAO needs access to your videos so you can submit your competition entry."
+        }
+      ],
+      "expo-audio"
     ]
   }
 }

@@ -76,6 +76,38 @@ export async function submitJudgeScores(
 
 const PIPELINE_STEPS: StepName[] = ['divide', 'assign_judges', 'resolve', 'distribute'];
 
+// CLOSE: open/collecting -> closed. Validates the entry pool (submitted entries
+// WITH a video become 'valid'; those without are 'voided'), then closes the entry
+// window so divide can run. Idempotent: re-press once closed just re-checks.
+export async function closeRound(
+  db: SupabaseClient,
+  roundId: string,
+  actorId?: string | null,
+): Promise<{ step: string; ran: boolean; flags: string[]; detail: unknown }> {
+  const { data: round, error } = await db.from('rounds').select('state').eq('id', roundId).single();
+  if (error || !round) throw new Error('Round not found.');
+  const state = (round as any).state;
+  const OPENISH = ['open', 'collecting'];
+
+  const { data: subs } = await db
+    .from('entries').select('id, video_url').eq('round_id', roundId).eq('status', 'submitted');
+  const valid = (subs ?? []).filter((e: any) => e.video_url).map((e: any) => e.id);
+  const voided = (subs ?? []).filter((e: any) => !e.video_url).map((e: any) => e.id);
+  const now = new Date().toISOString();
+  if (valid.length) await db.from('entries').update({ status: 'valid', updated_at: now }).in('id', valid);
+  if (voided.length) await db.from('entries').update({ status: 'voided', updated_at: now }).in('id', voided);
+
+  if (!OPENISH.includes(state)) {
+    return { step: 'close', ran: false, flags: [], detail: { state, validated: valid.length, voided: voided.length, note: 'already closed' } };
+  }
+  await db.from('rounds').update({ state: 'closed', updated_at: now }).eq('id', roundId);
+  await db.from('engine_audit').insert({
+    round_id: roundId, actor_id: actorId ?? null, action: 'close',
+    before: { state }, after: { state: 'closed' },
+  });
+  return { step: 'close', ran: true, flags: [], detail: { state: 'closed', from: state, validated: valid.length, voided: voided.length } };
+}
+
 // FINALIZE: distributed -> finalized. Freezes the scheme version (locked) and
 // stamps the round locked_at. Idempotent: a re-press on a finalized round no-ops.
 export async function finalizeRound(
