@@ -25,6 +25,29 @@ real presence.
 
 ---
 
+## 1b. Locked production decisions
+
+*(Confirmed 2026-08-09. These govern the whole run.)*
+
+- **Frame policy = HYBRID.** Common, Uncommon, and Rare badges share **one
+  standardized frame per tier** (reuse frame tooling, instant rarity read). **Epic and
+  Legendary** get **bespoke, over-the-top ornate frames** (extra flourishes, gem
+  accents, optional banner) so the chase-pieces feel like trophies. The center art
+  always changes per badge; standardized-tier borders do not.
+  - **Canonical frame templates** (from the locked reference set in `badge-art/`):
+    - **Rare → gold** = the clean rope-and-laurel gold frame from **Undefeated (dragon)**.
+    - **Uncommon → silver** = the silver swirl frame from **Open Mind (lotus)**.
+    - **Common → bronze** = same silhouette as the Uncommon frame, bronze/patina finish.
+    - **Epic → spectrum** = bespoke iridescent frame per badge (no fixed template).
+    - **Legendary → platinum** = bespoke ornate platinum/black-nickel + gem, in the
+      spirit of the **Gold Medallion** frame (each one unique).
+- **Text policy = NO TEXT IN THE ART.** All generated art is text-free. Badge **names
+  are added later** in the app card and the pin layout with real typography (and any
+  Legendary "limited-edition / numbered" engraving is set in type at layout, never baked
+  by the image model). Always include `--no text, letters, words, watermark` in prompts.
+
+---
+
 ## 2. Style bible (applies to every badge)
 
 **Medium & rendering.** Painterly digital illustration — the polished, semi-realistic
@@ -91,7 +114,10 @@ Keep these constant for the whole run so batch-to-batch drift doesn't creep in.
 ## 4. Rarity = finish (frame + treatment modifiers)
 
 Rarity is shown by the **frame metal and treatment** (digital and on the physical pin).
-Append the matching modifier to every prompt:
+Per the **Hybrid** policy (§1b): Common/Uncommon/Rare reuse the **canonical frame** for
+their tier (use that tier's reference image as the style reference so the border stays
+identical); Epic/Legendary use **bespoke ornate** frames. Append the matching modifier
+to every prompt:
 
 | Rarity | Frame / treatment modifier to append |
 |---|---|
@@ -136,7 +162,7 @@ consistent upper-left light source, same style-reference set.
 Append (or set as negative prompt where supported):
 
 ```
---no text, letters, watermark, signature, flat vector, cartoon, 3d plastic render,
+--no text, letters, words, numbers, watermark, signature, flat vector, cartoon, 3d plastic render,
 photorealistic photo, cluttered background, gore, blood, realistic firearms, menacing
 faces, extra frames, busy edges, low contrast, washed-out colors
 ```
@@ -282,9 +308,11 @@ Subjects are written to convey **emotion and awe**, not just depict an object.
 2. **Batch the rest** in groups of ~10, reusing the frozen references so all 90 match.
 3. **Select** the best generation per badge (aim for centered, clean silhouette,
    on-palette).
-4. **Assemble.** Composite each hero illustration into the shared medallion frame with
-   the correct rarity metal; add the vignette, keyline, and gloss. (I can do this step
-   and keep the frame identical across the set.)
+4. **Normalize frames (Hybrid).** For **Common/Uncommon/Rare**, keep the border
+   identical to that tier's **canonical frame** — either by feeding the tier reference
+   image as the style ref, or (if generations drift) by compositing the locked frame
+   over the center art. For **Epic/Legendary**, keep each bespoke frame as generated.
+   I can do this normalization pass and confirm rarity reads correctly.
 5. **Vectorize for pins.** Trace/redraw the selected art to clean vector at
    manufacturing spec (bold silhouette, ≤4 enamel colors + metal, legible at 1–1.25",
    die-struck soft/hard enamel). Deliver a print-ready file per SKU.
