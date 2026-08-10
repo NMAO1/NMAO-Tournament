@@ -9,6 +9,7 @@ type Assignment = {
   id: string; entry_id: string; state: string; score: number | null; submitted_at: string | null; role: string;
   entries: Entry | Entry[] | null;
 };
+type PoolPod = { pod_id: string; event: string; age_key: string; rank_key: string; entries: number; judge_count: number; seats_left: number };
 
 const prettyEvent = (e: string) =>
   e.replace(/^open_/, "Open · ").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
@@ -20,7 +21,15 @@ export default function JudgeQueue() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [rows, setRows] = useState<Assignment[]>([]);
+  const [pool, setPool] = useState<PoolPod[]>([]);
   const judgeId = useRef<string | null>(null);
+
+  const efHeaders = useCallback(async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    return sess.session
+      ? { "Content-Type": "application/json", apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${sess.session.access_token}` }
+      : null;
+  }, [supabase]);
 
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getSession();
@@ -42,26 +51,43 @@ export default function JudgeQueue() {
     setLoading(false);
   }, [supabase, router]);
 
+  // The judging pool — pods I'm eligible to claim (computed server-side).
+  const loadPool = useCallback(async () => {
+    const headers = await efHeaders();
+    if (!headers) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/available-pods`, { method: "POST", headers, body: "{}" });
+      const j = await res.json();
+      if (res.ok && j.ok) setPool((j.pods ?? []) as PoolPod[]);
+    } catch { /* ignore */ }
+  }, [efHeaders]);
+
   useEffect(() => {
-    load();
+    load(); loadPool();
     const ch = supabase
       .channel("judge-queue")
-      .on("postgres_changes", { event: "*", schema: "public", table: "judge_assignments" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "judge_assignments" }, () => { load(); loadPool(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [load, supabase]);
+  }, [load, loadPool, supabase]);
+
+  async function claim(podId: string) {
+    const headers = await efHeaders();
+    if (!headers) return;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/claim-pod`, { method: "POST", headers, body: JSON.stringify({ pod_id: podId }) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.ok) { alert(j.error || "Could not claim this pod."); loadPool(); return; }
+    load(); loadPool();
+  }
 
   async function recuse(entryId: string) {
-    if (!confirm("Recuse yourself from this entry? It leaves your queue and staff will reassign it to another judge.")) return;
-    const { data: sess } = await supabase.auth.getSession();
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/recuse-assignment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${sess.session?.access_token}` },
-      body: JSON.stringify({ entry_id: entryId }),
-    });
+    if (!confirm("Recuse from this entry? Your seat on this pod returns to the pool for another judge to claim.")) return;
+    const headers = await efHeaders();
+    if (!headers) return;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/recuse-assignment`, { method: "POST", headers, body: JSON.stringify({ entry_id: entryId }) });
     const j = await res.json().catch(() => ({}));
     if (!res.ok || !j.ok) { alert(j.error || "Could not recuse."); return; }
-    load();
+    load(); loadPool();
   }
 
   const todo = rows.filter((r) => r.state === "assigned" || r.state === "reopened");
@@ -86,6 +112,25 @@ export default function JudgeQueue() {
 
         {!loading && !err && (
           <>
+            <SectionLabel n={pool.length} label="Available to judge" />
+            {pool.length === 0 && <Empty text="No open pods to claim right now — new ones appear here in real time." />}
+            {pool.map((p) => (
+              <Card key={p.pod_id}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 600 }}>{prettyEvent(p.event)}</div>
+                  <div style={{ color: neutrals.muted, fontSize: 13, marginTop: 3 }}>
+                    {p.age_key.replace("_plus", "+").replace("_", "–")} · {p.rank_key} · {p.entries} entries · {p.seats_left} seat{p.seats_left > 1 ? "s" : ""} open
+                  </div>
+                </div>
+                <button onClick={() => claim(p.pod_id)}
+                  style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#fff", borderRadius: 10, padding: "10px 18px",
+                    background: `linear-gradient(160deg, ${hues.sapphire.hi}, ${hues.sapphire.base} 55%, ${hues.sapphire.shadow})` }}>
+                  Claim
+                </button>
+              </Card>
+            ))}
+
+            <div style={{ height: 26 }} />
             <SectionLabel n={todo.length} label="To score" />
             {todo.length === 0 && <Empty text="You're all caught up. New assignments appear here in real time." />}
             {todo.map((a) => {

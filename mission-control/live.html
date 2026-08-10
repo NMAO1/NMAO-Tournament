@@ -125,6 +125,7 @@
       <div class="selectors">
         <select class="sel" id="roundSel"></select>
         <span class="badge state-badge" id="stateBadge">—</span>
+        <button class="btn" id="fillBtn" title="Backfill any pods still short of judges (deadline safety-net)">Fill unclaimed</button>
         <button class="btn" id="refreshBtn">Refresh</button>
         <button class="btn" id="signoutBtn">Sign out</button>
       </div>
@@ -199,6 +200,26 @@ async function loadRounds(){
 }
 $('roundSel').onchange = e => selectRound(e.target.value);
 $('refreshBtn').onclick = () => ROUND && loadRound(ROUND);
+$('fillBtn').onclick = () => ROUND && fillUnclaimed();
+
+// Hybrid safety-net: backfill pods still short of judges after the claim window.
+async function fillUnclaimed(){
+  toast('Filling unclaimed pods…');
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const r = await fetch(SUPABASE_URL + '/functions/v1/fill-unclaimed-pods', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey: ANON, Authorization:'Bearer '+(session?.access_token||ANON) },
+      body: JSON.stringify({ round_id: ROUND }) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || 'failed');
+    const res = (d.rounds && d.rounds[0]) || {};
+    const added = (res.filled||[]).reduce((s,f)=>s+(f.added||0),0);
+    const short = (res.shortfalls||[]).length;
+    toast(`Filled ${added} seat(s)` + (short?` · ${short} pod(s) still short of eligible judges`:''), short?'err':'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast('Fill: '+e.message,'err'); }
+}
 
 async function selectRound(id){ ROUND = id; await loadRound(id); subscribe(id); }
 
@@ -327,8 +348,16 @@ async function callController(body){
   if (!r.ok || d.ok === false) throw new Error(d.error || `Failed (${r.status})`);
   return d;
 }
+const STEP_CONFIRM = {
+  close: 'Close entries for this round? No new entries can be submitted after this.',
+  divide: 'Run divide? This classifies entries and forms the divisions and pods.',
+  assign_judges: 'Run judge assignment? This assigns judges to every pod.',
+  resolve: 'Run resolve? This computes placements and updates competitor ratings.',
+  distribute: 'Run distribute? This awards medals and builds the ship list.',
+  finalize: 'Finalize this round? This freezes the scheme and publishes results.',
+};
 async function runStep(step){
-  if (step === 'finalize' && !confirm('Finalize this round? This freezes the scheme and publishes results.')) return;
+  if (STEP_CONFIRM[step] && !confirm(STEP_CONFIRM[step])) return;
   toast('Running ' + step + '…');
   try {
     const d = await callController({ roundId: ROUND, step });

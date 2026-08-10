@@ -32,3 +32,22 @@ export async function uploadEntryVideo(
   if (error) throw new Error(error.message);
   return path;
 }
+
+// In-house entry video → same private bucket, under the competitor's own folder
+// so competitor-scoped storage RLS applies. Returns the storage PATH, which
+// submit-inhouse-video records and get-inhouse-video-url later signs.
+export async function uploadInhouseVideo(
+  competitorId: string,
+  entrantId: string,
+  v: PickedVideo,
+): Promise<string> {
+  const ext = extFor(v);
+  const path = `${competitorId}/ih-${entrantId}_${Date.now()}.${ext}`;
+  const buf = await (await fetch(v.uri)).arrayBuffer();
+  const { error } = await supabase.storage.from("entry-videos").upload(path, buf, {
+    contentType: ctypeFor(ext),
+    upsert: true,
+  });
+  if (error) throw new Error(error.message);
+  return path;
+}

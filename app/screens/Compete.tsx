@@ -7,6 +7,7 @@ import { neutrals, hues, metalStops, status } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
 import { uploadEntryVideo, PickedVideo } from "../lib/upload";
 import { myCompetitors } from "../lib/competitors";
+import * as WebBrowser from "expo-web-browser";
 
 // Export competition videos at 1080p H.264 (flip to H264_1280x720 for smaller
 // files). MAX_MB guards the plan's Storage cap so an oversize clip gives a clear
@@ -33,12 +34,22 @@ export default function Compete() {
   const [step, setStep] = useState("");
   const [done, setDone] = useState<{ event: string; age_bracket: string } | null>(null);
   const [loadErr, setLoadErr] = useState("");
+  const [paid, setPaid] = useState(false);
+  const [pending, setPending] = useState<{ id: string; competitor_id: string; event: string }[]>([]);
+
+  async function loadPending(compIds: string[]) {
+    if (!compIds.length) { setPending([]); return; }
+    const { data: en } = await supabase.from("entries")
+      .select("id, competitor_id, event, payment_status").eq("payment_status", "unpaid").in("competitor_id", compIds);
+    setPending(((en ?? []) as { id: string; competitor_id: string; event: string }[]).map((e) => ({ id: e.id, competitor_id: e.competitor_id, event: e.event })));
+  }
 
   useEffect(() => {
     (async () => {
       const rows = await myCompetitors();
       setComps(rows);
       if (rows.length === 1) setCompetitorId(rows[0].id);
+      loadPending(rows.map((r) => r.id));
     })();
   }, []);
 
@@ -63,6 +74,48 @@ export default function Compete() {
   }
 
   const ready = !!competitorId && !!event && !!vid1 && phase === "idle";
+
+  // Poll the entry until the Stripe webhook flips it to 'paid' (source of truth).
+  async function waitForPaid(entryId: string): Promise<boolean> {
+    for (let i = 0; i < 8; i++) {
+      const { data } = await supabase.from("entries").select("payment_status").eq("id", entryId).maybeSingle();
+      if ((data as any)?.payment_status === "paid") return true;
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    return false;
+  }
+
+  // Register + pay in one motion (payment activates the entry). Payment happens
+  // in the device BROWSER (Stripe Checkout) — deliberately OFF Apple's in-app
+  // purchase rails (no 30% cut). Gated to the competitor/guardian by
+  // create-entry-checkout — schools can't pay here.
+  async function payAndRegister(compId?: string, ev?: string) {
+    const cid = compId ?? competitorId; const evt = ev ?? event;
+    if (!cid || !evt) return;
+    setPhase("working"); setStep("Registering…");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-entry-checkout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ competitor_id: cid, event: evt }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.ok) throw new Error(j.error || "Could not start payment.");
+      setStep("Opening secure checkout…");
+      await WebBrowser.openBrowserAsync(j.url); // resolves when the user closes the browser
+      setStep("Confirming payment…");
+      const ok = await waitForPaid(j.entry_id);
+      if (!ok) {
+        Alert.alert("Payment pending", "We couldn't confirm your payment yet. If you completed it, your entry will unlock in a moment — pull to refresh.");
+        setPhase("idle"); setStep(""); return;
+      }
+      setCompetitorId(cid); setEvent(evt); setPaid(true); setPhase("idle"); setStep("");
+      setPending((p) => p.filter((x) => !(x.competitor_id === cid && x.event === evt)));
+    } catch (e: any) {
+      Alert.alert("Registration", e?.message ?? "Please try again."); setPhase("idle"); setStep("");
+    }
+  }
 
   async function submit() {
     if (!competitorId || !event || !vid1) return;
@@ -93,7 +146,7 @@ export default function Compete() {
     }
   }
 
-  function reset() { setDone(null); setEvent(null); setVid1(null); setVid2(null); }
+  function reset() { setDone(null); setEvent(null); setVid1(null); setVid2(null); setPaid(false); }
 
   if (done) {
     const ev = EVENTS.find((e) => e.code === done.event)?.name ?? done.event;
@@ -129,6 +182,27 @@ export default function Compete() {
       </View>
       <Text style={{ color: neutrals.muted, fontSize: 14, marginBottom: 22 }}>Submit your entry for the open round.</Text>
 
+      {pending.length > 0 && !paid && (
+        <Section label="Awaiting payment">
+          {pending.map((p) => {
+            const c = comps.find((x) => x.id === p.competitor_id);
+            return (
+              <View key={p.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "rgba(230,185,63,0.08)", borderWidth: 1, borderColor: hues.gold.shadow, borderRadius: 12, padding: 14, marginBottom: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: neutrals.text, fontWeight: "600" }}>{EVENTS.find((e) => e.code === p.event)?.name ?? p.event}</Text>
+                  <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{c ? `${c.first_name} ${c.last_name}` : "Registered — finish to compete"}</Text>
+                </View>
+                <TouchableOpacity onPress={() => payAndRegister(p.competitor_id, p.event)} activeOpacity={0.85}>
+                  <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9 }}>
+                    <Text style={{ color: "#141210", fontWeight: "800", fontSize: 13 }}>Complete</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </Section>
+      )}
+
       {loadErr ? <Text style={{ color: status.danger, marginBottom: 16 }}>{loadErr}</Text> : null}
       {comps.length === 0 && !loadErr ? (
         <Text style={{ color: neutrals.muted2, fontSize: 14 }}>No competitor profile is linked to this account yet.</Text>
@@ -149,29 +223,50 @@ export default function Compete() {
           <Section label="Event">
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {EVENTS.map((e) => (
-                <Chip key={e.code} active={event === e.code} onPress={() => setEvent(e.code)} label={e.name} />
+                <Chip key={e.code} active={event === e.code} onPress={() => { setEvent(e.code); setPaid(false); }} label={e.name} />
               ))}
             </View>
           </Section>
 
-          <Section label="Videos">
-            <Text style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 10 }}>
-              Add up to two angles (front + side). Angle 1 is required. Exported at 1080p for crisp judging detail.
-            </Text>
-            <VideoSlot n={1} picked={vid1} onPick={() => pick(1)} onClear={() => setVid1(null)} required />
-            <View style={{ height: 10 }} />
-            <VideoSlot n={2} picked={vid2} onPick={() => pick(2)} onClear={() => setVid2(null)} />
-          </Section>
+          {event && !paid && (
+            <>
+              <TouchableOpacity onPress={() => payAndRegister()} disabled={phase === "working"} activeOpacity={0.85} style={{ marginTop: 8 }}>
+                <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                  style={{ borderRadius: 13, paddingVertical: 16, alignItems: "center", opacity: phase === "working" ? 0.7 : 1 }}>
+                  {phase === "working"
+                    ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><ActivityIndicator color="#141210" /><Text style={{ color: "#141210", fontWeight: "800" }}>{step || "Opening payment…"}</Text></View>
+                    : <Text style={{ color: "#141210", fontWeight: "800", fontSize: 16 }}>Register</Text>}
+                </LinearGradient>
+              </TouchableOpacity>
+              <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 10, textAlign: "center" }}>Secure your spot — you'll upload your video next.</Text>
+            </>
+          )}
 
-          <TouchableOpacity onPress={submit} disabled={!ready} activeOpacity={0.85} style={{ marginTop: 24 }}>
-            <LinearGradient colors={ready ? metalStops("gold") : [neutrals.surface2, neutrals.surface2, neutrals.surface2]}
-              start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-              style={{ borderRadius: 13, paddingVertical: 16, alignItems: "center" }}>
-              {phase === "working"
-                ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><ActivityIndicator color="#141210" /><Text style={{ color: "#141210", fontWeight: "800" }}>{step}</Text></View>
-                : <Text style={{ color: ready ? "#141210" : neutrals.muted2, fontWeight: "800", fontSize: 16 }}>Submit Entry</Text>}
-            </LinearGradient>
-          </TouchableOpacity>
+          {paid && (
+            <>
+              <View style={{ backgroundColor: "rgba(90,154,106,0.12)", borderWidth: 1, borderColor: "#3f7a52", borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                <Text style={{ color: "#7ED0A0", fontWeight: "700", fontSize: 13 }}>✓ Entry fee paid — you're registered. Upload your video to compete.</Text>
+              </View>
+              <Section label="Videos">
+                <Text style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 10 }}>
+                  Add up to two angles (front + side). Angle 1 is required. Exported at 1080p for crisp judging detail.
+                </Text>
+                <VideoSlot n={1} picked={vid1} onPick={() => pick(1)} onClear={() => setVid1(null)} required />
+                <View style={{ height: 10 }} />
+                <VideoSlot n={2} picked={vid2} onPick={() => pick(2)} onClear={() => setVid2(null)} />
+              </Section>
+
+              <TouchableOpacity onPress={submit} disabled={!ready} activeOpacity={0.85} style={{ marginTop: 8 }}>
+                <LinearGradient colors={ready ? metalStops("gold") : [neutrals.surface2, neutrals.surface2, neutrals.surface2]}
+                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                  style={{ borderRadius: 13, paddingVertical: 16, alignItems: "center" }}>
+                  {phase === "working"
+                    ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><ActivityIndicator color="#141210" /><Text style={{ color: "#141210", fontWeight: "800" }}>{step}</Text></View>
+                    : <Text style={{ color: ready ? "#141210" : neutrals.muted2, fontWeight: "800", fontSize: 16 }}>Submit Entry</Text>}
+                </LinearGradient>
+              </TouchableOpacity>
+            </>
+          )}
         </>
       )}
     </ScrollView>

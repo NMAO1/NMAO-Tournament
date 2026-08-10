@@ -1,14 +1,13 @@
 // =====================================================================
-// EDGE FUNCTION: recuse-assignment  (Judge app)
-// A judge recuses from an entry they're assigned to (conflict of interest —
-// they recognize the competitor). Since assignment_state has no 'recused' value,
-// recusal REMOVES the judge_assignment so the judge no longer sees or scores it;
-// the pod is then short a judge and staff re-runs assign_judges to backfill.
-// We refuse to recuse an already-submitted score (roll it back first).
+// EDGE FUNCTION: recuse-assignment  (Judge app — pull/claim model)
+// A judge recuses from a pod they claimed (conflict of interest). In the pull
+// model this simply RELEASES their seat(s) back into the judging pool — every
+// unsubmitted assignment they hold on that pod is removed, so the pod reopens
+// for another available judge to claim. No staff step, no reassignment logic.
 //
-// AUTH: Verify JWT = ON. Caller must be the assigned judge for the entry.
-// POST { entry_id } -> { ok, reassign_needed: true }
-// Deploy: supabase functions deploy recuse-assignment --project-ref oxzuavpyoetchwebdejp
+// AUTH: Verify JWT = ON. Caller must hold an (unsubmitted) assignment on the entry.
+// POST { entry_id } -> { ok, released_to_pool: true }
+// Deploy (editor-safe, no _shared): function name = recuse-assignment, Verify JWT ON.
 // =====================================================================
 
 // deno-lint-ignore-file no-explicit-any
@@ -48,27 +47,33 @@ Deno.serve(async (req) => {
 
     const { data: judge } = await svc.from("judges").select("id").eq("auth_user_id", uid).maybeSingle();
     if (!judge) return json({ ok: false, error: "Not authorized — judges only." }, 403);
+    const judgeId = (judge as any).id;
 
     const { data: ja } = await svc.from("judge_assignments")
-      .select("id, state").eq("entry_id", entryId).eq("judge_id", (judge as any).id).maybeSingle();
+      .select("id, state, pod_id").eq("entry_id", entryId).eq("judge_id", judgeId).maybeSingle();
     if (!ja) return json({ ok: false, error: "You are not assigned to this entry." }, 403);
     if ((ja as any).state === "submitted") {
       return json({ ok: false, error: "You've already submitted a score. Ask staff to reopen it before recusing." }, 409);
     }
+    const podId = (ja as any).pod_id;
 
-    const { error: delErr } = await svc.from("judge_assignments").delete().eq("id", (ja as any).id);
-    if (delErr) { console.error("recuse delete:", delErr); return json({ ok: false, error: "Could not recuse." }, 500); }
+    // Release the judge's unsubmitted seat(s) on this pod back into the pool.
+    if (podId) {
+      await svc.from("judge_assignments").delete()
+        .eq("pod_id", podId).eq("judge_id", judgeId).neq("state", "submitted");
+    } else {
+      await svc.from("judge_assignments").delete().eq("id", (ja as any).id);
+    }
 
-    // Best-effort audit — never block recusal on it.
     try {
       const { data: entry } = await svc.from("entries").select("round_id").eq("id", entryId).maybeSingle();
       await svc.from("engine_audit").insert({
         round_id: entry ? (entry as any).round_id : null, actor_id: null, action: "recuse",
-        before: { entry_id: entryId, judge_id: (judge as any).id }, after: { removed: true },
+        before: { entry_id: entryId, judge_id: judgeId, pod_id: podId }, after: { released_to_pool: true },
       });
     } catch { /* ignore */ }
 
-    return json({ ok: true, reassign_needed: true }, 200);
+    return json({ ok: true, released_to_pool: true }, 200);
   } catch (e: any) {
     console.error("recuse-assignment error:", e);
     return json({ ok: false, error: "server_error" }, 500);

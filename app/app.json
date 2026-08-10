@@ -31,7 +31,8 @@
           "photosPermission": "NMAO needs access to your videos so you can submit your competition entry."
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "expo-web-browser"
     ]
   }
 }
