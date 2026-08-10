@@ -1,0 +1,105 @@
+/* NMAO Badge Frames — collectible dueling-arena auras.
+   Wrap any element (a competitor's <video>, an avatar, a card) in a .bf frame.
+   Effects escalate with rarity: Common = flat border, Legendary = full aura + motif.
+   Driven by classes + the --bf-accent custom property (set from frame_spec). */
+
+.bf {
+  position: relative;
+  border-radius: 16px;
+  padding: 7px;                 /* thickness of the visible frame ring */
+  overflow: hidden;
+  --bf-accent: #c9ced5;
+  --bf-glow: color-mix(in srgb, var(--bf-accent) 60%, transparent);
+  isolation: isolate;
+}
+.bf__inner {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #0a0c14;
+}
+.bf__inner > video,
+.bf__inner > img,
+.bf__inner > .bf__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* the animated ring lives behind the inner media */
+.bf::before {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  z-index: 0;
+  background: var(--bf-accent);
+}
+
+/* ---------- BORDER (::before fill) ---------- */
+.bf--b-solid-bronze::before { background: #7a5a2e; }
+.bf--b-solid-silver::before { background: linear-gradient(135deg,#eef2f6,#9aa0a8); }
+.bf--b-solid-amber::before  { background: linear-gradient(135deg,#ffd27a,#e0851e); }
+.bf--b-solid-jade::before   { background: linear-gradient(135deg,#4fb98a,#245a44); }
+.bf--b-gold::before     { background: conic-gradient(#fff3b0,#e6b93f,#8c6a18,#ffe9a8,#e6b93f,#fff3b0); }
+.bf--b-platinum::before { background: conic-gradient(#ffffff,#f1c64c,#b07e1c,#f2f4f7,#f1c64c,#ffffff); }
+.bf--b-spectrum::before { background: conic-gradient(#ff2e3b,#ffb02e,#37dd8a,#1f7bff,#a32bf7,#ff2e3b); }
+.bf--b-gemstone::before { background: conic-gradient(#ffffff,var(--bf-accent),#0a0c14,var(--bf-accent),#ffffff); }
+.bf--b-flame::before    { background: conic-gradient(#ffe07a,#ff7a1e,#e23417,#ff9e2a,#ffe07a); }
+.bf--b-ripple::before   { background: conic-gradient(#dcefff,#3e86e0,#154ba0,#5dcaff,#dcefff); }
+.bf--b-electric::before { background: conic-gradient(#bfe0ff,#1f7bff,#eaf3ff,#1f7bff,#bfe0ff); }
+.bf--b-enso::before     { background: conic-gradient(#2e6f4f,#3ec87a,#173d2b,#3ec87a,#2e6f4f); }
+
+/* ---------- ANIM (rotation of the ring) ---------- */
+.bf--a-none::before          { animation: none; }
+.bf--a-shimmer::before       { animation: bf-spin 8s linear infinite; }
+.bf--a-rotating::before      { animation: bf-spin 5s linear infinite; }
+.bf--a-ripple::before        { animation: bf-spin 7s linear infinite; }
+.bf--a-flame-flicker::before { animation: bf-spin 3s linear infinite; }
+.bf--a-lightning::before     { animation: bf-spin 1.1s linear infinite; }
+/* pulse / breathing keep the ring still and animate the glow instead */
+.bf--a-pulse::before, .bf--a-breathing::before { animation: none; }
+
+/* ---------- GLOW (box-shadow on the frame) ---------- */
+.bf--g-none    { box-shadow: none; }
+.bf--g-soft    { box-shadow: 0 0 14px 0 var(--bf-glow); }
+.bf--g-strong  { box-shadow: 0 0 22px 2px var(--bf-glow); }
+.bf--g-radiant { box-shadow: 0 0 34px 5px var(--bf-glow); }
+
+/* glow animations (element-level; override static box-shadow) */
+.bf--a-pulse        { animation: bf-pulse 2.4s ease-in-out infinite; }
+.bf--a-breathing    { animation: bf-breathe 5s ease-in-out infinite; }
+.bf--a-flame-flicker{ animation: bf-flick 1.5s ease-in-out infinite; }
+.bf--a-lightning    { animation: bf-flick 0.9s ease-in-out infinite; }
+
+/* ---------- PARTICLES ---------- */
+.bf__particles { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.bf__p { position: absolute; border-radius: 50%; opacity: 0; }
+.bf__p--ember   { animation: bf-rise 2.2s linear infinite; }
+.bf__p--bubble  { animation: bf-rise 3s   linear infinite; }
+.bf__p--sparkle { animation: bf-tw   1.8s ease-in-out infinite; }
+
+/* ---------- MOTIF (signature overlay) ---------- */
+.bf__motif { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.bf__motif svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bf__motif .bf-shine {
+  position: absolute; top: -60%; left: -30%; width: 40%; height: 220%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: rotate(18deg); animation: bf-shine 3.5s ease-in-out infinite;
+}
+
+/* ---------- keyframes ---------- */
+@keyframes bf-spin   { to { transform: rotate(360deg); } }
+@keyframes bf-pulse  { 0%,100% { box-shadow: 0 0 14px 0 var(--bf-glow); } 50% { box-shadow: 0 0 26px 3px var(--bf-glow); } }
+@keyframes bf-breathe{ 0%,100% { box-shadow: 0 0 14px 0 var(--bf-glow); } 50% { box-shadow: 0 0 32px 5px var(--bf-glow); } }
+@keyframes bf-flick  { 0%,100% { box-shadow: 0 0 20px 1px var(--bf-glow); } 45% { box-shadow: 0 0 32px 4px var(--bf-glow); } 70% { box-shadow: 0 0 24px 2px var(--bf-glow); } }
+@keyframes bf-rise   { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-180px); opacity: 0; } }
+@keyframes bf-tw     { 0%,100% { opacity: 0; transform: scale(.3); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes bf-shine  { 0% { left: -30%; } 55%,100% { left: 120%; } }
+
+/* ---------- accessibility: respect reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .bf::before, .bf, .bf__p, .bf__motif *, .bf__motif .bf-shine { animation: none !important; }
+  .bf__p { opacity: .6; }
+}

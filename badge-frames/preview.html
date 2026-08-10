@@ -1,0 +1,272 @@
+<!doctype html><html><head><meta charset="utf-8"><title>NMAO Badge Frames — all 100</title>
+<style>
+body{margin:0;background:#0b0b0f;color:#e8e8ee;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:20px}
+h1{font-weight:600;font-size:20px;margin:0 0 2px} .sub{color:#8a8f9e;font-size:12px;margin:0 0 18px}
+h3{font-size:13px;color:#c9ced5;margin:22px 0 10px;border-bottom:1px solid #23232c;padding-bottom:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:20px 14px}
+.cell{text-align:center} .scene{height:96px;display:flex;align-items:center;justify-content:center;background:radial-gradient(120% 90% at 50% 20%,#2a3252,#0a0c14);color:#9fb0d0;font-size:10px;padding:6px;text-align:center}
+.lab{font-size:11px;color:#d6d9e0;margin-top:8px;line-height:1.3} .lab span{display:block;color:#8a8f9e;font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+/* NMAO Badge Frames — collectible dueling-arena auras.
+   Wrap any element (a competitor's <video>, an avatar, a card) in a .bf frame.
+   Effects escalate with rarity: Common = flat border, Legendary = full aura + motif.
+   Driven by classes + the --bf-accent custom property (set from frame_spec). */
+
+.bf {
+  position: relative;
+  border-radius: 16px;
+  padding: 7px;                 /* thickness of the visible frame ring */
+  overflow: hidden;
+  --bf-accent: #c9ced5;
+  --bf-glow: color-mix(in srgb, var(--bf-accent) 60%, transparent);
+  isolation: isolate;
+}
+.bf__inner {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #0a0c14;
+}
+.bf__inner > video,
+.bf__inner > img,
+.bf__inner > .bf__media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* the animated ring lives behind the inner media */
+.bf::before {
+  content: "";
+  position: absolute;
+  inset: -55%;
+  z-index: 0;
+  background: var(--bf-accent);
+}
+
+/* ---------- BORDER (::before fill) ---------- */
+.bf--b-solid-bronze::before { background: #7a5a2e; }
+.bf--b-solid-silver::before { background: linear-gradient(135deg,#eef2f6,#9aa0a8); }
+.bf--b-solid-amber::before  { background: linear-gradient(135deg,#ffd27a,#e0851e); }
+.bf--b-solid-jade::before   { background: linear-gradient(135deg,#4fb98a,#245a44); }
+.bf--b-gold::before     { background: conic-gradient(#fff3b0,#e6b93f,#8c6a18,#ffe9a8,#e6b93f,#fff3b0); }
+.bf--b-platinum::before { background: conic-gradient(#ffffff,#f1c64c,#b07e1c,#f2f4f7,#f1c64c,#ffffff); }
+.bf--b-spectrum::before { background: conic-gradient(#ff2e3b,#ffb02e,#37dd8a,#1f7bff,#a32bf7,#ff2e3b); }
+.bf--b-gemstone::before { background: conic-gradient(#ffffff,var(--bf-accent),#0a0c14,var(--bf-accent),#ffffff); }
+.bf--b-flame::before    { background: conic-gradient(#ffe07a,#ff7a1e,#e23417,#ff9e2a,#ffe07a); }
+.bf--b-ripple::before   { background: conic-gradient(#dcefff,#3e86e0,#154ba0,#5dcaff,#dcefff); }
+.bf--b-electric::before { background: conic-gradient(#bfe0ff,#1f7bff,#eaf3ff,#1f7bff,#bfe0ff); }
+.bf--b-enso::before     { background: conic-gradient(#2e6f4f,#3ec87a,#173d2b,#3ec87a,#2e6f4f); }
+
+/* ---------- ANIM (rotation of the ring) ---------- */
+.bf--a-none::before          { animation: none; }
+.bf--a-shimmer::before       { animation: bf-spin 8s linear infinite; }
+.bf--a-rotating::before      { animation: bf-spin 5s linear infinite; }
+.bf--a-ripple::before        { animation: bf-spin 7s linear infinite; }
+.bf--a-flame-flicker::before { animation: bf-spin 3s linear infinite; }
+.bf--a-lightning::before     { animation: bf-spin 1.1s linear infinite; }
+/* pulse / breathing keep the ring still and animate the glow instead */
+.bf--a-pulse::before, .bf--a-breathing::before { animation: none; }
+
+/* ---------- GLOW (box-shadow on the frame) ---------- */
+.bf--g-none    { box-shadow: none; }
+.bf--g-soft    { box-shadow: 0 0 14px 0 var(--bf-glow); }
+.bf--g-strong  { box-shadow: 0 0 22px 2px var(--bf-glow); }
+.bf--g-radiant { box-shadow: 0 0 34px 5px var(--bf-glow); }
+
+/* glow animations (element-level; override static box-shadow) */
+.bf--a-pulse        { animation: bf-pulse 2.4s ease-in-out infinite; }
+.bf--a-breathing    { animation: bf-breathe 5s ease-in-out infinite; }
+.bf--a-flame-flicker{ animation: bf-flick 1.5s ease-in-out infinite; }
+.bf--a-lightning    { animation: bf-flick 0.9s ease-in-out infinite; }
+
+/* ---------- PARTICLES ---------- */
+.bf__particles { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.bf__p { position: absolute; border-radius: 50%; opacity: 0; }
+.bf__p--ember   { animation: bf-rise 2.2s linear infinite; }
+.bf__p--bubble  { animation: bf-rise 3s   linear infinite; }
+.bf__p--sparkle { animation: bf-tw   1.8s ease-in-out infinite; }
+
+/* ---------- MOTIF (signature overlay) ---------- */
+.bf__motif { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
+.bf__motif svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bf__motif .bf-shine {
+  position: absolute; top: -60%; left: -30%; width: 40%; height: 220%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  transform: rotate(18deg); animation: bf-shine 3.5s ease-in-out infinite;
+}
+
+/* ---------- keyframes ---------- */
+@keyframes bf-spin   { to { transform: rotate(360deg); } }
+@keyframes bf-pulse  { 0%,100% { box-shadow: 0 0 14px 0 var(--bf-glow); } 50% { box-shadow: 0 0 26px 3px var(--bf-glow); } }
+@keyframes bf-breathe{ 0%,100% { box-shadow: 0 0 14px 0 var(--bf-glow); } 50% { box-shadow: 0 0 32px 5px var(--bf-glow); } }
+@keyframes bf-flick  { 0%,100% { box-shadow: 0 0 20px 1px var(--bf-glow); } 45% { box-shadow: 0 0 32px 4px var(--bf-glow); } 70% { box-shadow: 0 0 24px 2px var(--bf-glow); } }
+@keyframes bf-rise   { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-180px); opacity: 0; } }
+@keyframes bf-tw     { 0%,100% { opacity: 0; transform: scale(.3); } 50% { opacity: 1; transform: scale(1); } }
+@keyframes bf-shine  { 0% { left: -30%; } 55%,100% { left: 120%; } }
+
+/* ---------- accessibility: respect reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .bf::before, .bf, .bf__p, .bf__motif *, .bf__motif .bf-shine { animation: none !important; }
+  .bf__p { opacity: .6; }
+}
+
+</style></head><body>
+<h1>NMAO Badge Frames — all 100</h1>
+<p class="sub">Each placeholder is a stand-in for a competitor's dueling video. Effects escalate with rarity.</p>
+<h3>Common</h3><div class="grid"><div class="cell"><div class="bf" data-code="first-step"><div class="bf__inner"><div class="scene">First Step</div></div></div><div class="lab">First Step<span>Common</span></div></div><div class="cell"><div class="bf" data-code="first-bow"><div class="bf__inner"><div class="scene">First Bow</div></div></div><div class="lab">First Bow<span>Common</span></div></div><div class="cell"><div class="bf" data-code="first-reveal"><div class="bf__inner"><div class="scene">First Reveal</div></div></div><div class="lab">First Reveal<span>Common</span></div></div><div class="cell"><div class="bf" data-code="first-reflection"><div class="bf__inner"><div class="scene">First Reflection</div></div></div><div class="lab">First Reflection<span>Common</span></div></div><div class="cell"><div class="bf" data-code="first-duel"><div class="bf__inner"><div class="scene">First Duel</div></div></div><div class="lab">First Duel<span>Common</span></div></div><div class="cell"><div class="bf" data-code="first-vote"><div class="bf__inner"><div class="scene">First Vote</div></div></div><div class="lab">First Vote<span>Common</span></div></div><div class="cell"><div class="bf" data-code="teammate"><div class="bf__inner"><div class="scene">Teammate</div></div></div><div class="lab">Teammate<span>Common</span></div></div></div><h3>Uncommon</h3><div class="grid"><div class="cell"><div class="bf" data-code="first-medal"><div class="bf__inner"><div class="scene">First Medal</div></div></div><div class="lab">First Medal<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="back-on-the-mat"><div class="bf__inner"><div class="scene">Back on the Mat</div></div></div><div class="lab">Back on the Mat<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="early-bird"><div class="bf__inner"><div class="scene">Early Bird</div></div></div><div class="lab">Early Bird<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="rising-star"><div class="bf__inner"><div class="scene">Rising Star</div></div></div><div class="lab">Rising Star<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="new-heights"><div class="bf__inner"><div class="scene">New Heights</div></div></div><div class="lab">New Heights<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="comeback"><div class="bf__inner"><div class="scene">Comeback</div></div></div><div class="lab">Comeback<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="rising-floor"><div class="bf__inner"><div class="scene">Rising Floor</div></div></div><div class="lab">Rising Floor<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="both-hands"><div class="bf__inner"><div class="scene">Both Hands</div></div></div><div class="lab">Both Hands<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="open-mind"><div class="bf__inner"><div class="scene">Open Mind</div></div></div><div class="lab">Open Mind<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="style-explorer"><div class="bf__inner"><div class="scene">Style Explorer</div></div></div><div class="lab">Style Explorer<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="fearless"><div class="bf__inner"><div class="scene">Fearless Challenger</div></div></div><div class="lab">Fearless Challenger<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="podium"><div class="bf__inner"><div class="scene">Podium</div></div></div><div class="lab">Podium<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="goal-keeper"><div class="bf__inner"><div class="scene">Goal Keeper</div></div></div><div class="lab">Goal Keeper<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="first-blood"><div class="bf__inner"><div class="scene">First Blood</div></div></div><div class="lab">First Blood<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="rivalry"><div class="bf__inner"><div class="scene">Rivalry</div></div></div><div class="lab">Rivalry<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="daily-voter"><div class="bf__inner"><div class="scene">Daily Voter</div></div></div><div class="lab">Daily Voter<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="fair-witness"><div class="bf__inner"><div class="scene">Fair Witness</div></div></div><div class="lab">Fair Witness<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="dojo-pride"><div class="bf__inner"><div class="scene">Dojo Pride</div></div></div><div class="lab">Dojo Pride<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="encourager"><div class="bf__inner"><div class="scene">Encourager</div></div></div><div class="lab">Encourager<span>Uncommon</span></div></div><div class="cell"><div class="bf" data-code="anniversary"><div class="bf__inner"><div class="scene">Anniversary</div></div></div><div class="lab">Anniversary<span>Uncommon</span></div></div></div><h3>Rare / tiered</h3><div class="grid"><div class="cell"><div class="bf" data-code="first-gold"><div class="bf__inner"><div class="scene">First Gold</div></div></div><div class="lab">First Gold<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="on-the-mat"><div class="bf__inner"><div class="scene">On the Mat I/II/III</div></div></div><div class="lab">On the Mat I/II/III<span>Common&gt;Rare</span></div></div><div class="cell"><div class="bf" data-code="nine-bows"><div class="bf__inner"><div class="scene">Nine Bows</div></div></div><div class="lab">Nine Bows<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="deadline-warrior"><div class="bf__inner"><div class="scene">Deadline Warrior</div></div></div><div class="lab">Deadline Warrior<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="iron-will"><div class="bf__inner"><div class="scene">Iron Will</div></div></div><div class="lab">Iron Will<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="perfect-attendance"><div class="bf__inner"><div class="scene">Perfect Attendance</div></div></div><div class="lab">Perfect Attendance<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="steady-climb"><div class="bf__inner"><div class="scene">Steady Climb</div></div></div><div class="lab">Steady Climb<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="breakthrough"><div class="bf__inner"><div class="scene">Breakthrough</div></div></div><div class="lab">Breakthrough<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="precision"><div class="bf__inner"><div class="scene">Precision (Technical)</div></div></div><div class="lab">Precision (Technical)<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="kime"><div class="bf__inner"><div class="scene">Kime (Power)</div></div></div><div class="lab">Kime (Power)<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="rooted"><div class="bf__inner"><div class="scene">Rooted (Balance)</div></div></div><div class="lab">Rooted (Balance)<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="flow"><div class="bf__inner"><div class="scene">Flow (Timing)</div></div></div><div class="lab">Flow (Timing)<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="spirit"><div class="bf__inner"><div class="scene">Spirit (Presentation)</div></div></div><div class="lab">Spirit (Presentation)<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="innovator"><div class="bf__inner"><div class="scene">Innovator (Difficulty)</div></div></div><div class="lab">Innovator (Difficulty)<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="traditionalist"><div class="bf__inner"><div class="scene">Traditionalist</div></div></div><div class="lab">Traditionalist<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="weapon-master"><div class="bf__inner"><div class="scene">Weapon Master</div></div></div><div class="lab">Weapon Master<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="gold-rush"><div class="bf__inner"><div class="scene">Gold Rush x3/x5</div></div></div><div class="lab">Gold Rush x3/x5<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="undefeated"><div class="bf__inner"><div class="scene">Undefeated</div></div></div><div class="lab">Undefeated<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="semifinalist"><div class="bf__inner"><div class="scene">Semifinalist</div></div></div><div class="lab">Semifinalist<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="imprint-complete"><div class="bf__inner"><div class="scene">Imprint Complete</div></div></div><div class="lab">Imprint Complete<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="season-keepsake"><div class="bf__inner"><div class="scene">Season Keepsake</div></div></div><div class="lab">Season Keepsake<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="consistent-journaler"><div class="bf__inner"><div class="scene">Consistent Journaler I/II/III</div></div></div><div class="lab">Consistent Journaler I/II/III<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="reflective-warrior"><div class="bf__inner"><div class="scene">Reflective Warrior</div></div></div><div class="lab">Reflective Warrior<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="duelist"><div class="bf__inner"><div class="scene">Duelist I/II/III</div></div></div><div class="lab">Duelist I/II/III<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="warpath"><div class="bf__inner"><div class="scene">Warpath</div></div></div><div class="lab">Warpath<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="peoples-champion"><div class="bf__inner"><div class="scene">People&#x27;s Champion</div></div></div><div class="lab">People&#x27;s Champion<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="road-warrior"><div class="bf__inner"><div class="scene">Road Warrior</div></div></div><div class="lab">Road Warrior<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="iron-duelist"><div class="bf__inner"><div class="scene">Iron Duelist</div></div></div><div class="lab">Iron Duelist<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="voice-of-the-people"><div class="bf__inner"><div class="scene">Voice of the People I/II/III</div></div></div><div class="lab">Voice of the People I/II/III<span>tiered</span></div></div><div class="cell"><div class="bf" data-code="sharp-eye"><div class="bf__inner"><div class="scene">Sharp Eye</div></div></div><div class="lab">Sharp Eye<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="kingmaker"><div class="bf__inner"><div class="scene">Kingmaker</div></div></div><div class="lab">Kingmaker<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="ghost"><div class="bf__inner"><div class="scene">Ghost</div></div></div><div class="lab">Ghost<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="mentor"><div class="bf__inner"><div class="scene">Mentor</div></div></div><div class="lab">Mentor<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="well-rounded"><div class="bf__inner"><div class="scene">Well-Rounded</div></div></div><div class="lab">Well-Rounded<span>Rare</span></div></div><div class="cell"><div class="bf" data-code="globetrotter"><div class="bf__inner"><div class="scene">Globetrotter</div></div></div><div class="lab">Globetrotter<span>Rare</span></div></div></div><h3>Epic</h3><div class="grid"><div class="cell"><div class="bf" data-code="full-circle"><div class="bf__inner"><div class="scene">Full Circle</div></div></div><div class="lab">Full Circle<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="sweep"><div class="bf__inner"><div class="scene">Sweep</div></div></div><div class="lab">Sweep<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="podium-season"><div class="bf__inner"><div class="scene">Podium Season</div></div></div><div class="lab">Podium Season<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="finalist"><div class="bf__inner"><div class="scene">Finalist</div></div></div><div class="lab">Finalist<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="giant-slayer"><div class="bf__inner"><div class="scene">Giant Slayer</div></div></div><div class="lab">Giant Slayer<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="undefeated-duelist"><div class="bf__inner"><div class="scene">Undefeated Duelist</div></div></div><div class="lab">Undefeated Duelist<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="deadlock"><div class="bf__inner"><div class="scene">Deadlock</div></div></div><div class="lab">Deadlock<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="trusted-voter"><div class="bf__inner"><div class="scene">Trusted Voter</div></div></div><div class="lab">Trusted Voter<span>Epic</span></div></div><div class="cell"><div class="bf" data-code="zen"><div class="bf__inner"><div class="scene">Zen</div></div></div><div class="lab">Zen<span>Epic</span></div></div></div><h3>Legendary / flagship</h3><div class="grid"><div class="cell"><div class="bf" data-code="grandmaster"><div class="bf__inner"><div class="scene">Grandmaster</div></div></div><div class="lab">Grandmaster<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="gold-medallion"><div class="bf__inner"><div class="scene">Gold Medallion</div></div></div><div class="lab">Gold Medallion<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="grand-champion"><div class="bf__inner"><div class="scene">Grand Champion</div></div></div><div class="lab">Grand Champion<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="sponsors-champion"><div class="bf__inner"><div class="scene">Sponsor&#x27;s Champion</div></div></div><div class="lab">Sponsor&#x27;s Champion<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="gem-s1"><div class="bf__inner"><div class="scene">Gem Series S1 (Sapphire)</div></div></div><div class="lab">Gem Series S1 (Sapphire)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s2"><div class="bf__inner"><div class="scene">Gem Series S2 (Amethyst)</div></div></div><div class="lab">Gem Series S2 (Amethyst)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s3"><div class="bf__inner"><div class="scene">Gem Series S3 (Ruby)</div></div></div><div class="lab">Gem Series S3 (Ruby)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s4"><div class="bf__inner"><div class="scene">Gem Series S4 (Emerald)</div></div></div><div class="lab">Gem Series S4 (Emerald)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s5"><div class="bf__inner"><div class="scene">Gem Series S5 (Coral)</div></div></div><div class="lab">Gem Series S5 (Coral)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s6"><div class="bf__inner"><div class="scene">Gem Series S6 (Onyx)</div></div></div><div class="lab">Gem Series S6 (Onyx)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s7"><div class="bf__inner"><div class="scene">Gem Series S7 (Rose)</div></div></div><div class="lab">Gem Series S7 (Rose)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s8"><div class="bf__inner"><div class="scene">Gem Series S8 (Turquoise)</div></div></div><div class="lab">Gem Series S8 (Turquoise)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s9"><div class="bf__inner"><div class="scene">Gem Series S9 (Peridot)</div></div></div><div class="lab">Gem Series S9 (Peridot)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="gem-s10"><div class="bf__inner"><div class="scene">Gem Series S10 (Platinum)</div></div></div><div class="lab">Gem Series S10 (Platinum)<span>flagship</span></div></div><div class="cell"><div class="bf" data-code="decade-of-dedication"><div class="bf__inner"><div class="scene">Decade of Dedication</div></div></div><div class="lab">Decade of Dedication<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="duel-legend"><div class="bf__inner"><div class="scene">Duel Legend</div></div></div><div class="lab">Duel Legend<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="perfect-score"><div class="bf__inner"><div class="scene">Perfect Score</div></div></div><div class="lab">Perfect Score<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="charter-member"><div class="bf__inner"><div class="scene">Charter Member</div></div></div><div class="lab">Charter Member<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="trailblazer"><div class="bf__inner"><div class="scene">Trailblazer</div></div></div><div class="lab">Trailblazer<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s1"><div class="bf__inner"><div class="scene">Season Champion S1 (Sapphire)</div></div></div><div class="lab">Season Champion S1 (Sapphire)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s2"><div class="bf__inner"><div class="scene">Season Champion S2 (Amethyst)</div></div></div><div class="lab">Season Champion S2 (Amethyst)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s3"><div class="bf__inner"><div class="scene">Season Champion S3 (Ruby)</div></div></div><div class="lab">Season Champion S3 (Ruby)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s4"><div class="bf__inner"><div class="scene">Season Champion S4 (Emerald)</div></div></div><div class="lab">Season Champion S4 (Emerald)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s5"><div class="bf__inner"><div class="scene">Season Champion S5 (Coral)</div></div></div><div class="lab">Season Champion S5 (Coral)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s6"><div class="bf__inner"><div class="scene">Season Champion S6 (Onyx)</div></div></div><div class="lab">Season Champion S6 (Onyx)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s7"><div class="bf__inner"><div class="scene">Season Champion S7 (Rose)</div></div></div><div class="lab">Season Champion S7 (Rose)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s8"><div class="bf__inner"><div class="scene">Season Champion S8 (Turquoise)</div></div></div><div class="lab">Season Champion S8 (Turquoise)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s9"><div class="bf__inner"><div class="scene">Season Champion S9 (Peridot)</div></div></div><div class="lab">Season Champion S9 (Peridot)<span>Legendary</span></div></div><div class="cell"><div class="bf" data-code="season-champion-s10"><div class="bf__inner"><div class="scene">Season Champion S10 (Platinum)</div></div></div><div class="lab">Season Champion S10 (Platinum)<span>Legendary</span></div></div></div>
+<script>
+/* NMAO Badge Frames — runtime.
+   Applies a badge's frame_spec to a DOM element. Framework-agnostic.
+   Usage:
+     <div id="frame"><div class="bf__inner"><video ...></video></div></div>
+     applyFrame(document.getElementById('frame'), spec)   // spec from badge-frames.json
+   Exposes an ES module API and a window.BadgeFrames global. */
+
+const BORDER_ACCENT = {
+  'solid-bronze': '#b98a4a', 'solid-silver': '#c9ced5', 'solid-amber': '#e0851e',
+  'solid-jade': '#3ec87a', gold: '#e6b93f', platinum: '#f1c64c', spectrum: '#a32bf7',
+  gemstone: '#bfe0ff', flame: '#ff7a1e', ripple: '#3e86e0', electric: '#1f7bff', enso: '#3ec87a',
+};
+
+function accentFor(spec) {
+  if (spec.particle && spec.particle.color) return spec.particle.color;
+  return BORDER_ACCENT[spec.border] || '#c9ced5';
+}
+
+function particleLayer(spec) {
+  const p = spec.particle;
+  if (!p || !p.count) return null;
+  const layer = document.createElement('div');
+  layer.className = 'bf__particles';
+  for (let i = 0; i < p.count; i++) {
+    const s = document.createElement('span');
+    s.className = 'bf__p bf__p--' + p.kind;
+    const L = 6 + Math.random() * 88;
+    if (p.kind === 'sparkle') {
+      s.style.width = s.style.height = '4px';
+      s.style.left = L + '%';
+      s.style.top = (10 + Math.random() * 72) + '%';
+      s.style.background = p.color;
+      s.style.boxShadow = '0 0 6px ' + p.color;
+      s.style.animationDuration = (1.3 + Math.random() * 1.4) + 's';
+      s.style.animationDelay = (-Math.random() * 2) + 's';
+    } else {
+      s.style.width = s.style.height = '5px';
+      s.style.left = L + '%';
+      s.style.bottom = '-8px';
+      s.style.background = p.color;
+      if (p.kind === 'ember') s.style.boxShadow = '0 0 6px ' + p.color;
+      s.style.animationDuration = (2 + Math.random() * 1.6) + 's';
+      s.style.animationDelay = (-Math.random() * 2.5) + 's';
+    }
+    layer.appendChild(s);
+  }
+  return layer;
+}
+
+/* Signature motifs (flagship-only). First-pass stylized overlays — tasteful and light.
+   Each returns an HTML string placed in a full-size .bf__motif layer. */
+const G = '#e6b93f', P = '#f2f4f7';
+const MOTIFS = {
+  'gem-shine': () => '<div class="bf-shine"></div>',
+  'season-gem-shine': () => '<div class="bf-shine"></div>',
+  signature: () => '<div class="bf-shine"></div>',
+  laurel: () =>
+    `<svg style="position:absolute;left:4%;bottom:2%;width:26%;height:40%" viewBox="0 0 40 60" fill="none" stroke="${G}" stroke-width="2" stroke-linecap="round">
+       <path d="M30 58 Q14 46 16 26 Q18 12 30 4"/>
+       <g stroke-width="1.6">${leaf(18,44)}${leaf(16,34)}${leaf(17,24)}${leaf(21,14)}</g></svg>
+     <svg style="position:absolute;right:4%;bottom:2%;width:26%;height:40%;transform:scaleX(-1)" viewBox="0 0 40 60" fill="none" stroke="${G}" stroke-width="2" stroke-linecap="round">
+       <path d="M30 58 Q14 46 16 26 Q18 12 30 4"/>
+       <g stroke-width="1.6">${leaf(18,44)}${leaf(16,34)}${leaf(17,24)}${leaf(21,14)}</g></svg>`,
+  crown: () =>
+    `<svg style="position:absolute;left:50%;top:3%;width:22%;height:16%;transform:translateX(-50%)" viewBox="0 0 60 34">
+       <path d="M6 30 L10 10 L22 22 L30 6 L38 22 L50 10 L54 30 Z" fill="${G}" stroke="#7a5a10"/>
+       <circle cx="30" cy="6" r="3" fill="#ff3b47"/></svg>
+     <div class="bf-shine"></div>`,
+  'dragon-coil': (a) =>
+    `<svg style="position:absolute;left:0;top:0;width:100%;height:46%" viewBox="0 0 100 30" fill="none" preserveAspectRatio="none">
+       <path d="M4 24 C22 6 34 26 50 14 C66 2 78 24 96 8" stroke="${G}" stroke-width="3" stroke-linecap="round" opacity=".9"/>
+       <path d="M4 24 C22 6 34 26 50 14 C66 2 78 24 96 8" stroke="${a}" stroke-width="1" stroke-dasharray="2 6" opacity=".8"/></svg>
+     <div class="bf-shine"></div>`,
+  'torch-flame': () =>
+    `<svg style="position:absolute;left:50%;top:2%;width:16%;height:26%;transform:translateX(-50%);animation:bf-tw 1.4s ease-in-out infinite" viewBox="0 0 30 46">
+       <path d="M15 2 C22 12 22 20 17 28 C24 24 22 12 15 2 Z" fill="#ff9e2a"/>
+       <path d="M15 8 C19 16 19 22 15 30 C11 22 11 16 15 8 Z" fill="#ffe07a"/></svg>`,
+  'enso-radiant': () =>
+    `<svg style="position:absolute;left:50%;top:50%;width:60%;height:80%;transform:translate(-50%,-50%);animation:bf-spin 14s linear infinite" viewBox="0 0 100 100">
+       <circle cx="50" cy="50" r="42" fill="none" stroke="${G}" stroke-width="4" stroke-linecap="round" stroke-dasharray="200 60" opacity=".7"/></svg>`,
+  'twin-rings': () =>
+    `<svg style="position:absolute;right:5%;bottom:4%;width:24%;height:24%" viewBox="0 0 60 40" fill="none" stroke="${G}" stroke-width="3">
+       <circle cx="22" cy="20" r="14"/><circle cx="38" cy="20" r="14"/></svg>`,
+  'wax-seal': () =>
+    `<svg style="position:absolute;left:6%;bottom:5%;width:20%;height:20%" viewBox="0 0 40 40">
+       <circle cx="20" cy="20" r="16" fill="#8c1d2a" stroke="${G}" stroke-width="2"/>
+       <path d="M20 11 L23 18 L30 18 L24 23 L26 30 L20 26 L14 30 L16 23 L10 18 L17 18 Z" fill="#e0b0b6"/></svg>`,
+  'star-ribbon': () =>
+    `<svg style="position:absolute;left:50%;top:4%;width:20%;height:26%;transform:translateX(-50%)" viewBox="0 0 40 52">
+       <path d="M20 2 L24 14 L37 14 L26 22 L30 34 L20 26 L10 34 L14 22 L3 14 L16 14 Z" fill="${G}" stroke="#7a5a10"/>
+       <path d="M14 30 L10 50 L20 44 L30 50 L26 30 Z" fill="#c21326"/></svg>`,
+  'crowned-blade': () =>
+    `<svg style="position:absolute;left:50%;top:4%;width:16%;height:70%;transform:translateX(-50%)" viewBox="0 0 24 80">
+       <path d="M12 8 L16 20 L12 74 L8 20 Z" fill="${P}" stroke="#9aa0a8"/>
+       <rect x="6" y="20" width="12" height="4" fill="${G}"/>
+       <path d="M4 8 L8 2 L12 7 L16 2 L20 8 Z" fill="${G}"/></svg>`,
+  'ten-stars': () => {
+    let s = '';
+    for (let i = 0; i < 10; i++) {
+      const ang = (i / 10) * Math.PI * 2 - Math.PI / 2;
+      const x = 50 + Math.cos(ang) * 44, y = 50 + Math.sin(ang) * 44;
+      s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="${G}"/>`;
+    }
+    return `<svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 100 100">${s}</svg>`;
+  },
+  'clash-lightning': (a) =>
+    `<svg style="position:absolute;left:50%;top:6%;width:14%;height:60%;transform:translateX(-50%);animation:bf-tw .5s steps(2) infinite" viewBox="0 0 20 60">
+       <path d="M11 2 L5 26 L12 28 L7 58" fill="none" stroke="${a}" stroke-width="3"/></svg>`,
+};
+function leaf(x, y) { return `<path d="M${x} ${y} q-6 -3 -8 -8" />`; }
+
+function motifHTML(name, accent) {
+  const fn = MOTIFS[name];
+  return fn ? fn(accent) : '';
+}
+
+/* Apply a frame_spec to a .bf element (which should contain a .bf__inner with the media). */
+function applyFrame(el, spec) {
+  if (!el || !spec) return;
+  el.classList.add('bf');
+  [...el.classList].forEach((c) => { if (/^bf--/.test(c)) el.classList.remove(c); });
+  el.classList.add('bf--b-' + spec.border, 'bf--g-' + spec.glow, 'bf--a-' + spec.anim, 'bf--tier-' + spec.tier);
+  const accent = accentFor(spec);
+  el.style.setProperty('--bf-accent', accent);
+  el.querySelectorAll(':scope > .bf__particles, :scope > .bf__motif').forEach((n) => n.remove());
+  const pl = particleLayer(spec);
+  if (pl) el.appendChild(pl);
+  if (spec.motif) {
+    const m = document.createElement('div');
+    m.className = 'bf__motif';
+    m.innerHTML = motifHTML(spec.motif, accent);
+    el.appendChild(m);
+  }
+}
+
+/* Convenience: build the full frame DOM around a media element. */
+function createFrame(mediaEl, spec) {
+  const frame = document.createElement('div');
+  const inner = document.createElement('div');
+  inner.className = 'bf__inner';
+  inner.appendChild(mediaEl);
+  frame.appendChild(inner);
+  applyFrame(frame, spec);
+  return frame;
+}
+
+if (typeof window !== 'undefined') {
+  window.BadgeFrames = { applyFrame, createFrame, accentFor, motifHTML, MOTIFS, BORDER_ACCENT };
+}
+
+const SPECS={"first-step": {"tier": 1, "border": "solid-bronze", "glow": "none", "anim": "none", "particle": null, "motif": null}, "first-bow": {"tier": 1, "border": "solid-bronze", "glow": "none", "anim": "none", "particle": null, "motif": null}, "first-reveal": {"tier": 1, "border": "solid-bronze", "glow": "none", "anim": "none", "particle": null, "motif": null}, "first-reflection": {"tier": 1, "border": "solid-bronze", "glow": "none", "anim": "none", "particle": null, "motif": null}, "first-medal": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "first-gold": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "on-the-mat": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "nine-bows": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "back-on-the-mat": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "early-bird": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "deadline-warrior": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "iron-will": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "perfect-attendance": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "rising-star": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "new-heights": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "steady-climb": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "comeback": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "breakthrough": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "rising-floor": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "full-circle": {"tier": 4, "border": "spectrum", "glow": "strong", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 8}, "motif": null}, "precision": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "kime": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "rooted": {"tier": 3, "border": "gold", "glow": "soft", "anim": "breathing", "particle": null, "motif": null}, "flow": {"tier": 3, "border": "ripple", "glow": "soft", "anim": "ripple", "particle": {"kind": "bubble", "color": "#bfe0ff", "count": 8}, "motif": null}, "spirit": {"tier": 3, "border": "flame", "glow": "strong", "anim": "flame-flicker", "particle": {"kind": "ember", "color": "#ff9e2a", "count": 9}, "motif": null}, "innovator": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": {"kind": "sparkle", "color": "#e0a0ff", "count": 6}, "motif": null}, "grandmaster": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "crown"}, "both-hands": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "open-mind": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "traditionalist": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "weapon-master": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "style-explorer": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "fearless": {"tier": 2, "border": "solid-amber", "glow": "soft", "anim": "pulse", "particle": null, "motif": null}, "podium": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "gold-rush": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "sweep": {"tier": 4, "border": "spectrum", "glow": "strong", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 8}, "motif": null}, "undefeated": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": {"kind": "sparkle", "color": "#ffe9a8", "count": 7}, "motif": "dragon-coil"}, "podium-season": {"tier": 4, "border": "spectrum", "glow": "strong", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 8}, "motif": null}, "gold-medallion": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 12}, "motif": "dragon-coil"}, "semifinalist": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "finalist": {"tier": 4, "border": "spectrum", "glow": "strong", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 8}, "motif": null}, "grand-champion": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "laurel"}, "sponsors-champion": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "star-ribbon"}, "giant-slayer": {"tier": 4, "border": "spectrum", "glow": "strong", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 8}, "motif": null}, "imprint-complete": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "season-keepsake": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "gem-s1": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#1f7bff", "count": 10}, "motif": "gem-shine"}, "gem-s2": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 10}, "motif": "gem-shine"}, "gem-s3": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#ff2e3b", "count": 10}, "motif": "gem-shine"}, "gem-s4": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#1d9e75", "count": 10}, "motif": "gem-shine"}, "gem-s5": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#d85a30", "count": 10}, "motif": "gem-shine"}, "gem-s6": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#3a3a48", "count": 10}, "motif": "gem-shine"}, "gem-s7": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#d4537e", "count": 10}, "motif": "gem-shine"}, "gem-s8": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#1db0c4", "count": 10}, "motif": "gem-shine"}, "gem-s9": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#97c459", "count": 10}, "motif": "gem-shine"}, "gem-s10": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#d6dbe2", "count": 10}, "motif": "gem-shine"}, "decade-of-dedication": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "ten-stars"}, "consistent-journaler": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "reflective-warrior": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "goal-keeper": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "first-duel": {"tier": 1, "border": "solid-bronze", "glow": "none", "anim": "none", "particle": null, "motif": null}, "duelist": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "first-blood": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "warpath": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "peoples-champion": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "road-warrior": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "rivalry": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": "twin-rings"}, "undefeated-duelist": {"tier": 4, "border": "spectrum", "glow": "strong", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#7f77dd", "count": 8}, "motif": null}, "iron-duelist": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "duel-legend": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "crowned-blade"}, "deadlock": {"tier": 4, "border": "electric", "glow": "strong", "anim": "lightning", "particle": null, "motif": "clash-lightning"}, "first-vote": {"tier": 1, "border": "solid-bronze", "glow": "none", "anim": "none", "particle": null, "motif": null}, "voice-of-the-people": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "daily-voter": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "sharp-eye": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "kingmaker": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "fair-witness": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "trusted-voter": {"tier": 4, "border": "spectrum", "glow": "strong", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 8}, "motif": null}, "dojo-pride": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "teammate": {"tier": 1, "border": "solid-bronze", "glow": "none", "anim": "none", "particle": null, "motif": null}, "encourager": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "perfect-score": {"tier": 5, "border": "enso", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "enso-radiant"}, "zen": {"tier": 4, "border": "solid-jade", "glow": "soft", "anim": "breathing", "particle": null, "motif": null}, "ghost": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "charter-member": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "wax-seal"}, "trailblazer": {"tier": 5, "border": "platinum", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#fff3b0", "count": 11}, "motif": "torch-flame"}, "season-champion-s1": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#1f7bff", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s2": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#a32bf7", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s3": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#ff2e3b", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s4": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#1d9e75", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s5": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#d85a30", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s6": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#3a3a48", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s7": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#d4537e", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s8": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#1db0c4", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s9": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#97c459", "count": 10}, "motif": "season-gem-shine"}, "season-champion-s10": {"tier": 5, "border": "gemstone", "glow": "radiant", "anim": "rotating", "particle": {"kind": "sparkle", "color": "#d6dbe2", "count": 10}, "motif": "season-gem-shine"}, "mentor": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "anniversary": {"tier": 2, "border": "solid-silver", "glow": "soft", "anim": "none", "particle": null, "motif": null}, "well-rounded": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}, "globetrotter": {"tier": 3, "border": "gold", "glow": "soft", "anim": "shimmer", "particle": null, "motif": null}};
+document.querySelectorAll('.bf[data-code]').forEach(function(el){applyFrame(el, SPECS[el.dataset.code]);});
+</script></body></html>

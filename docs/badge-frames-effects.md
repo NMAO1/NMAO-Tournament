@@ -72,6 +72,11 @@ The recipe for every badge is generated to this rule and lives in **`badge-frame
 `border, glow, anim, particle_{kind,color,count}, motif`. Tweak any row; Common rows stay
 intentionally empty of effects.
 
+**Implementation kit (built, ready for Claude Code):** `../badge-frames/` — a working
+CSS + runtime + React (`BadgeFrame.tsx`) + types + signature motifs that render any
+`frame_spec`. Open `../badge-frames/preview.html` to see all 100. See its `README.md`
+for integration.
+
 ## Rarity → effect ladder (the read-at-a-glance tier)
 
 | Rarity | Frame recipe |
