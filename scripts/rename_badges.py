@@ -123,6 +123,19 @@ REGISTRY = {
   "carved from a single turquoise jewel": "52-gem-s8-turquoise",
   "carved from a single peridot jewel": "53-gem-s9-peridot",
   "carved from a single platinum-white diamond jewel": "54-gem-s10-platinum",
+  # tolerant aliases (short/mis-spelled gem prompts + reworded subjects)
+  "commemorative ribboned emblem": "88-anniversary",
+  "single sapphire jew": "45-gem-s1-sapphire",
+  "single amethyst jew": "46-gem-s2-amethyst",
+  "single ruby jew": "47-gem-s3-ruby",
+  "single emerald jew": "48-gem-s4-emerald",
+  "single coral jew": "49-gem-s5-coral",
+  "single onyx jew": "50-gem-s6-onyx",
+  "single rose jew": "51-gem-s7-rose",
+  "single turquoise jew": "52-gem-s8-turquoise",
+  "single peridot jew": "53-gem-s9-peridot",
+  "single periodot": "53-gem-s9-peridot",
+  "single platinum jew": "54-gem-s10-platinum",
 }
 
 def main():
