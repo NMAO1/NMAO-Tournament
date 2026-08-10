@@ -281,7 +281,10 @@ export default function SchoolPortal() {
                 <div style={{ ...card, padding: 16, marginBottom: 22 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Add athlete</div>
-                    <button onClick={() => setImportOpen(true)} style={{ border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>⬆ Import list</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button onClick={() => setImportOpen(true)} style={{ border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>⬆ Import list</button>
+                      <Hint on={hintsOn} align="right">Bulk-add competitors — one per line as <code>First, Last, YYYY-MM-DD, rank</code>. Date &amp; rank are optional (rank defaults to beginner).</Hint>
+                    </div>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 140px 150px", gap: 10 }}>
                     <input style={inp} placeholder="First name" value={form.first} onChange={(e) => setForm({ ...form, first: e.target.value })} />
