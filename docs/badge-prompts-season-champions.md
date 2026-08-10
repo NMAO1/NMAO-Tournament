@@ -198,7 +198,10 @@ subtle bokeh, bold symmetrical silhouette, martial-arts honor, high detail, no t
 ## After you generate
 
 Drop the 10 into `docs/badge-art/reference/` (name them `season-champion-s1.png` …
-`s10.png`). Run `scripts/crop_medallion.py` to get transparent medallions, and — if you
-chose Option A — I'll composite the crisp **"SEASON CHAMPION"** banner + **S#** tab in a
-consistent font across all ten, then output the finals. These pair with the Gem Series
-badges (45–54) as the flagship, color-matched collectible line.
+`s10.png`). Then the finishing is automated:
+`python3 scripts/crop_medallion.py` → transparent medallions, then
+`python3 scripts/letter_champion.py <in.png> <season#> <out.png>` bakes the crisp
+**"SEASON CHAMPION"** banner + **S#** gold end-cap seal (proven working; identical
+placement/type on all ten). Font is currently DejaVu Serif Bold as a stand-in — we can
+swap to a premium engraved face (e.g. Cinzel / Trajan) for the finals. These pair with
+the Gem Series badges (45–54) as the flagship, color-matched collectible line.
