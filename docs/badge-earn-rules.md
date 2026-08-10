@@ -18,8 +18,10 @@ Last updated: 2026-08-09
 - **`code`** is the permanent key (slug). Use it for `badges.code` / `emblem_key`,
   `badge_awards.badge_code`, and the pin `sku`. **Do not** key off catalog numbers —
   the catalog has a few number collisions (flagged below); the slugs are collision-free.
-- **`art file`** = `docs/badge-art/<n>-<slug>.png`. The four **locked heroes** already
-  exist under `docs/badge-art/reference/`. Every other file appears as art is produced;
+- **`art file`** = the **cropped, transparent medallion** at
+  `docs/badge-art/final/<n>-<slug>.png` (medallion only, background removed — see
+  `scripts/crop_medallion.py`). Raw square generations live in `docs/badge-art/reference/`;
+  **use the `final/` versions in the app.** Every other file appears as art is produced;
   the name is fixed now so DB rows and assets line up.
 - **Trigger event** = when to evaluate the check (see glossary). **Earn condition** =
   the boolean to award. Awards are **idempotent** — insert into `badge_awards` only if
@@ -222,6 +224,9 @@ badge_code, tier, round_id?, season_id?, awarded_at, seen=false)`.
 
 ## Assets present today
 
-`spirit` (25), `open-mind` (29), `undefeated` (37), `gold-medallion` (72) — under
-`docs/badge-art/reference/`. All others land as art is produced, using the fixed
-filenames above.
+`spirit` (25), `open-mind` (29), `undefeated` (37), `gold-medallion` (72) — cropped
+transparent medallions in `docs/badge-art/final/` (raw squares in `reference/`). All
+others land as art is produced, using the fixed filenames above.
+
+> Note: the `gold-medallion` hero was generated **before** the text-free rule and has a
+> "Perfect-Season Champion" banner baked in — regenerate it text-free before shipping.

@@ -313,7 +313,13 @@ Subjects are written to convey **emotion and awe**, not just depict an object.
    image as the style ref, or (if generations drift) by compositing the locked frame
    over the center art. For **Epic/Legendary**, keep each bespoke frame as generated.
    I can do this normalization pass and confirm rarity reads correctly.
-5. **Vectorize for pins.** Trace/redraw the selected art to clean vector at
+5. **Crop to the medallion (required).** Generated art is square with a background;
+   badges must be the **medallion only on a transparent background**. Run
+   `scripts/crop_medallion.py <in> docs/badge-art/final` — it detects the rim, masks
+   everything outside it to transparent, and exports a 1024² RGBA PNG. **App code never
+   crops;** Claude Code consumes the pre-cropped `docs/badge-art/final/<n>-<slug>.png`
+   files directly. (Locked heroes already processed there.)
+6. **Vectorize for pins.** Trace/redraw the selected art to clean vector at
    manufacturing spec (bold silhouette, ≤4 enamel colors + metal, legible at 1–1.25",
    die-struck soft/hard enamel). Deliver a print-ready file per SKU.
 6. **Locked & hidden states.** Also export each as a **dark embossed silhouette**
