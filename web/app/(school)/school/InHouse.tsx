@@ -17,8 +17,9 @@ const MAX_CRITERIA = 10;
 // a classic forms/weapons division.
 const SUGGESTED = ["Traditional Forms", "Traditional Weapons", "Open Forms", "Open Weapons", "Board Breaking", "Sparring", "Fitness Challenge", "Creative"];
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://nmao.us/app";
-const STATES = ["draft", "open", "judging", "complete"];
-const LIVE_STATES = ["open", "judging", "complete"]; // states shown once a tournament is created (draft config is locked)
+// In-house has no judging engine, so the only meaningful states are: draft
+// (config editable), live (created & running), and complete (closed).
+const stateLabel = (s: string) => (s === "draft" ? "Draft" : s === "complete" ? "Complete" : "Live");
 const stateColor = (s: string) => (s === "complete" ? hues.gold.hi : s === "judging" ? "#7DAAD4" : s === "open" ? "#7ED0A0" : neutrals.muted);
 const eventName = (c: string | null) => c || "—";
 const dollars = (c: number | null | undefined) => (c == null ? "" : (c / 100).toFixed(2));
@@ -212,12 +213,15 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                       style={{ border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "8px 13px", background: cur.format === o.v ? hues.gold.base : "transparent", color: cur.format === o.v ? "#141210" : neutrals.muted }}>{o.l}</button>
                   ))}
                 </div>
+              ) : cur.state === "complete" ? (
+                <>
+                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.5, textTransform: "uppercase", color: "#7ED0A0", border: "1px solid #2E5B44", borderRadius: 6, padding: "5px 9px" }}>Completed</span>
+                  <button onClick={() => changeState(cur, "open")} style={{ ...ghost, padding: "7px 14px" }}>Reopen</button>
+                </>
               ) : (
                 <>
                   <button onClick={() => editSetup(cur)} style={{ ...ghost, padding: "7px 14px" }}>Edit setup</button>
-                  <select style={inp} value={cur.state} onChange={(e) => changeState(cur, e.target.value)}>
-                    {LIVE_STATES.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}
-                  </select>
+                  <button onClick={() => changeState(cur, "complete")} style={{ ...ghost, padding: "7px 14px" }}>Mark complete</button>
                 </>
               )}
             </div>
