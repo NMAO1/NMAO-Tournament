@@ -5,7 +5,13 @@
 tournament flow** — its own loop, its own leaderboard, its own badges. Minor-safe by
 design.*
 
-Last updated: 2026-08-08
+Last updated: 2026-08-10
+
+> **See `DUELING-HANDOFF.md`** for the consolidated build handoff. Two decisions since
+> this doc was written: (a) a **$3.99/mo Duelist Membership** gates the ability to duel
+> (voting stays free) — it also throttles duel supply so votes-per-duel stay high;
+> (b) **no voting on your own school's duels** (same-school exclusion) to stop team
+> brigading, in addition to one-vote-per-duel.
 
 ---
 
@@ -51,7 +57,9 @@ Last updated: 2026-08-08
 ## 4. Voting model
 
 - **Who votes:** verified competitors only (closed community). **One vote per duel**
-  per competitor; **can't vote on your own** duel.
+  per competitor; **can't vote on your own** duel; **can't vote on a duel your own
+  school is in** (same-school exclusion — stops team brigading). Voting is **free**
+  (not gated by the Duelist Membership).
 - **Watch-to-vote:** a vote only counts after the voter has actually viewed both
   entries (min. playback) — keeps votes honest and rewards genuine attention.
 - **No comments** (for minor safety) — the vote is a clean A/B "who won?" Optional
