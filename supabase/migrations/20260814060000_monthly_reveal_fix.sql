@@ -1,31 +1,5 @@
--- ============================================================
--- Dueling — Slice 2c: the monthly reveal (assembly job)
--- run_monthly_reveal('YYYY-MM') — admin-triggered ("Run the reveal"):
---   1) award all newly-earned badges (seen=false)
---   2) assemble a POSITIVE-ONLY snapshot per active competitor into
---      monthly_reveals.payload (jsonb — adding a stat later is a one-line change)
--- The app reads the snapshot and plays the animation; it marks it seen.
--- Season reset is SEPARATE (fires after the tournament round; decay TBD).
--- Message: a computed `signal` + inline copy for now; swap to reveal_sayings/
--- motivational_sayings once those are seeded (currently empty).
--- Spec: docs/DUELING-DECISIONS.md §8/§9.
--- ============================================================
-
-create table if not exists monthly_reveals (
-  id               uuid primary key default gen_random_uuid(),
-  competitor_id    uuid not null references competitors(id) on delete cascade,
-  period           text not null,                 -- 'YYYY-MM'
-  payload          jsonb not null,                -- assembled positive-only reveal
-  rating_at_reveal int,                           -- snapshot → next month's rating-gain diff
-  seen             boolean not null default false,
-  created_at       timestamptz not null default now(),
-  unique (competitor_id, period)
-);
-alter table monthly_reveals enable row level security;
-grant select on monthly_reveals to authenticated;
-drop policy if exists monthly_reveals_read on monthly_reveals;
-create policy monthly_reveals_read on monthly_reveals for select to authenticated
-  using (nmao.is_staff() or competitor_id in (select nmao.competitor_ids()));
+-- Fix: qualify duel_ratings.rating/best_streak (plpgsql variable vs column
+-- collision) in run_monthly_reveal. create-or-replace; safe re-apply.
 
 create or replace function nmao.run_monthly_reveal(p_period text)
 returns int
@@ -118,23 +92,3 @@ begin
   return n;
 end;
 $$;
-
-revoke all on function nmao.run_monthly_reveal(text) from public;
-grant execute on function nmao.run_monthly_reveal(text) to service_role;
-
--- ---- AUTO-JOB: assemble the reveal for the just-ended month, no human trigger ----
-create or replace function nmao.run_monthly_reveal_auto()
-returns int
-language plpgsql security definer set search_path = public
-as $$
-begin
-  -- when this fires on the 1st, the just-ended month is the prior calendar month
-  return nmao.run_monthly_reveal(to_char(date_trunc('month', now()) - interval '1 month', 'YYYY-MM'));
-end;
-$$;
-revoke all on function nmao.run_monthly_reveal_auto() from public;
-grant execute on function nmao.run_monthly_reveal_auto() to service_role;
-
--- fire on the 1st of each month at 06:00 UTC (after the duel-sweep has resolved any
--- month-end duels). cron.schedule upserts by name; adjust the schedule freely.
-select cron.schedule('monthly-reveal', '0 6 1 * *', $$ select nmao.run_monthly_reveal_auto(); $$);
