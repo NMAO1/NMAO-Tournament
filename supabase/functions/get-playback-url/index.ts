@@ -11,7 +11,8 @@
 // before the entry. Swapping storage → Mux later only changes this function.
 //
 // AUTH: Verify JWT = ON.
-// POST { entry_id } -> { ok, angle1, angle2, preroll, expires_in }
+// POST { entry_id }  -> { ok, angle1, angle2, preroll, expires_in }        (judging/owner)
+// POST { duel_id }   -> { ok, kind:'duel', challenger, opponent, preroll } (open voting)
 // Deploy: supabase functions deploy get-playback-url --project-ref oxzuavpyoetchwebdejp
 // =====================================================================
 
@@ -60,8 +61,42 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
     const entryId = String(body.entry_id || "").trim();
-    if (!entryId) return json({ ok: false, error: "entry_id is required." }, 400);
+    const duelId = String(body.duel_id || "").trim();
+    if (!entryId && !duelId) return json({ ok: false, error: "entry_id or duel_id is required." }, 400);
 
+    // ---- DUEL playback (open community voting) --------------------------------
+    // Watchable by: staff, either participant, or any verified competitor while the
+    // duel is in a public state (voting/complete/no_contest) and not hidden by moderation.
+    if (duelId) {
+      const { data: duel } = await svc.from("duels")
+        .select("challenger_id, opponent_id, challenger_video, opponent_video, status, moderation_status")
+        .eq("id", duelId).maybeSingle();
+      if (!duel) return json({ ok: false, error: "Duel not found." }, 404);
+
+      const [{ data: staff }, { data: own }, { data: wards }] = await Promise.all([
+        svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle(),
+        svc.from("competitors").select("id").eq("auth_user_id", uid),
+        svc.from("guardian_competitors").select("competitor_id, guardians!inner(auth_user_id)").eq("guardians.auth_user_id", uid),
+      ]);
+      const mine = new Set<string>([
+        ...((own ?? []) as any[]).map((r) => r.id),
+        ...((wards ?? []) as any[]).map((r) => r.competitor_id),
+      ]);
+      const isParticipant = mine.has((duel as any).challenger_id) || mine.has((duel as any).opponent_id);
+      const publicWatchable = ["voting", "complete", "no_contest"].includes((duel as any).status)
+        && (duel as any).moderation_status === "ok";
+      const allowed = !!staff || isParticipant || (mine.size > 0 && publicWatchable);
+      if (!allowed) return json({ ok: false, error: "Not authorized to view this duel." }, 403);
+
+      const [challenger, opponent] = await Promise.all([
+        resolve(svc, (duel as any).challenger_video),
+        resolve(svc, (duel as any).opponent_video),
+      ]);
+      // SPONSOR PRE-ROLL SEAM — null until sponsorship ships (same as entries).
+      return json({ ok: true, kind: "duel", challenger, opponent, preroll: null, expires_in: TTL }, 200);
+    }
+
+    // ---- ENTRY playback (judging / owner) ------------------------------------
     const { data: entry } = await svc.from("entries").select("competitor_id, video_url, video_url_2").eq("id", entryId).maybeSingle();
     if (!entry) return json({ ok: false, error: "Entry not found." }, 404);
 
