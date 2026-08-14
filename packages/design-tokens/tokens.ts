@@ -35,6 +35,9 @@ export const neutrals = {
 export const spectrum =
   'linear-gradient(90deg, #FF2E3B 0%, #C22DE0 40%, #A32BF7 52%, #4B6BFF 74%, #1F7BFF 100%)';
 
+/** The signature spectrum as stops for RN <LinearGradient> (use horizontal start/end). */
+export const spectrumStops = ['#FF2E3B', '#C22DE0', '#A32BF7', '#4B6BFF', '#1F7BFF'] as const;
+
 export const status = { success: '#5A9A6A', danger: '#E07070', info: '#7DAAD4' } as const;
 
 export const font = {

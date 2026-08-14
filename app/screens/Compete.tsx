@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } fr
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
-import { neutrals, hues, metalStops, status } from "@nmao/design-tokens";
+import { neutrals, hues, metalStops, spectrumStops, status } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
 import { uploadEntryVideo, PickedVideo } from "../lib/upload";
 import { myCompetitors } from "../lib/competitors";
@@ -193,8 +193,8 @@ export default function Compete() {
                   <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{c ? `${c.first_name} ${c.last_name}` : "Registered — finish to compete"}</Text>
                 </View>
                 <TouchableOpacity onPress={() => payAndRegister(p.competitor_id, p.event)} activeOpacity={0.85}>
-                  <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9 }}>
-                    <Text style={{ color: "#141210", fontWeight: "800", fontSize: 13 }}>Complete</Text>
+                  <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9 }}>
+                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Complete</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -257,12 +257,12 @@ export default function Compete() {
               </Section>
 
               <TouchableOpacity onPress={submit} disabled={!ready} activeOpacity={0.85} style={{ marginTop: 8 }}>
-                <LinearGradient colors={ready ? metalStops("gold") : [neutrals.surface2, neutrals.surface2, neutrals.surface2]}
-                  start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+                <LinearGradient colors={ready ? spectrumStops : [neutrals.surface2, neutrals.surface2, neutrals.surface2]}
+                  start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
                   style={{ borderRadius: 13, paddingVertical: 16, alignItems: "center" }}>
                   {phase === "working"
-                    ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><ActivityIndicator color="#141210" /><Text style={{ color: "#141210", fontWeight: "800" }}>{step}</Text></View>
-                    : <Text style={{ color: ready ? "#141210" : neutrals.muted2, fontWeight: "800", fontSize: 16 }}>Submit Entry</Text>}
+                    ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><ActivityIndicator color="#fff" /><Text style={{ color: "#fff", fontWeight: "800" }}>{step}</Text></View>
+                    : <Text style={{ color: ready ? "#fff" : neutrals.muted2, fontWeight: "800", fontSize: 16 }}>Submit Entry</Text>}
                 </LinearGradient>
               </TouchableOpacity>
             </>

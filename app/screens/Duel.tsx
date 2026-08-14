@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
-import { neutrals, hues, metalStops } from "@nmao/design-tokens";
+import { neutrals, hues, metalStops, spectrumStops } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { myCompetitors } from "../lib/competitors";
 import { uploadDuelVideo } from "../lib/upload";
@@ -111,8 +111,8 @@ export default function Duel() {
 
       <SectionLabel left="Your duels" right="S1 · Round VIII" />
       <TouchableOpacity onPress={openChallenge} activeOpacity={0.85} disabled={week?.remaining === 0}>
-        <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ borderRadius: 11, paddingVertical: 12, alignItems: "center", opacity: week?.remaining === 0 ? 0.5 : 1, marginBottom: 4 }}>
-          <Text style={{ color: "#141210", fontWeight: "800", letterSpacing: 0.5 }}>⚔  Challenge</Text>
+        <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ borderRadius: 12, paddingVertical: 14, alignItems: "center", opacity: week?.remaining === 0 ? 0.5 : 1, marginBottom: 4 }}>
+          <Text style={{ color: "#fff", fontWeight: "800", letterSpacing: 0.5 }}>⚔  Challenge</Text>
         </LinearGradient>
       </TouchableOpacity>
       {week?.remaining === 0 ? <Text style={{ color: neutrals.muted2, fontSize: 11, textAlign: "center", marginBottom: 6 }}>Weekly limit reached — resets soon.</Text> : null}
