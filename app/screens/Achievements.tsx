@@ -3,10 +3,14 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "rea
 import { neutrals, hues, type MedalType } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { Medal } from "../components/Medal";
+import { Medallion, type Tier } from "../components/Medallion";
 import { myCompetitors } from "../lib/competitors";
 import { loadVault, equipFrame, markBadgesSeen, type Vault, type VaultBadge } from "../lib/vault";
 
 const asMedal = (t: string): MedalType => (t === "gold" || t === "silver" || t === "bronze" || t === "participation" ? t : "participation");
+const asTier = (t: string): Tier => (t === "gold" || t === "silver" || t === "bronze" ? t : "part");
+// Season palette — S1 Sapphire (drives participation color + eyes on the twin).
+const SEASON = { hi: "#66A9FF", b: "#1F7BFF", sh: "#0B3FD6" };
 
 // The badge vault + medal case. Earned badges glow by rarity; tap one to wear its
 // frame in the Arena. Locked badges are greyed goals.
@@ -34,8 +38,17 @@ export default function Achievements() {
   }
 
   const earned = vault.badges.filter((b) => b.earned).length;
+  // Map the season's earned medals onto the 8 medallion rounds (R1–R8); rest are ghost slots.
+  const medTiers: (Tier | null)[] = Array.from({ length: 8 }, (_, i) => (vault.medals[i] ? asTier(vault.medals[i].tier) : null));
+  const filled = medTiers.filter(Boolean).length;
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingBottom: 34 }}>
+      <Label t="Your Season Medallion" />
+      <View style={{ alignItems: "center", marginBottom: 10 }}>
+        <Medallion tiers={medTiers} season={SEASON} size={280} />
+        <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.3, marginTop: 4 }}>{filled} / 8 rounds · Season 1 · Sapphire</Text>
+      </View>
+
       <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>{earned} of {vault.badges.length} badges earned. Tap an earned badge to wear its frame.</Text>
 
       {vault.medals.length ? (

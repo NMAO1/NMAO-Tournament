@@ -22,12 +22,12 @@ import { AlertsSheet } from "./components/AlertsSheet";
 type Tab = "compete" | "duel" | "achievements" | "leaderboard" | "profile";
 type ActiveReveal = { kind: "duel"; duelId: string } | { kind: "monthly"; period: string; payload: Record<string, unknown> };
 
-const TABS: { key: Tab; label: string; title: string; ownHeader?: boolean }[] = [
-  { key: "compete", label: "Compete", title: "Compete", ownHeader: true },
-  { key: "duel", label: "Duel", title: "The Arena" },
-  { key: "achievements", label: "Achieve", title: "Achievements" },
-  { key: "leaderboard", label: "Ranks", title: "Leaderboard" },
-  { key: "profile", label: "Profile", title: "Profile", ownHeader: true },
+const TABS: { key: Tab; label: string; title: string; icon: string; hue: string; ownHeader?: boolean }[] = [
+  { key: "compete", label: "Compete", title: "Compete", icon: "🥋", hue: hues.sapphire.hi, ownHeader: true },
+  { key: "duel", label: "Duel", title: "The Arena", icon: "⚔️", hue: hues.ruby.hi },
+  { key: "achievements", label: "Honors", title: "Honors", icon: "🎖️", hue: hues.amethyst.hi },
+  { key: "leaderboard", label: "Leaderboard", title: "Leaderboard", icon: "🏆", hue: hues.gold.hi },
+  { key: "profile", label: "Profile", title: "Profile", icon: "👤", hue: hues.gold.hi, ownHeader: true },
 ];
 
 function MainTabs() {
@@ -72,7 +72,7 @@ function MainTabs() {
 
       <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: neutrals.border, backgroundColor: "#0b0b0c", paddingTop: 8, paddingBottom: 26 }}>
         {TABS.map((t) => (
-          <TabButton key={t.key} label={t.label} active={tab === t.key} onPress={() => setTab(t.key)} />
+          <TabButton key={t.key} label={t.label} icon={t.icon} hue={t.hue} active={tab === t.key} onPress={() => setTab(t.key)} />
         ))}
       </View>
 
@@ -86,11 +86,12 @@ function MainTabs() {
   );
 }
 
-function TabButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+function TabButton({ label, icon, hue, active, onPress }: { label: string; icon: string; hue: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}>
-      <View style={{ height: 2, width: 18, borderRadius: 2, backgroundColor: active ? hues.gold.hi : "transparent", marginBottom: 6 }} />
-      <Text style={{ color: active ? hues.gold.hi : neutrals.muted2, fontWeight: active ? "800" : "500", fontSize: 11, letterSpacing: 0.3 }}>{label}</Text>
+      <View style={{ height: 2, width: 20, borderRadius: 2, backgroundColor: active ? hue : "transparent", marginBottom: 5 }} />
+      <Text style={{ fontSize: 15, marginBottom: 1, opacity: active ? 1 : 0.5 }}>{icon}</Text>
+      <Text numberOfLines={1} style={{ color: active ? hue : neutrals.muted2, fontWeight: active ? "800" : "500", fontSize: 9.5, letterSpacing: 0.1 }}>{label}</Text>
     </TouchableOpacity>
   );
 }
