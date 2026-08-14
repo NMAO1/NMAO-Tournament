@@ -45,16 +45,25 @@ export function Medallion({ tiers, season, size = 300 }: {
   const hi = vec(C - 34, C - 46);
 
   const Piece = ({ clip, tier }: { clip: ReturnType<typeof Skia.Path.MakeFromSVGString>; tier: Tier | null }) => {
-    if (!tier) return <Path path={clip!} color="#17181d" />;
+    // Empty slot: dark fill + a gold border so the holder's 8 segments read clearly.
+    if (!tier) return (
+      <Group>
+        <Path path={clip!} color="#17161a" />
+        <Path path={clip!} style="stroke" strokeWidth={2.6} color="#8a7638" />
+      </Group>
+    );
     const lt = light(tier), dk = dark(tier);
     return (
-      <Group clip={clip!}>
-        <Circle cx={C} cy={C} r={R}><RadialGradient c={hi} r={R} colors={lt} /></Circle>
-        <Group transform={[{ translateX: 2 * C }, { scaleX: -1 }]}>
-          <Path path={paths.taijitu}><RadialGradient c={hi} r={R} colors={dk} /></Path>
+      <Group>
+        <Group clip={clip!}>
+          <Circle cx={C} cy={C} r={R}><RadialGradient c={hi} r={R} colors={lt} /></Circle>
+          <Group transform={[{ translateX: 2 * C }, { scaleX: -1 }]}>
+            <Path path={paths.taijitu}><RadialGradient c={hi} r={R} colors={dk} /></Path>
+          </Group>
+          <Circle cx={C} cy={C - h} r={EYR} color={dk[1]} />
+          <Circle cx={C} cy={C + h} r={EYR} color={lt[1]} />
         </Group>
-        <Circle cx={C} cy={C - h} r={EYR} color={dk[1]} />
-        <Circle cx={C} cy={C + h} r={EYR} color={lt[1]} />
+        <Path path={clip!} style="stroke" strokeWidth={1.2} color="#0b0b0d" />
       </Group>
     );
   };
