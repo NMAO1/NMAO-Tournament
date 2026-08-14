@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from "react-native";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { myCompetitors } from "../lib/competitors";
-import { standings, voterBoard, type Scope, type Division, type LbRow, type VoterRow } from "../lib/leaderboard";
+import { standings, voterBoard, tournamentBoard, type Scope, type Division, type LbRow, type VoterRow, type TourRow } from "../lib/leaderboard";
 
+type Board = "duelists" | "tournament" | "voters";
 const DIVS: { key: Division; label: string; hue: string }[] = [
   { key: "all", label: "All", hue: hues.gold.base },
   { key: "beginner", label: "Beginner", hue: hues.sapphire.base },
@@ -28,69 +29,100 @@ const SORTS: { key: SortKey; label: string; unit: string; get: (r: LbRow) => num
   { key: "bestStreak", label: "Streak", unit: "🔥", get: (r) => r.bestStreak, sub: (r) => `${r.rating} RTG` },
 ];
 
+type TSortKey = "points" | "gold" | "medals" | "events";
+const TSORTS: { key: TSortKey; label: string; unit: string; get: (r: TourRow) => number; sub: (r: TourRow) => string }[] = [
+  { key: "points", label: "Points", unit: "pts", get: (r) => r.points, sub: (r) => `${r.gold}🥇 ${r.silver}🥈 ${r.bronze}🥉` },
+  { key: "gold", label: "Gold", unit: "🥇", get: (r) => r.gold, sub: (r) => `${r.medals} medals · ${r.events} events` },
+  { key: "medals", label: "Medals", unit: "🏅", get: (r) => r.medals, sub: (r) => `${r.gold}🥇 ${r.silver}🥈 ${r.bronze}🥉` },
+  { key: "events", label: "Events", unit: "", get: (r) => r.events, sub: (r) => `${r.medals} medals` },
+];
+
 export default function Leaderboard() {
   const [me, setMe] = useState<string | null>(null);
-  const [voters, setVoters] = useState(false);
+  const [board, setBoard] = useState<Board>("duelists");
   const [scope, setScope] = useState<Scope>("global");
   const [division, setDivision] = useState<Division>("all");
   const [sort, setSort] = useState<SortKey>("rating");
+  const [tsort, setTsort] = useState<TSortKey>("points");
   const [duel, setDuel] = useState<LbRow[] | null>(null);
+  const [tour, setTour] = useState<TourRow[] | null>(null);
   const [vote, setVote] = useState<VoterRow[] | null>(null);
-  const [sel, setSel] = useState<LbRow | null>(null);
+  const [selD, setSelD] = useState<LbRow | null>(null);
+  const [selT, setSelT] = useState<TourRow | null>(null);
 
   useEffect(() => { myCompetitors().then((c) => setMe(c[0]?.id ?? null)); }, []);
-  useEffect(() => { if (me && !voters) { setDuel(null); standings(me, scope, division).then(setDuel); } }, [me, scope, division, voters]);
-  useEffect(() => { if (me && voters) { setVote(null); voterBoard(me).then(setVote); } }, [me, voters]);
+  useEffect(() => { if (me && board === "duelists") { setDuel(null); standings(me, scope, division).then(setDuel); } }, [me, scope, division, board]);
+  useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division).then(setTour); } }, [me, division, board]);
+  useEffect(() => { if (me && board === "voters") { setVote(null); voterBoard(me).then(setVote); } }, [me, board]);
 
   const sortDef = SORTS.find((s) => s.key === sort)!;
   const rows = duel ? [...duel].sort((a, b) => sortDef.get(b) - sortDef.get(a)) : null;
+  const tsortDef = TSORTS.find((s) => s.key === tsort)!;
+  const trows = tour ? [...tour].sort((a, b) => tsortDef.get(b) - tsortDef.get(a)) : null;
 
   return (
     <>
       <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={{ flexDirection: "row", backgroundColor: neutrals.surface, borderRadius: 10, padding: 3, marginBottom: 12 }}>
-          <Seg label="Duelists" active={!voters} onPress={() => setVoters(false)} />
-          <Seg label="Voters" active={voters} onPress={() => setVoters(true)} />
+          <Seg label="Duelists" active={board === "duelists"} onPress={() => setBoard("duelists")} />
+          <Seg label="Tournament" active={board === "tournament"} onPress={() => setBoard("tournament")} />
+          <Seg label="Voters" active={board === "voters"} onPress={() => setBoard("voters")} />
         </View>
 
-        {!voters ? (
+        {board === "duelists" ? (
           <>
             <View style={{ flexDirection: "row", marginBottom: 10 }}>
               {SCOPES.map((s) => <Chip key={s.key} label={s.label} active={scope === s.key} color={hues.gold.hi} onPress={() => setScope(s.key)} />)}
             </View>
-            <Row2Label t="Division" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
-              {DIVS.map((d) => <Chip key={d.key} label={d.label} active={division === d.key} color={d.hue} filled onPress={() => setDivision(d.key)} />)}
-            </ScrollView>
+            <DivisionRow division={division} setDivision={setDivision} />
             <Row2Label t="Sort" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               {SORTS.map((s) => <Chip key={s.key} label={s.label} active={sort === s.key} color={hues.gold.base} filled onPress={() => setSort(s.key)} />)}
             </ScrollView>
-
-            {rows == null ? <ActivityIndicator color={neutrals.muted} style={{ marginTop: 24 }} />
-              : rows.length === 0 ? <Empty />
-              : rows.map((r, i) => {
-                const raw = sortDef.get(r);
-                const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
-                return <LbRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={sortDef.unit} sub={sortDef.sub(r)} onPress={() => setSel(r)} />;
-              })}
+            {rows == null ? <Loading /> : rows.length === 0 ? <Empty /> : rows.map((r, i) => {
+              const raw = sortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
+              return <LbRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={sortDef.unit} sub={sortDef.sub(r)} onPress={() => setSelD(r)} />;
+            })}
+          </>
+        ) : board === "tournament" ? (
+          <>
+            <DivisionRow division={division} setDivision={setDivision} />
+            <Row2Label t="Sort" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              {TSORTS.map((s) => <Chip key={s.key} label={s.label} active={tsort === s.key} color={hues.gold.base} filled onPress={() => setTsort(s.key)} />)}
+            </ScrollView>
+            {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : trows.map((r, i) => {
+              const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
+              return <TourRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={tsortDef.unit} sub={tsortDef.sub(r)} onPress={() => setSelT(r)} />;
+            })}
           </>
         ) : (
-          vote == null ? <ActivityIndicator color={neutrals.muted} style={{ marginTop: 24 }} />
-            : vote.length === 0 ? <Empty />
-            : vote.map((r) => <VoterRowView key={r.rank} r={r} />)
+          vote == null ? <Loading /> : vote.length === 0 ? <Empty /> : vote.map((r) => <VoterRowView key={r.rank} r={r} />)
         )}
       </ScrollView>
 
-      <Modal visible={!!sel} transparent animationType="slide" onRequestClose={() => setSel(null)}>
-        <TouchableOpacity activeOpacity={1} onPress={() => setSel(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.62)", justifyContent: "flex-end" }}>
-          {sel ? <PlayerCard row={sel} onClose={() => setSel(null)} /> : null}
-        </TouchableOpacity>
+      <Modal visible={!!selD} transparent animationType="slide" onRequestClose={() => setSelD(null)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setSelD(null)} style={sheetScrim}>{selD ? <PlayerCard row={selD} onClose={() => setSelD(null)} /> : null}</TouchableOpacity>
+      </Modal>
+      <Modal visible={!!selT} transparent animationType="slide" onRequestClose={() => setSelT(null)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setSelT(null)} style={sheetScrim}>{selT ? <TourCard row={selT} onClose={() => setSelT(null)} /> : null}</TouchableOpacity>
       </Modal>
     </>
   );
 }
 
+const sheetScrim = { flex: 1, backgroundColor: "rgba(0,0,0,0.62)", justifyContent: "flex-end" as const };
+
+function DivisionRow({ division, setDivision }: { division: Division; setDivision: (d: Division) => void }) {
+  return (
+    <>
+      <Row2Label t="Division" />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+        {DIVS.map((d) => <Chip key={d.key} label={d.label} active={division === d.key} color={d.hue} filled onPress={() => setDivision(d.key)} />)}
+      </ScrollView>
+    </>
+  );
+}
 function Seg({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center", backgroundColor: active ? hues.gold.base : "transparent" }}>
@@ -117,15 +149,15 @@ function Avatar({ name, belt, size = 40, glow }: { name: string; belt: string | 
     </View>
   );
 }
-function LbRowView({ rank, row, value, unit, sub, onPress }: { rank: number; row: LbRow; value: string; unit: string; sub: string; onPress: () => void }) {
+function RowShell({ rank, name, belt, school, value, unit, sub, you, onPress }: { rank: number; name: string; belt: string | null; school: string | null; value: string; unit: string; sub: string; you: boolean; onPress: () => void }) {
   const top = rank <= 3;
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, paddingHorizontal: 13, marginBottom: 9, borderRadius: 16, backgroundColor: row.you ? "rgba(230,185,63,0.09)" : neutrals.surface, borderWidth: 1, borderColor: row.you ? hues.gold.shadow : neutrals.border }}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, paddingHorizontal: 13, marginBottom: 9, borderRadius: 16, backgroundColor: you ? "rgba(230,185,63,0.09)" : neutrals.surface, borderWidth: 1, borderColor: you ? hues.gold.shadow : neutrals.border }}>
       <Text style={{ color: top ? hues.gold.hi : neutrals.muted2, fontWeight: "800", width: 26, textAlign: "center", fontVariant: ["tabular-nums"], fontSize: 15 }}>{rank}</Text>
-      <View style={{ marginHorizontal: 10 }}><Avatar name={row.name} belt={row.belt} glow={top} /></View>
+      <View style={{ marginHorizontal: 10 }}><Avatar name={name} belt={belt} glow={top} /></View>
       <View style={{ flex: 1 }}>
-        <Text numberOfLines={1} style={{ color: neutrals.text, fontWeight: row.you ? "800" : "600", fontSize: 14 }}>{row.name}{rank === 1 ? "  👑" : ""}{row.you ? "  · YOU" : ""}</Text>
-        <Text numberOfLines={1} style={{ color: neutrals.muted2, fontSize: 11, marginTop: 1, textTransform: "capitalize" }}>{[row.belt?.replace("_", " "), row.school].filter(Boolean).join(" · ")}</Text>
+        <Text numberOfLines={1} style={{ color: neutrals.text, fontWeight: you ? "800" : "600", fontSize: 14 }}>{name}{rank === 1 ? "  👑" : ""}{you ? "  · YOU" : ""}</Text>
+        <Text numberOfLines={1} style={{ color: neutrals.muted2, fontSize: 11, marginTop: 1, textTransform: "capitalize" }}>{[belt?.replace("_", " "), school].filter(Boolean).join(" · ")}</Text>
       </View>
       <View style={{ alignItems: "flex-end" }}>
         <Text style={{ color: hues.gold.hi, fontWeight: "800", fontSize: 16, fontVariant: ["tabular-nums"] }}>{value}{unit ? <Text style={{ color: neutrals.muted2, fontSize: 9, fontWeight: "700" }}> {unit}</Text> : null}</Text>
@@ -133,6 +165,12 @@ function LbRowView({ rank, row, value, unit, sub, onPress }: { rank: number; row
       </View>
     </TouchableOpacity>
   );
+}
+function LbRowView({ rank, row, value, unit, sub, onPress }: { rank: number; row: LbRow; value: string; unit: string; sub: string; onPress: () => void }) {
+  return <RowShell rank={rank} name={row.name} belt={row.belt} school={row.school} value={value} unit={unit} sub={sub} you={row.you} onPress={onPress} />;
+}
+function TourRowView({ rank, row, value, unit, sub, onPress }: { rank: number; row: TourRow; value: string; unit: string; sub: string; onPress: () => void }) {
+  return <RowShell rank={rank} name={row.name} belt={row.belt} school={row.school} value={value} unit={unit} sub={sub} you={row.you} onPress={onPress} />;
 }
 function VoterRowView({ r }: { r: VoterRow }) {
   return (
@@ -146,29 +184,19 @@ function VoterRowView({ r }: { r: VoterRow }) {
     </View>
   );
 }
-function PlayerCard({ row, onClose }: { row: LbRow; onClose: () => void }) {
-  const hue = beltHue(row.belt);
-  const bento = [
-    { k: "Duels", v: row.duels, acc: hues.sapphire.base },
-    { k: "Medals", v: row.medals, acc: hues.gold.base },
-    { k: "Best Streak", v: row.bestStreak, acc: hues.amethyst.base },
-  ];
-  const game = [
-    { tag: "ALL TIME", name: "Winning percentage", v: `${row.winPct}%` },
-    { tag: "ALL TIME", name: "Record (W–L–D)", v: `${row.wins}–${row.losses}–${row.draws}` },
-    { tag: "ALL TIME", name: "Best streak", v: `${row.bestStreak} 🔥` },
-    { tag: "NOW", name: "Current streak", v: `${row.streak}` },
-    { tag: "NOW", name: "Rank", v: `#${row.rank}` },
-  ];
+function CardShell({ name, belt, school, rank, headLabel, headValue, headUnit, bento, game, onClose }: {
+  name: string; belt: string | null; school: string | null; rank: number; headLabel: string; headValue: string; headUnit: string;
+  bento: { k: string; v: number | string; acc: string }[]; game: { tag: string; name: string; v: string }[]; onClose: () => void;
+}) {
   return (
     <TouchableOpacity activeOpacity={1} style={{ backgroundColor: "#161618", borderTopLeftRadius: 26, borderTopRightRadius: 26, borderTopWidth: 1, borderColor: "#2a2a2e", paddingBottom: 30 }}>
       <View style={{ width: 40, height: 4, borderRadius: 3, backgroundColor: "#3a3a3e", alignSelf: "center", marginTop: 10, marginBottom: 6 }} />
       <View style={{ alignItems: "center", paddingHorizontal: 20, paddingTop: 8 }}>
-        <Avatar name={row.name} belt={row.belt} size={78} />
-        <Text style={{ color: neutrals.text, fontSize: 20, fontWeight: "800", marginTop: 10 }}>{row.name.replace("You — ", "")}</Text>
-        <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2, textTransform: "capitalize" }}>Rank #{row.rank} · {[row.belt?.replace("_", " "), row.school].filter(Boolean).join(" · ")}</Text>
-        <Text style={{ color: neutrals.muted2, fontSize: 9.5, letterSpacing: 2, fontWeight: "800", marginTop: 16 }}>DUEL RATING</Text>
-        <Text style={{ color: hues.gold.hi, fontSize: 26, fontWeight: "800", marginTop: 3, fontVariant: ["tabular-nums"] }}>{row.rating.toLocaleString()} <Text style={{ color: neutrals.muted, fontSize: 12 }}>RTG</Text></Text>
+        <Avatar name={name} belt={belt} size={78} />
+        <Text style={{ color: neutrals.text, fontSize: 20, fontWeight: "800", marginTop: 10 }}>{name.replace("You — ", "")}</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2, textTransform: "capitalize" }}>Rank #{rank} · {[belt?.replace("_", " "), school].filter(Boolean).join(" · ")}</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 9.5, letterSpacing: 2, fontWeight: "800", marginTop: 16 }}>{headLabel}</Text>
+        <Text style={{ color: hues.gold.hi, fontSize: 26, fontWeight: "800", marginTop: 3, fontVariant: ["tabular-nums"] }}>{headValue} <Text style={{ color: neutrals.muted, fontSize: 12 }}>{headUnit}</Text></Text>
       </View>
       <View style={{ flexDirection: "row", gap: 9, paddingHorizontal: 20, marginTop: 16 }}>
         {bento.map((b) => (
@@ -196,6 +224,28 @@ function PlayerCard({ row, onClose }: { row: LbRow; onClose: () => void }) {
     </TouchableOpacity>
   );
 }
-function Empty() {
-  return <Text style={{ color: neutrals.muted2, textAlign: "center", marginTop: 28 }}>No standings here yet — get in the arena.</Text>;
+function PlayerCard({ row, onClose }: { row: LbRow; onClose: () => void }) {
+  return <CardShell name={row.name} belt={row.belt} school={row.school} rank={row.rank} headLabel="DUEL RATING" headValue={row.rating.toLocaleString()} headUnit="RTG"
+    bento={[{ k: "Duels", v: row.duels, acc: hues.sapphire.base }, { k: "Medals", v: row.medals, acc: hues.gold.base }, { k: "Best Streak", v: row.bestStreak, acc: hues.amethyst.base }]}
+    game={[
+      { tag: "ALL TIME", name: "Winning percentage", v: `${row.winPct}%` },
+      { tag: "ALL TIME", name: "Record (W–L–D)", v: `${row.wins}–${row.losses}–${row.draws}` },
+      { tag: "ALL TIME", name: "Best streak", v: `${row.bestStreak} 🔥` },
+      { tag: "NOW", name: "Current streak", v: `${row.streak}` },
+      { tag: "NOW", name: "Rank", v: `#${row.rank}` },
+    ]} onClose={onClose} />;
+}
+function TourCard({ row, onClose }: { row: TourRow; onClose: () => void }) {
+  return <CardShell name={row.name} belt={row.belt} school={row.school} rank={row.rank} headLabel="TOURNAMENT POINTS" headValue={String(row.points)} headUnit="pts"
+    bento={[{ k: "🥇 Gold", v: row.gold, acc: hues.gold.base }, { k: "🥈 Silver", v: row.silver, acc: "#C6CDD4" }, { k: "🥉 Bronze", v: row.bronze, acc: "#C57F35" }]}
+    game={[
+      { tag: "SEASON", name: "Total medals", v: `${row.medals}` },
+      { tag: "SEASON", name: "Events entered", v: `${row.events}` },
+      { tag: "SEASON", name: "Participation", v: `${row.participation}` },
+      { tag: "NOW", name: "Rank", v: `#${row.rank}` },
+    ]} onClose={onClose} />;
+}
+function Loading() { return <ActivityIndicator color={neutrals.muted} style={{ marginTop: 24 }} />; }
+function Empty({ note }: { note?: string }) {
+  return <Text style={{ color: neutrals.muted2, textAlign: "center", marginTop: 28 }}>{note ?? "No standings here yet — get in the arena."}</Text>;
 }

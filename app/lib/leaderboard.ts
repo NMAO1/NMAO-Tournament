@@ -19,6 +19,20 @@ export async function standings(competitorId: string, scope: Scope, division: Di
   }));
 }
 
+export type TourRow = {
+  rank: number; competitorId: string; name: string; school: string | null; belt: string | null;
+  gold: number; silver: number; bronze: number; participation: number; medals: number; points: number; events: number; you: boolean;
+};
+export async function tournamentBoard(competitorId: string, division: Division = "all"): Promise<TourRow[]> {
+  const { data } = await supabase.rpc("tournament_leaderboard", { p_competitor_id: competitorId, p_division: division, p_limit: 50 });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).map((r) => ({
+    rank: r.rank, competitorId: r.competitor_id, name: r.name, school: r.school ?? null, belt: r.belt ?? null,
+    gold: r.gold ?? 0, silver: r.silver ?? 0, bronze: r.bronze ?? 0, participation: r.participation ?? 0,
+    medals: r.medals ?? 0, points: r.points ?? 0, events: r.events ?? 0, you: !!r.is_you,
+  }));
+}
+
 export async function voterBoard(competitorId: string): Promise<VoterRow[]> {
   const { data } = await supabase.rpc("voter_leaderboard", { p_competitor_id: competitorId, p_limit: 50 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
