@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from "react-native";
-import { neutrals, hues } from "@nmao/design-tokens";
+import { LinearGradient } from "expo-linear-gradient";
+import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { myCompetitors } from "../lib/competitors";
 import { standings, voterBoard, tournamentBoard, type Scope, type Division, type LbRow, type VoterRow, type TourRow } from "../lib/leaderboard";
 
@@ -72,12 +73,12 @@ export default function Leaderboard() {
         {board === "duelists" ? (
           <>
             <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              {SCOPES.map((s) => <Chip key={s.key} label={s.label} active={scope === s.key} color={hues.gold.hi} onPress={() => setScope(s.key)} />)}
+              {SCOPES.map((s) => <Chip key={s.key} label={s.label} active={scope === s.key} color={hues.gold.hi} spectrum onPress={() => setScope(s.key)} />)}
             </View>
             <DivisionRow division={division} setDivision={setDivision} />
             <Row2Label t="Sort" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              {SORTS.map((s) => <Chip key={s.key} label={s.label} active={sort === s.key} color={hues.gold.base} filled onPress={() => setSort(s.key)} />)}
+              {SORTS.map((s) => <Chip key={s.key} label={s.label} active={sort === s.key} color={hues.gold.base} filled spectrum onPress={() => setSort(s.key)} />)}
             </ScrollView>
             {rows == null ? <Loading /> : rows.length === 0 ? <Empty /> : rows.map((r, i) => {
               const raw = sortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
@@ -89,7 +90,7 @@ export default function Leaderboard() {
             <DivisionRow division={division} setDivision={setDivision} />
             <Row2Label t="Sort" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              {TSORTS.map((s) => <Chip key={s.key} label={s.label} active={tsort === s.key} color={hues.gold.base} filled onPress={() => setTsort(s.key)} />)}
+              {TSORTS.map((s) => <Chip key={s.key} label={s.label} active={tsort === s.key} color={hues.gold.base} filled spectrum onPress={() => setTsort(s.key)} />)}
             </ScrollView>
             {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : trows.map((r, i) => {
               const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
@@ -118,19 +119,31 @@ function DivisionRow({ division, setDivision }: { division: Division; setDivisio
     <>
       <Row2Label t="Division" />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
-        {DIVS.map((d) => <Chip key={d.key} label={d.label} active={division === d.key} color={d.hue} filled onPress={() => setDivision(d.key)} />)}
+        {DIVS.map((d) => <Chip key={d.key} label={d.label} active={division === d.key} color={d.hue} filled spectrum onPress={() => setDivision(d.key)} />)}
       </ScrollView>
     </>
   );
 }
 function Seg({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const inner = <Text style={{ color: active ? "#fff" : neutrals.muted2, fontWeight: "800", fontSize: 12 }}>{label}</Text>;
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: "center", backgroundColor: active ? hues.gold.base : "transparent" }}>
-      <Text style={{ color: active ? "#141210" : neutrals.muted2, fontWeight: "800", fontSize: 12 }}>{label}</Text>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ flex: 1, borderRadius: 8, overflow: "hidden" }}>
+      {active
+        ? <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 8, alignItems: "center" }}>{inner}</LinearGradient>
+        : <View style={{ paddingVertical: 8, alignItems: "center" }}>{inner}</View>}
     </TouchableOpacity>
   );
 }
-function Chip({ label, active, color, filled, onPress }: { label: string; active: boolean; color: string; filled?: boolean; onPress: () => void }) {
+function Chip({ label, active, color, filled, spectrum, onPress }: { label: string; active: boolean; color: string; filled?: boolean; spectrum?: boolean; onPress: () => void }) {
+  if (spectrum && active) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ marginRight: 8, borderRadius: 999, overflow: "hidden" }}>
+        <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingHorizontal: 14, paddingVertical: 7 }}>
+          <Text style={{ color: "#fff", fontSize: 11, fontWeight: "800" }}>{label}</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ paddingHorizontal: 13, paddingVertical: 7, borderRadius: 999, marginRight: 8, borderWidth: 1, borderColor: active ? color : neutrals.border, backgroundColor: active && filled ? color : active ? "rgba(230,185,63,0.1)" : "transparent" }}>
       <Text style={{ color: active && filled ? "#0b0a08" : active ? color : neutrals.muted2, fontSize: 11, fontWeight: "800" }}>{label}</Text>
