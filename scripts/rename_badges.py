@@ -136,6 +136,22 @@ REGISTRY = {
   "single peridot jew": "53-gem-s9-peridot",
   "single periodot": "53-gem-s9-peridot",
   "single platinum jew": "54-gem-s10-platinum",
+  # batch 05 — trophy paths + new badges
+  "two-handled bronze victory trophy cup": "first-bronze",
+  "two-handled silver victory trophy cup": "first-silver",
+  "two-handled gold victory trophy cup": "first-gold",
+  "two crossed dueling blades over a radiant champion's crest": "dueling-master",
+  "glowing mountain summit pierced by a rising beam of light": "ascent",
+  "weathered tree with many glowing growth rings": "seasons-veteran",
+  "small glowing spark overpowering a towering flame": "underdog",
+  "all-seeing eye above a glowing crystal ball": "oracle",
+  "glowing play button ringed by radiating cheer lines": "superfan",
+  "clenched fist gripping a lightning bolt at the final moment": "clutch",
+  "perfect diamond shield radiating flawless light": "flawless-victory",
+  "single glowing footprint blazing a new trail ahead": "trendsetter",
+  "two racers crossing a glowing finish line neck and neck": "photo-finish",
+  "glowing clock striking zero as a final strike lands": "buzzer-beater",
+  "broken chain reforged into a glowing blade": "redemption",
 }
 
 def main():
