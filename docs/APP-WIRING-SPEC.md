@@ -242,12 +242,12 @@ G1/G5/G6 (Arena frames) — ✅ done. G2/G3/G4/G7 are later-phase; G3 + G7 gate 
 
 1. ✅ **Shell + tokens + primitives** — DONE. `packages/design-tokens` extended (`rarityStops`/`rarityBase`/`medalMetal`); `app/components/{Frame,Medal,Coin,Header}.tsx`; `app/App.tsx` 5-tab shell (opens on Duel; Compete + Profile=Home preserved); stub screens `app/screens/{Duel,Achievements,Leaderboard}.tsx`. See `app/DUELING-FOUNDATION.md`. NOTE: `npx expo install expo-screen-orientation` before the ring.
 2. ✅ **Duel tab / Arena** — DONE (core loop). `app/lib/duel.ts` (all RPCs), `app/screens/Duel.tsx` (hub: week meter + Compete challenge/respond/upload + Vote queue+search) → `app/screens/Arena.tsx` (ring in a Modal: guarded landscape, framed forms, 15s watch-gate, cinematic vote via haptics+flash, hidden tally). `uploadDuelVideo`→`entry-videos` (confirmed). REMAINING: `npx expo install expo-video` (real playback → feed position to `setWatched`; poster seam in place) + `expo-screen-orientation` (rotate; guarded); Skia particle burst on vote; crest tooltip; sudden-death banner.
-3. **Alerts + realtime notifications** — bell, list, mark-read, deep-link routing.
-4. **Reveals** — (a) the per-duel dueling reveal (tally unveil + re-entry, needs G3) and (b) the monthly badge+medal ceremony (needs G7). Shared mystical/score/haptic engine.
-5. **Achievements vault** — badge grid, equip frame, locked/goal states.
-6. **Leaderboard** — scoped standings + voter board.
-7. **Profile hub** — sections; wire prefs + dojo; store/journal as placeholders → then G2, Phase 2 store.
-8. **Compete coherence** — duel→tournament upload seam.
+3. ✅ **Alerts + realtime notifications** — DONE. `app/lib/notifications.ts` (list/unread/markRead/markAll/`subscribeNotifications` realtime/`latestUnseenMonthly`/`markMonthlySeen`); `app/components/AlertsSheet.tsx` (bell → sheet → deep-link route); wired in `App.tsx` (bell unread + realtime + routing). Migration `20260816030000` (`mark_monthly_reveal_seen`).
+4. ✅ **Reveals** — DONE. `app/screens/DuelReveal.tsx` (per-duel: face-off → result [win/deadlock/loss/spectator] → tally → onward, via `duel_reveal`, haptics) + `app/screens/MonthlyReveal.tsx` (coin+regal title → medals → badges → season summary → journal, from the payload, auto-opens on launch when unseen). REMAINING polish: licensed score via `expo-audio`, Skia bloom particles, count-up animations, re-entry/journal deep-links.
+5. ✅ **Achievements vault** — DONE. `app/screens/Achievements.tsx` + `lib/vault.ts` via `badge_vault` RPC (earned-glow + locked-grey, tap-to-equip `set_equipped_frame`, medal case), marks badges seen.
+6. ✅ **Leaderboard** — DONE. `app/screens/Leaderboard.tsx` + `lib/leaderboard.ts` via `duel_leaderboard` (My Bracket/School/Global) + `voter_leaderboard`.
+7. ✅ **Profile hub** — DONE. `app/screens/Profile.tsx` (avatar frame + name/rank/style + rating/wins/streak; rows → Journal, My Dojo, Notifications prefs, Store placeholder, Rules, Tournament & entries [=existing Home], Sign out). **Journal (G2)** real & FULLY PRIVATE: `app/screens/Journal.tsx` + `lib/journal.ts` (prompts + freeform), RLS scoped to own login via `nmao.self_competitor_ids()` (migration `20260816050000`). Leaderboard/vault RPCs: migration `20260816040000`.
+8. **Compete coherence** — duel→tournament upload seam. (remaining)
 
 Ship 1–4 as the playable core (challenge → vote → get notified → reveal). 5–8 complete the world.
 

@@ -141,6 +141,26 @@ export async function faceOff(duelId: string): Promise<FaceOff | null> {
   return { duelId: String(j.duel_id), type: j.type as DuelType, status: String(j.status), challenger: toCard(j.challenger as Record<string, unknown>), opponent: toCard(j.opponent as Record<string, unknown>) };
 }
 
+// ---- reveal (duel_reveal) — face-off + tally + result (once the duel closes) ----
+export type Reveal = FaceOff & {
+  result: "challenger" | "opponent" | "draw" | "no_contest" | null;
+  winnerId: string | null;
+  challengerVotes: number; opponentVotes: number; totalVotes: number;
+  challengerBackers: number; opponentBackers: number;
+};
+export async function duelReveal(duelId: string): Promise<Reveal | null> {
+  const { data, error } = await supabase.rpc("duel_reveal", { p_duel_id: duelId });
+  if (error || !data) return null;
+  const j = data as Record<string, unknown>;
+  return {
+    duelId: String(j.duel_id), type: j.type as DuelType, status: String(j.status),
+    challenger: toCard(j.challenger as Record<string, unknown>), opponent: toCard(j.opponent as Record<string, unknown>),
+    result: (j.result as Reveal["result"]) ?? null, winnerId: (j.winner_id as string) ?? null,
+    challengerVotes: Number(j.challenger_votes ?? 0), opponentVotes: Number(j.opponent_votes ?? 0), totalVotes: Number(j.total_votes ?? 0),
+    challengerBackers: Number(j.challenger_backers ?? 0), opponentBackers: Number(j.opponent_backers ?? 0),
+  };
+}
+
 // ---- signed playback URLs for the ring (get-playback-url EF, duel branch) ----
 export async function playbackUrls(duelId: string): Promise<{ challenger: string | null; opponent: string | null }> {
   try {

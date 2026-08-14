@@ -1,45 +1,79 @@
-import { View, Text, ScrollView } from "react-native";
-import { neutrals } from "@nmao/design-tokens";
+import { useEffect, useState } from "react";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { neutrals, hues, type MedalType } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { Medal } from "../components/Medal";
-import type { Rarity } from "@nmao/design-tokens";
+import { myCompetitors } from "../lib/competitors";
+import { loadVault, equipFrame, markBadgesSeen, type Vault, type VaultBadge } from "../lib/vault";
 
-// Badge vault + medal case — foundation placeholder demonstrating the Frame /
-// Medal primitives across every rarity & metal.
-const RARITIES: Rarity[] = ["legendary", "epic", "rare", "common"];
+const asMedal = (t: string): MedalType => (t === "gold" || t === "silver" || t === "bronze" || t === "participation" ? t : "participation");
 
+// The badge vault + medal case. Earned badges glow by rarity; tap one to wear its
+// frame in the Arena. Locked badges are greyed goals.
 export default function Achievements() {
+  const [me, setMe] = useState<string | null>(null);
+  const [vault, setVault] = useState<Vault | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const id = (await myCompetitors())[0]?.id ?? null;
+      setMe(id);
+      if (id) { setVault(await loadVault(id)); markBadgesSeen(id); }
+    })();
+  }, []);
+
+  async function equip(b: VaultBadge) {
+    if (!me || !b.earned) return;
+    const next = vault?.equipped === b.code ? null : b.code;
+    await equipFrame(me, next);
+    setVault((v) => (v ? { ...v, equipped: next } : v));
+  }
+
+  if (!vault) {
+    return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
+  }
+
+  const earned = vault.badges.filter((b) => b.earned).length;
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: neutrals.bg }}
-      contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
-    >
-      <Text style={{ color: neutrals.muted, marginBottom: 18, lineHeight: 20 }}>
-        Your badge vault — earned frames glow by rarity; locked ones await.
-      </Text>
+    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingBottom: 34 }}>
+      <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>{earned} of {vault.badges.length} badges earned. Tap an earned badge to wear its frame.</Text>
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
-        {RARITIES.map((r) => (
-          <View key={r} style={{ alignItems: "center", width: "24%", marginBottom: 16 }}>
-            <Frame rarity={r} size="mini" radius={30}>
-              <View style={{ width: 52, height: 52, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
-                <Text style={{ color: "#EFC24E", fontSize: 20 }}>◆</Text>
+      {vault.medals.length ? (
+        <>
+          <Label t="Medal case" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+            {vault.medals.map((m, i) => (
+              <View key={i} style={{ alignItems: "center", width: "25%", marginBottom: 12 }}>
+                <Medal type={asMedal(m.tier)} place={m.place} size={50} />
+                <Text style={{ color: neutrals.muted2, fontSize: 8, marginTop: 6, textAlign: "center" }} numberOfLines={1}>{m.event ?? m.tier}</Text>
               </View>
-            </Frame>
-            <Text style={{ color: neutrals.muted2, fontSize: 9, marginTop: 8, textTransform: "capitalize" }}>{r}</Text>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      ) : null}
 
-      <Text style={{ color: neutrals.muted, fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: "800", marginTop: 12, marginBottom: 16 }}>
-        Medal case
-      </Text>
-      <View style={{ flexDirection: "row", justifyContent: "space-around" }}>
-        <Medal type="gold" place={1} size={54} />
-        <Medal type="silver" place={2} size={54} />
-        <Medal type="bronze" place={3} size={54} />
-        <Medal type="participation" size={54} />
+      <Label t="Badge vault" />
+      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
+        {vault.badges.map((b) => {
+          const equipped = vault.equipped === b.code;
+          return (
+            <TouchableOpacity key={b.code} onPress={() => equip(b)} activeOpacity={b.earned ? 0.7 : 1} style={{ width: "25%", alignItems: "center", marginBottom: 16, opacity: b.earned ? 1 : 0.32 }}>
+              <Frame rarity={b.rarity} size="mini" radius={30} glow={b.earned}>
+                <View style={{ width: 50, height: 50, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
+                  <Text style={{ color: b.earned ? "#EFC24E" : neutrals.muted2, fontSize: 18 }}>◆</Text>
+                </View>
+              </Frame>
+              <Text style={{ color: equipped ? hues.gold.hi : neutrals.muted2, fontSize: 8, marginTop: 6, textAlign: "center", fontWeight: equipped ? "800" : "400" }} numberOfLines={2}>
+                {equipped ? "★ " : ""}{b.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </ScrollView>
   );
+}
+
+function Label({ t }: { t: string }) {
+  return <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: "800", marginTop: 16, marginBottom: 10 }}>{t}</Text>;
 }
