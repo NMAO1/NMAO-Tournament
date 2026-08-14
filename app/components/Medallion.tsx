@@ -28,10 +28,11 @@ const METAL: Record<Tier, { light: string[]; dark: string[] }> = {
   part: { light: ["#FFFFFF", "#ECECE8", "#D2D2CC"], dark: [] }, // dark filled from season
 };
 
-export function Medallion({ tiers, season, size = 300 }: {
+export function Medallion({ tiers, season, size = 300, centerTier = null }: {
   tiers: (Tier | null)[];
   season: { hi: string; b: string; sh: string };
   size?: number;
+  centerTier?: Tier | null; // R9 keystone (finishing medal); null = ghost placeholder
 }) {
   const paths = useMemo(() => ({
     waves: Array.from({ length: 8 }, (_, k) => Skia.Path.MakeFromSVGString(waveStr(k))!),
@@ -74,7 +75,7 @@ export function Medallion({ tiers, season, size = 300 }: {
         <Circle cx={C} cy={C} r={R + 8} style="stroke" strokeWidth={9} color="#3a3320" />
         <Circle cx={C} cy={C} r={R + 8} style="stroke" strokeWidth={2} color="#5a4c2a" />
         {paths.waves.map((p, k) => <Piece key={k} clip={p} tier={tiers[k] ?? null} />)}
-        <Piece clip={paths.center} tier="gold" />
+        <Piece clip={paths.center} tier={centerTier} />
       </Group>
     </Canvas>
   );

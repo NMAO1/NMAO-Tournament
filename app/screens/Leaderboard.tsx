@@ -192,7 +192,7 @@ function VoterRowView({ r }: { r: VoterRow }) {
       <Text style={{ flex: 1, color: neutrals.text, fontWeight: r.you ? "800" : "600", fontSize: 14 }} numberOfLines={1}>{r.name}</Text>
       <View style={{ alignItems: "flex-end" }}>
         <Text style={{ color: hues.gold.hi, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{r.votesCast}</Text>
-        <Text style={{ color: neutrals.muted2, fontSize: 10 }}>{r.accuracy != null ? `${Math.round(r.accuracy)}% acc` : "votes"}</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 10 }}>{r.accuracy != null ? `${Math.round(r.accuracy * 100)}% acc` : "votes"}</Text>
       </View>
     </View>
   );
