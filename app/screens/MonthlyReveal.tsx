@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { neutrals, hues, type Rarity, type MedalType } from "@nmao/design-tokens";
 import { Coin } from "../components/Coin";
 import { Medal } from "../components/Medal";
+import { Medallion, type Tier } from "../components/Medallion";
 import { Frame } from "../components/Frame";
 import { markMonthlySeen } from "../lib/notifications";
 
@@ -16,6 +17,8 @@ const num = (p: Payload, k: string) => (typeof p[k] === "number" ? (p[k] as numb
 const str = (p: Payload, k: string) => (typeof p[k] === "string" ? (p[k] as string) : null);
 const asRarity = (r: unknown): Rarity => (r === "legendary" || r === "epic" || r === "rare" || r === "common" ? r : "common");
 const asMedal = (t: unknown): MedalType => (t === "gold" || t === "silver" || t === "bronze" || t === "participation" ? t : "participation");
+const asTier = (t: unknown): Tier => (t === "gold" || t === "silver" || t === "bronze" ? (t as Tier) : "part");
+const SEASON = { hi: "#66A9FF", b: "#1F7BFF", sh: "#0B3FD6" }; // S1 Sapphire
 const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function earnText(b: any): string {
@@ -71,14 +74,31 @@ function Open({ message }: { message: string | null }) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Medals({ medals }: { medals: any[] }) {
+  // The month's medals take their place on the Season Medallion, one by one.
+  const target: (Tier | null)[] = Array.from({ length: 8 }, (_, i) => (medals[i] ? asTier(medals[i].tier) : null));
+  const [shown, setShown] = useState<(Tier | null)[]>(Array(8).fill(null));
+  useEffect(() => {
+    setShown(Array(8).fill(null));
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      setShown(target.map((t, idx) => (idx < i ? t : null)));
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
+      if (i >= target.filter(Boolean).length || i >= 8) clearInterval(id);
+    }, 220);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medals]);
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 22 }}>◈ Tournament medals ◈</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center" }}>
+      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>◈ Your Season Medallion ◈</Text>
+      <Medallion tiers={shown} season={SEASON} size={236} />
+      <Text style={{ color: neutrals.muted2, fontSize: 11, marginTop: 8, marginBottom: 4 }}>Each medal takes its place</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
         {medals.map((m, i) => (
-          <View key={i} style={{ alignItems: "center", margin: 10, width: 96 }}>
-            <Medal type={asMedal(m.tier)} place={typeof m.place === "number" ? m.place : null} size={58} />
-            <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "700", marginTop: 8, textAlign: "center" }} numberOfLines={2}>{String(m.event ?? "")}</Text>
+          <View key={i} style={{ alignItems: "center", margin: 8, width: 84 }}>
+            <Medal type={asMedal(m.tier)} place={typeof m.place === "number" ? m.place : null} size={44} />
+            <Text style={{ color: neutrals.text, fontSize: 10, fontWeight: "700", marginTop: 6, textAlign: "center" }} numberOfLines={1}>{String(m.event ?? "")}</Text>
             <Text style={{ color: neutrals.muted2, fontSize: 9, textTransform: "capitalize" }}>{String(m.tier ?? "")}{typeof m.place === "number" ? ` · ${ordinal(m.place)}` : ""}</Text>
           </View>
         ))}
