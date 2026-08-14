@@ -19,7 +19,7 @@ export function Header({
       style={{
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent: "flex-end",
         paddingHorizontal: 18,
         paddingTop: 56,
         paddingBottom: 12,
@@ -27,6 +27,11 @@ export function Header({
     >
       <Text
         style={{
+          position: "absolute",
+          left: 18,
+          right: 18,
+          top: 56,
+          textAlign: "center",
           color: neutrals.text,
           fontSize: 16,
           fontWeight: "800",
