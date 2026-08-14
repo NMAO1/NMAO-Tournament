@@ -58,5 +58,33 @@ export function glow(h: Hue, alpha = 0.35): string {
   return `0 0 18px rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
 }
 
-export const tokens = { hues, tierHue, neutrals, spectrum, status, font } as const;
+// ---------------------------------------------------------------------
+// Rarity → collectible-frame / medal treatment (dueling).
+// common uses a neutral "steel"; rare/epic/legendary map to the hue set.
+// ---------------------------------------------------------------------
+export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
+export const rarityHue = { rare: 'sapphire', epic: 'amethyst', legendary: 'gold' } as const;
+export const steel = { hi: '#D7D2C7', base: '#8E877A', shadow: '#4B463D' } as const;
+
+/** The 3 metal stops for a rarity (expo-linear-gradient colors). */
+export function rarityStops(r: Rarity): [string, string, string] {
+  if (r === 'common') return [steel.hi, steel.base, steel.shadow];
+  return metalStops(rarityHue[r]);
+}
+/** The base color of a rarity — used for the frame's glow. */
+export function rarityBase(r: Rarity): string {
+  if (r === 'common') return steel.base;
+  return hues[rarityHue[r]].base;
+}
+
+/** Tournament medal metals — asset-swappable placeholder gradients (gold/silver/bronze/participation). */
+export const medalMetal = {
+  gold:          ['#FFF7D6', '#E4AE3C', '#6E4E12'],
+  silver:        ['#FFFFFF', '#C2CAD1', '#5C646B'],
+  bronze:        ['#FBE3C4', '#C57F35', '#552F10'],
+  participation: ['#F2F5F7', '#9BA7AF', '#454C52'],
+} as const;
+export type MedalType = keyof typeof medalMetal;
+
+export const tokens = { hues, tierHue, neutrals, spectrum, status, font, rarityHue, medalMetal } as const;
 export default tokens;

@@ -8,9 +8,9 @@ Source of truth is the DB; this doc is a readable mirror to decide what to build
 
 ## 1. Summary
 
-- **104 active** badges · **9 retired** · **13 new** (vs the original 100-row catalog seed).
+- **105 active** badges · **9 retired** · **14 new** (vs the original 100-row catalog seed).
 - **33 active tiered** (leveled) badges. **31 leveled badges** carry `earn_rule.unlocks = 'frame_upgrade'`.
-- The **ten newest** badges (migration `…150000`) are listed together in **§8** with their build dependencies (not yet threaded into the §2 category tables).
+- The newest badges (migrations `…150000` / `…160000`) are listed together in **§8** with their build dependencies (not yet threaded into the §2 category tables).
 - Everything below is **catalog/data only**. **No award engine runs for the new ladders yet**, and the "border upgrades per level" behavior is **not built** (see §5).
 
 ### Data model (unchanged tables)
@@ -217,10 +217,11 @@ Catalog-only, like everything else. The **Build hook** column is what each needs
 | trendsetter | Trendsetter | Community | rare | — | Be the first at your school to earn a rare or higher badge. | **META hook** — evaluate on any badge award (school-first) |
 | photo-finish | Photo Finish *(hidden)* | Hidden | uncommon | — | Win a duel by a single vote. | 1-vote winning margin |
 | buzzer-beater | Buzzer Beater *(hidden)* | Hidden | uncommon | — | Submit an entry in the final minute before a deadline. | entry within 60s of deadline |
+| redemption | Redemption | Dueling | rare | — | Beat an opponent who has beaten you before. | duel history (prior loss to same opponent) |
 
 Most reuse existing signals (`duels`, `duel_votes`, `duel_ratings`, `skill_ratings`, entries/deadlines). **Two need new signals:** Superfan (watch-time) and Trendsetter (a badge-award meta hook).
 
 ---
 
 ## 7. Migrations in this pass
-`20260815020000` copy pass (all 100 descriptions) · `…040000` medal Paths · `…050000` growth ladders + removals + Mirror fix · `…060000` mastery criterion ladders · `…070000` weapon-master/style-explorer/undefeated · `…080000` Relentless + Giant Slayer · `…090000` duelist retune + Dueling Master · `…100000` peoples-champion + road-warrior · `…110000` voting ladders + Honorable Voter · `…120000` Honorable Voter rename + retire trusted-voter + trailblazer · `…130000` retire mentor · `…140000` retire dojo-pride/encourager/ghost + perfect-score/zen thresholds · `…150000` 10 new badges (Ascent, Seasons Veteran, Underdog, Oracle, Superfan, Clutch, Flawless Victory, Trendsetter, Photo Finish, Buzzer Beater).
+`20260815020000` copy pass (all 100 descriptions) · `…040000` medal Paths · `…050000` growth ladders + removals + Mirror fix · `…060000` mastery criterion ladders · `…070000` weapon-master/style-explorer/undefeated · `…080000` Relentless + Giant Slayer · `…090000` duelist retune + Dueling Master · `…100000` peoples-champion + road-warrior · `…110000` voting ladders + Honorable Voter · `…120000` Honorable Voter rename + retire trusted-voter + trailblazer · `…130000` retire mentor · `…140000` retire dojo-pride/encourager/ghost + perfect-score/zen thresholds · `…150000` 10 new badges (Ascent, Seasons Veteran, Underdog, Oracle, Superfan, Clutch, Flawless Victory, Trendsetter, Photo Finish, Buzzer Beater) · `…160000` Redemption.

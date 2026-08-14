@@ -5,21 +5,55 @@ import type { Session } from "@supabase/supabase-js";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { supabase } from "./lib/supabase";
 import Login from "./screens/Login";
-import Home from "./screens/Home";
 import Compete from "./screens/Compete";
+import Duel from "./screens/Duel";
+import Achievements from "./screens/Achievements";
+import Leaderboard from "./screens/Leaderboard";
+import Home from "./screens/Home"; // serves as the Profile hub for now (rating, tasks, reveal)
+import { Header } from "./components/Header";
 
-type Tab = "home" | "compete";
+// 5-tab shell (spec §1): Compete · Duel · Achievements · Leaderboard · Profile.
+// Alerts = header bell (not a tab). App opens on Duel (the Arena).
+// Compete + Profile keep their own internal headers for now; the shared Header
+// rides above the new tabs. (Header + bell unify onto every tab as we rebuild them.)
+type Tab = "compete" | "duel" | "achievements" | "leaderboard" | "profile";
+
+const TABS: { key: Tab; label: string; title: string; ownHeader?: boolean }[] = [
+  { key: "compete", label: "Compete", title: "Compete", ownHeader: true },
+  { key: "duel", label: "Duel", title: "The Arena" },
+  { key: "achievements", label: "Achieve", title: "Achievements" },
+  { key: "leaderboard", label: "Ranks", title: "Leaderboard" },
+  { key: "profile", label: "Profile", title: "Profile", ownHeader: true },
+];
 
 function MainTabs() {
-  const [tab, setTab] = useState<Tab>("home");
+  const [tab, setTab] = useState<Tab>("duel");
+  const active = TABS.find((t) => t.key === tab)!;
   return (
     <View style={{ flex: 1 }}>
+      {!active.ownHeader ? <Header title={active.title} unread={3} onBell={() => { /* TODO: alerts sheet (§7) */ }} /> : null}
+
       <View style={{ flex: 1 }}>
-        {tab === "home" ? <Home onCompete={() => setTab("compete")} /> : <Compete />}
+        {tab === "compete" ? <Compete /> : null}
+        {tab === "duel" ? <Duel /> : null}
+        {tab === "achievements" ? <Achievements /> : null}
+        {tab === "leaderboard" ? <Leaderboard /> : null}
+        {tab === "profile" ? <Home onCompete={() => setTab("compete")} /> : null}
       </View>
-      <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: neutrals.border, backgroundColor: "#0b0b0c", paddingTop: 10, paddingBottom: 26 }}>
-        <TabButton label="Home" active={tab === "home"} onPress={() => setTab("home")} />
-        <TabButton label="Compete" active={tab === "compete"} onPress={() => setTab("compete")} />
+
+      <View
+        style={{
+          flexDirection: "row",
+          borderTopWidth: 1,
+          borderTopColor: neutrals.border,
+          backgroundColor: "#0b0b0c",
+          paddingTop: 8,
+          paddingBottom: 26,
+        }}
+      >
+        {TABS.map((t) => (
+          <TabButton key={t.key} label={t.label} active={tab === t.key} onPress={() => setTab(t.key)} />
+        ))}
       </View>
     </View>
   );
@@ -27,8 +61,19 @@ function MainTabs() {
 
 function TabButton({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flex: 1, alignItems: "center", paddingVertical: 6 }}>
-      <Text style={{ color: active ? hues.gold.hi : neutrals.muted2, fontWeight: active ? "700" : "500", fontSize: 13 }}>{label}</Text>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}>
+      <View
+        style={{
+          height: 2,
+          width: 18,
+          borderRadius: 2,
+          backgroundColor: active ? hues.gold.hi : "transparent",
+          marginBottom: 6,
+        }}
+      />
+      <Text style={{ color: active ? hues.gold.hi : neutrals.muted2, fontWeight: active ? "800" : "500", fontSize: 11, letterSpacing: 0.3 }}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }

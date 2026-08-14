@@ -33,6 +33,25 @@ export async function uploadEntryVideo(
   return path;
 }
 
+// Duel form video → same private entry-videos bucket, under the competitor's own
+// folder. Returns the storage PATH, which submit_duel_video records and
+// get-playback-url (duel branch) later signs for the ring.
+export async function uploadDuelVideo(
+  competitorId: string,
+  duelId: string,
+  v: PickedVideo,
+): Promise<string> {
+  const ext = extFor(v);
+  const path = `${competitorId}/duel-${duelId}_${Date.now()}.${ext}`;
+  const buf = await (await fetch(v.uri)).arrayBuffer();
+  const { error } = await supabase.storage.from("entry-videos").upload(path, buf, {
+    contentType: ctypeFor(ext),
+    upsert: true,
+  });
+  if (error) throw new Error(error.message);
+  return path;
+}
+
 // In-house entry video → same private bucket, under the competitor's own folder
 // so competitor-scoped storage RLS applies. Returns the storage PATH, which
 // submit-inhouse-video records and get-inhouse-video-url later signs.

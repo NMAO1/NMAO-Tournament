@@ -47,7 +47,10 @@ const [tab,setTab] = useState<Tab>('duel');   // app opens on Duel (the vote que
 
 ## 2. DUEL tab — the Arena (hero screen)
 
-**Orientation model (locked):** the app is **portrait** for navigation. The Duel tab (portrait) shows three zones — **(a) your active duels strip**, **(b) the vote queue**, **(c) sudden-death CTA banner**. Tapping a queued duel **rotates into an immersive landscape "ring"** (Arena-only landscape) to watch + vote; exiting returns to portrait. Videos are **16:9, side by side, full width**. Implement with `expo-screen-orientation`: lock portrait globally, allow/force landscape only while the ring is mounted (`unlockAsync`/`lockAsync(LANDSCAPE)` on mount, restore `PORTRAIT_UP` on unmount). Anchor: `scratchpad/arena-mockup.html`.
+**Orientation model (locked):** the app is **portrait** for navigation. The Duel tab (portrait) is a **two-section hub** in a scroll body (tab bar pinned):
+- **§ Your duels (Compete)** — weekly-count meter; a **"Challenge a rival"** CTA (→ `find_duel_opponents` → pick → `create_duel`); then your **active-duel cards** with contextual actions: *challenged you* → **Decline/Accept** (`respond_to_duel`), *accepted* → **Upload your form** (`submit_duel_video`, with the upload-deadline countdown), *live* → **● LIVE** (community voting). Each card shows the opponent on a mini badge-color avatar.
+- **§ Vote queue** — search + queue cards + "enter the ring" (the voting side, `duel_vote_queue`).
+- **Sudden-death CTA banner** pins at top when a votable duel is in overtime. Tapping a queued duel **rotates into an immersive landscape "ring"** (Arena-only landscape) to watch + vote; exiting returns to portrait. Videos are **16:9, side by side, full width**. Implement with `expo-screen-orientation`: lock portrait globally, allow/force landscape only while the ring is mounted (`unlockAsync`/`lockAsync(LANDSCAPE)` on mount, restore `PORTRAIT_UP` on unmount). Anchor: `scratchpad/arena-mockup.html`.
 
 ### 2a. Vote queue → Tale of the Path → the ring (the Arena)
 Portrait queue = **a search field + a scrollable list** of duel cards. Tap a card → rotate to landscape.
@@ -186,7 +189,7 @@ type Notif = { id:string; type:string; title:string; body:string|null;
 ### 8a. Dueling reveal — **after EVERY duel** (frequent)
 Triggered when a duel resolves (`duel_result` notification / on opening a just-completed duel). This is the **tally unveiling** — the whole duel the tally was hidden, now it's revealed. Beats:
 1. **The face-off — a UFC "Tale of the Tape"** (ref image; dojo-luxe, not fire). Each competitor's **profile photo (or silhouette fallback) slams in from their side on a spotlight of their equipped-badge color**, with the **badge crest as a faint watermark** behind them; fight-promo names (small first / big last); the **VS pops** with a flash + shake; then a **stat table** — Team · Style · Rank · Duel Wins · Win Streak · Rating (left value │ gold label │ right value, alternating rows). **No reveal button — Next advances.** Whoosh on each slam, gong on the VS.
-2. **Result** — Win (crown + gold burst) / Deadlock (both glow) / Loss (gentle, effort-framed — never a harsh "you lost").
+2. **Result** — Win (crown + gold burst) / Deadlock (both glow) / **Loss (finalized, growth-framed):** shows *your* card (not the winner's) topped with a **jade growth emblem** (rising ↑, not a crown), headline **"Well fought."**, copy *"[Opponent] took this round — but every duel sharpens your edge."* No "you lost." A **warm, hopeful audio cue** (soft rising bells + flute — no gong/drum/brass). The loss tally stays honest but is framed by **"N competitors backed you."** Onward CTA: **"Improve your submission & compete again!"** + a **"Watch the winning form"** button (learn from the winner). Rewards still held to the monthly reveal.
 3. **Tally revealed** — vote split bar + counts + "**N competitors backed you**".
 4. **Onward — ALWAYS invite re-entry** (locked copy, outcome-aware):
    - **Win:** "Momentum. The arena felt that one." → CTA **"Enter again — keep your streak alive"**
@@ -222,14 +225,14 @@ type Reveal = { period:string; rating_at_reveal:number; seen:boolean;
 | # | Gap | Fix |
 |---|-----|-----|
 | G1 | Equip-a-frame | `competitors.equipped_badge_code` column + `set_equipped_frame(code)` RPC (verify earned) |
-| G2 | Journal | `journal_entries` table + own-only RLS + insert/list RPCs |
-| G3 | Per-duel reveal (§8a) | `duel_reveal(duel_id)` RPC → `{result, your_votes, their_votes, backers, message}` + **both competitors' Tale-of-the-Tape**: name, team/school, style, rank, duel_wins, win_streak, rating, equipped badge (frame color/crest), `profile_photo_url` |
-| G9 | Profile photo | `competitors.profile_photo_url` (uploaded bust shot; storage bucket + upload flow). Powers the face-off portrait (silhouette fallback when null) and avatars. Return it from `duel_vote_queue`, `duel_reveal`, leaderboard |
+| G2 | Journal | `journal_entries` table **EXISTS** — verify own-only RLS + add insert/list RPCs |
+| G3 | ✅ DONE — Per-duel reveal (§8a) | `duel_faceoff(duel)` (both `nmao.competitor_card` cards + meta, no tally — pre-vote safe) + `duel_reveal(duel)` (adds tally/result/backers, hidden until close). Cards carry name/school/rank/rating/wins/streak/frame/`profile_photo_url`. Migration `20260816010000` |
+| G9 | ✅ DONE — Profile photo | `competitors.profile_photo_url` + public `profile-photos` bucket; returned by `competitor_card`/`duel_faceoff`. Migration `20260816000000` (upload flow app-side) |
 | G4 | Expo push delivery | `push_tokens` table + register RPC + EF that fans out new `notifications` |
 | G5 | ✅ DONE — Queue frame data | `duel_vote_queue` returns `*_frame_code/_rarity/_name/_desc` + `p_search` (migrations `20260815000000`, `20260815010000`) |
 | G6 | ✅ DONE — Mark-badges-seen | `mark_badges_seen(competitor?)` + `set_equipped_frame` (migration `20260815000000`) |
-| G7 | Monthly medals (§8b) | `run_monthly_reveal` must assemble `medals[]` (tournament placements for the period) into the payload, not just badges |
-| G8 | Earned-action detail (§8b) | Store/compose each award's earning context → payload `badges[].earned_action` + `medals[].earned_action` (the concrete occurrence, shown under each collectible) |
+| G7 | ✅ DONE — Monthly medals (§8b) | `run_monthly_reveal` assembles `medals[]` from the `medals` table (`{tier,place,event}`) for the period. Migration `20260816020000` |
+| G8 | ✅ DONE (column) — Earned-action detail (§8b) | `badge_awards.context` added + surfaced as `badges[].earned_action` (+`description`) in the monthly payload. Migrations `20260816000000`/`20260816020000`. Award fns populate `context` going forward |
 
 G1/G5/G6 (Arena frames) — ✅ done. G2/G3/G4/G7 are later-phase; G3 + G7 gate the two reveals. Plus a player-facing copy pass on `badges.description` (spawned task).
 
@@ -237,8 +240,8 @@ G1/G5/G6 (Arena frames) — ✅ done. G2/G3/G4/G7 are later-phase; G3 + G7 gate 
 
 ## 10. Build sequence (recommended)
 
-1. **Shell + tokens + `<Frame>` primitive** — tab bar, header/bell, design tokens, the reusable rarity-glow Frame. (Visual foundation; matches anchor.)
-2. **Duel tab / Arena** — queue read, tap-to-play + 15s gate, cinematic vote, active-duels strip, sudden-death banner. *(The hero — get it perfect. Needs G1/G5/G6.)*
+1. ✅ **Shell + tokens + primitives** — DONE. `packages/design-tokens` extended (`rarityStops`/`rarityBase`/`medalMetal`); `app/components/{Frame,Medal,Coin,Header}.tsx`; `app/App.tsx` 5-tab shell (opens on Duel; Compete + Profile=Home preserved); stub screens `app/screens/{Duel,Achievements,Leaderboard}.tsx`. See `app/DUELING-FOUNDATION.md`. NOTE: `npx expo install expo-screen-orientation` before the ring.
+2. ✅ **Duel tab / Arena** — DONE (core loop). `app/lib/duel.ts` (all RPCs), `app/screens/Duel.tsx` (hub: week meter + Compete challenge/respond/upload + Vote queue+search) → `app/screens/Arena.tsx` (ring in a Modal: guarded landscape, framed forms, 15s watch-gate, cinematic vote via haptics+flash, hidden tally). `uploadDuelVideo`→`entry-videos` (confirmed). REMAINING: `npx expo install expo-video` (real playback → feed position to `setWatched`; poster seam in place) + `expo-screen-orientation` (rotate; guarded); Skia particle burst on vote; crest tooltip; sudden-death banner.
 3. **Alerts + realtime notifications** — bell, list, mark-read, deep-link routing.
 4. **Reveals** — (a) the per-duel dueling reveal (tally unveil + re-entry, needs G3) and (b) the monthly badge+medal ceremony (needs G7). Shared mystical/score/haptic engine.
 5. **Achievements vault** — badge grid, equip frame, locked/goal states.
