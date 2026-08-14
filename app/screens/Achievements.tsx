@@ -49,7 +49,7 @@ export default function Achievements() {
         <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.3, marginTop: 4 }}>{filled} / 8 rounds · Season 1 · Sapphire</Text>
       </View>
 
-      <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>{earned} of {vault.badges.length} badges earned. Tap an earned badge to wear its frame.</Text>
+      <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>{earned === 0 ? "Badges stay hidden until earned — compete to reveal them." : `${earned} badge${earned === 1 ? "" : "s"} earned. Tap one to wear its frame.`}</Text>
 
       {vault.medals.length ? (
         <>
@@ -65,9 +65,11 @@ export default function Achievements() {
         </>
       ) : null}
 
-      <Label t="Badge vault" />
-      <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-        {vault.badges.map((b) => {
+      {earned > 0 ? (
+        <>
+          <Label t="Badge vault" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center" }}>
+            {vault.badges.filter((b) => b.earned).map((b) => {
           const equipped = vault.equipped === b.code;
           return (
             <TouchableOpacity key={b.code} onPress={() => equip(b)} activeOpacity={b.earned ? 0.7 : 1} style={{ width: "25%", alignItems: "center", marginBottom: 14, opacity: b.earned ? 1 : 0.4 }}>
@@ -84,7 +86,9 @@ export default function Achievements() {
             </TouchableOpacity>
           );
         })}
-      </View>
+          </View>
+        </>
+      ) : null}
     </ScrollView>
   );
 }
