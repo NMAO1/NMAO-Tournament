@@ -80,10 +80,13 @@ export default function Leaderboard() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               {SORTS.map((s) => <Chip key={s.key} label={s.label} active={sort === s.key} color={hues.gold.base} filled spectrum onPress={() => setSort(s.key)} />)}
             </ScrollView>
-            {rows == null ? <Loading /> : rows.length === 0 ? <Empty /> : rows.map((r, i) => {
-              const raw = sortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
-              return <LbRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={sortDef.unit} sub={sortDef.sub(r)} onPress={() => setSelD(r)} />;
-            })}
+            {rows == null ? <Loading /> : rows.length === 0 ? <Empty /> : (() => {
+              const showMove = scope === "global" && division === "all" && sort === "rating";
+              return rows.map((r, i) => {
+                const raw = sortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
+                return <LbRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={sortDef.unit} sub={sortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelD(r)} />;
+              });
+            })()}
           </>
         ) : board === "tournament" ? (
           <>
@@ -92,10 +95,13 @@ export default function Leaderboard() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               {TSORTS.map((s) => <Chip key={s.key} label={s.label} active={tsort === s.key} color={hues.gold.base} filled spectrum onPress={() => setTsort(s.key)} />)}
             </ScrollView>
-            {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : trows.map((r, i) => {
-              const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
-              return <TourRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={tsortDef.unit} sub={tsortDef.sub(r)} onPress={() => setSelT(r)} />;
-            })}
+            {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : (() => {
+              const showMove = division === "all" && tsort === "points";
+              return trows.map((r, i) => {
+                const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
+                return <TourRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={tsortDef.unit} sub={tsortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelT(r)} />;
+              });
+            })()}
           </>
         ) : (
           vote == null ? <Loading /> : vote.length === 0 ? <Empty /> : vote.map((r) => <VoterRowView key={r.rank} r={r} />)
@@ -162,11 +168,20 @@ function Avatar({ name, belt, size = 40, glow }: { name: string; belt: string | 
     </View>
   );
 }
-function RowShell({ rank, name, belt, school, value, unit, sub, you, onPress }: { rank: number; name: string; belt: string | null; school: string | null; value: string; unit: string; sub: string; you: boolean; onPress: () => void }) {
+function MoveTag({ move }: { move: number | "new" }) {
+  if (move === "new") return <Text style={{ color: hues.amethyst.hi, fontSize: 8, fontWeight: "800", marginTop: 2 }}>NEW</Text>;
+  if (move === 0) return <Text style={{ color: neutrals.muted2, fontSize: 10, marginTop: 1 }}>–</Text>;
+  const up = move > 0;
+  return <Text style={{ color: up ? "#37d67a" : "#ff5d6c", fontSize: 9, fontWeight: "800", marginTop: 1, fontVariant: ["tabular-nums"] }}>{up ? "▲" : "▼"}{Math.abs(move)}</Text>;
+}
+function RowShell({ rank, name, belt, school, value, unit, sub, you, move, onPress }: { rank: number; name: string; belt: string | null; school: string | null; value: string; unit: string; sub: string; you: boolean; move?: number | "new" | null; onPress: () => void }) {
   const top = rank <= 3;
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, paddingHorizontal: 13, marginBottom: 9, borderRadius: 16, backgroundColor: you ? "rgba(230,185,63,0.09)" : neutrals.surface, borderWidth: 1, borderColor: you ? hues.gold.shadow : neutrals.border }}>
-      <Text style={{ color: top ? hues.gold.hi : neutrals.muted2, fontWeight: "800", width: 26, textAlign: "center", fontVariant: ["tabular-nums"], fontSize: 15 }}>{rank}</Text>
+      <View style={{ width: 26, alignItems: "center" }}>
+        <Text style={{ color: top ? hues.gold.hi : neutrals.muted2, fontWeight: "800", textAlign: "center", fontVariant: ["tabular-nums"], fontSize: 15 }}>{rank}</Text>
+        {move != null ? <MoveTag move={move} /> : null}
+      </View>
       <View style={{ marginHorizontal: 10 }}><Avatar name={name} belt={belt} glow={top} /></View>
       <View style={{ flex: 1 }}>
         <Text numberOfLines={1} style={{ color: neutrals.text, fontWeight: you ? "800" : "600", fontSize: 14 }}>{name}{rank === 1 ? "  👑" : ""}{you ? "  · YOU" : ""}</Text>
@@ -179,11 +194,18 @@ function RowShell({ rank, name, belt, school, value, unit, sub, you, onPress }: 
     </TouchableOpacity>
   );
 }
-function LbRowView({ rank, row, value, unit, sub, onPress }: { rank: number; row: LbRow; value: string; unit: string; sub: string; onPress: () => void }) {
-  return <RowShell rank={rank} name={row.name} belt={row.belt} school={row.school} value={value} unit={unit} sub={sub} you={row.you} onPress={onPress} />;
+function LbRowView({ rank, row, value, unit, sub, move, onPress }: { rank: number; row: LbRow; value: string; unit: string; sub: string; move?: number | "new" | null; onPress: () => void }) {
+  return <RowShell rank={rank} name={row.name} belt={row.belt} school={row.school} value={value} unit={unit} sub={sub} you={row.you} move={move} onPress={onPress} />;
 }
-function TourRowView({ rank, row, value, unit, sub, onPress }: { rank: number; row: TourRow; value: string; unit: string; sub: string; onPress: () => void }) {
-  return <RowShell rank={rank} name={row.name} belt={row.belt} school={row.school} value={value} unit={unit} sub={sub} you={row.you} onPress={onPress} />;
+function TourRowView({ rank, row, value, unit, sub, move, onPress }: { rank: number; row: TourRow; value: string; unit: string; sub: string; move?: number | "new" | null; onPress: () => void }) {
+  return <RowShell rank={rank} name={row.name} belt={row.belt} school={row.school} value={value} unit={unit} sub={sub} you={row.you} move={move} onPress={onPress} />;
+}
+// Movement is meaningful only on the canonical global, all-division view sorted
+// by the default key — there, display rank === the snapshotted canonical rank.
+function moveOf(prevRank: number | null, displayRank: number, show: boolean): number | "new" | null {
+  if (!show) return null;
+  if (prevRank == null) return "new";
+  return prevRank - displayRank; // + = climbed, - = dropped
 }
 function VoterRowView({ r }: { r: VoterRow }) {
   return (
