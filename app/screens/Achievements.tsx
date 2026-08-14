@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
-import { neutrals, hues, type MedalType } from "@nmao/design-tokens";
+import { neutrals, hues, rarityBase, type MedalType } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
@@ -70,12 +70,14 @@ export default function Achievements() {
         {vault.badges.map((b) => {
           const equipped = vault.equipped === b.code;
           return (
-            <TouchableOpacity key={b.code} onPress={() => equip(b)} activeOpacity={b.earned ? 0.7 : 1} style={{ width: "25%", alignItems: "center", marginBottom: 16, opacity: b.earned ? 1 : 0.32 }}>
-              <Frame rarity={b.rarity} size="mini" radius={30} glow={b.earned}>
-                <View style={{ width: 50, height: 50, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
-                  <Text style={{ color: b.earned ? "#EFC24E" : neutrals.muted2, fontSize: 18 }}>◆</Text>
-                </View>
-              </Frame>
+            <TouchableOpacity key={b.code} onPress={() => equip(b)} activeOpacity={b.earned ? 0.7 : 1} style={{ width: "25%", alignItems: "center", marginBottom: 14, opacity: b.earned ? 1 : 0.4 }}>
+              <View style={{ padding: 7, borderRadius: 16, backgroundColor: equipped ? "rgba(230,185,63,0.08)" : "#141216", borderWidth: 1, borderColor: equipped ? hues.gold.base : b.earned ? rarityBase(b.rarity) + "66" : neutrals.border }}>
+                <Frame rarity={b.rarity} size="mini" radius={30} glow={b.earned}>
+                  <View style={{ width: 50, height: 50, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ color: b.earned ? "#EFC24E" : neutrals.muted2, fontSize: 18 }}>◆</Text>
+                  </View>
+                </Frame>
+              </View>
               <Text style={{ color: equipped ? hues.gold.hi : neutrals.muted2, fontSize: 8, marginTop: 6, textAlign: "center", fontWeight: equipped ? "800" : "400" }} numberOfLines={2}>
                 {equipped ? "★ " : ""}{b.name}
               </Text>
