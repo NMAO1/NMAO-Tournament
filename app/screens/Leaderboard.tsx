@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
+import { neutrals, hues, spectrumStops, type MedalType } from "@nmao/design-tokens";
+import { Medal } from "../components/Medal";
 import { myCompetitors } from "../lib/competitors";
 import { standings, voterBoard, tournamentBoard, type Scope, type Division, type LbRow, type VoterRow, type TourRow } from "../lib/leaderboard";
 
@@ -219,9 +220,49 @@ function VoterRowView({ r }: { r: VoterRow }) {
     </View>
   );
 }
-function CardShell({ name, belt, school, rank, headLabel, headValue, headUnit, bento, game, onClose }: {
+function Legend({ c, t }: { c: string; t: string }) {
+  return <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}><View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: c }} /><Text style={{ color: neutrals.muted2, fontSize: 11, fontWeight: "700" }}>{t}</Text></View>;
+}
+// Honest win/loss viz from the aggregate record (no per-duel series to draw).
+function RatioBar({ wins, losses, draws }: { wins: number; losses: number; draws: number }) {
+  const total = Math.max(1, wins + losses + draws);
+  const seg = (n: number, c: string) => (n > 0 ? <View style={{ flex: n, backgroundColor: c }} /> : null);
+  return (
+    <View style={{ paddingHorizontal: 20, marginTop: 18 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 7 }}>
+        <Text style={{ color: neutrals.muted, fontSize: 10, letterSpacing: 2, fontWeight: "800" }}>WIN / LOSS</Text>
+        <Text style={{ color: hues.gold.hi, fontSize: 12, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{Math.round((100 * wins) / total)}% win rate</Text>
+      </View>
+      <View style={{ flexDirection: "row", height: 10, borderRadius: 5, overflow: "hidden", backgroundColor: "#141416" }}>
+        {seg(wins, "#37d67a")}{seg(draws, "#5a5a60")}{seg(losses, "#ff5d6c")}
+      </View>
+      <View style={{ flexDirection: "row", gap: 16, marginTop: 9 }}>
+        <Legend c="#37d67a" t={`${wins} W`} /><Legend c="#ff5d6c" t={`${losses} L`} /><Legend c="#5a5a60" t={`${draws} D`} />
+      </View>
+    </View>
+  );
+}
+// Visual medal case built from the earned gold/silver/bronze counts.
+function MedalStrip({ gold, silver, bronze }: { gold: number; silver: number; bronze: number }) {
+  const items: MedalType[] = [...Array(gold).fill("gold"), ...Array(silver).fill("silver"), ...Array(bronze).fill("bronze")];
+  if (items.length === 0) return null;
+  const shown = items.slice(0, 16);
+  return (
+    <View style={{ paddingHorizontal: 20, marginTop: 18 }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 10 }}>
+        <Text style={{ color: neutrals.muted, fontSize: 10, letterSpacing: 2, fontWeight: "800" }}>MEDAL CASE</Text>
+        {items.length > shown.length ? <Text style={{ color: neutrals.muted2, fontSize: 11, fontWeight: "700" }}>+{items.length - shown.length} more</Text> : null}
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 3 }}>
+        {shown.map((t, i) => <Medal key={i} type={t} size={34} ribbon={false} />)}
+      </View>
+    </View>
+  );
+}
+function CardShell({ name, belt, school, rank, headLabel, headValue, headUnit, bento, game, ratioBar, medalStrip, onClose }: {
   name: string; belt: string | null; school: string | null; rank: number; headLabel: string; headValue: string; headUnit: string;
-  bento: { k: string; v: number | string; acc: string }[]; game: { tag: string; name: string; v: string }[]; onClose: () => void;
+  bento: { k: string; v: number | string; acc: string }[]; game: { tag: string; name: string; v: string }[];
+  ratioBar?: { wins: number; losses: number; draws: number }; medalStrip?: { gold: number; silver: number; bronze: number }; onClose: () => void;
 }) {
   return (
     <TouchableOpacity activeOpacity={1} style={{ backgroundColor: "#161618", borderTopLeftRadius: 26, borderTopRightRadius: 26, borderTopWidth: 1, borderColor: "#2a2a2e", paddingBottom: 30 }}>
@@ -233,6 +274,8 @@ function CardShell({ name, belt, school, rank, headLabel, headValue, headUnit, b
         <Text style={{ color: neutrals.muted2, fontSize: 9.5, letterSpacing: 2, fontWeight: "800", marginTop: 16 }}>{headLabel}</Text>
         <Text style={{ color: hues.gold.hi, fontSize: 26, fontWeight: "800", marginTop: 3, fontVariant: ["tabular-nums"] }}>{headValue} <Text style={{ color: neutrals.muted, fontSize: 12 }}>{headUnit}</Text></Text>
       </View>
+      {ratioBar ? <RatioBar {...ratioBar} /> : null}
+      {medalStrip ? <MedalStrip {...medalStrip} /> : null}
       <View style={{ flexDirection: "row", gap: 9, paddingHorizontal: 20, marginTop: 16 }}>
         {bento.map((b) => (
           <View key={b.k} style={{ flex: 1, backgroundColor: "#141416", borderWidth: 1, borderColor: neutrals.border, borderRadius: 14, paddingVertical: 12, alignItems: "center", overflow: "hidden" }}>
@@ -261,6 +304,7 @@ function CardShell({ name, belt, school, rank, headLabel, headValue, headUnit, b
 }
 function PlayerCard({ row, onClose }: { row: LbRow; onClose: () => void }) {
   return <CardShell name={row.name} belt={row.belt} school={row.school} rank={row.rank} headLabel="DUEL RATING" headValue={row.rating.toLocaleString()} headUnit="RTG"
+    ratioBar={{ wins: row.wins, losses: row.losses, draws: row.draws }}
     bento={[{ k: "Duels", v: row.duels, acc: hues.sapphire.base }, { k: "Medals", v: row.medals, acc: hues.gold.base }, { k: "Best Streak", v: row.bestStreak, acc: hues.amethyst.base }]}
     game={[
       { tag: "ALL TIME", name: "Winning percentage", v: `${row.winPct}%` },
@@ -272,6 +316,7 @@ function PlayerCard({ row, onClose }: { row: LbRow; onClose: () => void }) {
 }
 function TourCard({ row, onClose }: { row: TourRow; onClose: () => void }) {
   return <CardShell name={row.name} belt={row.belt} school={row.school} rank={row.rank} headLabel="TOURNAMENT POINTS" headValue={String(row.points)} headUnit="pts"
+    medalStrip={{ gold: row.gold, silver: row.silver, bronze: row.bronze }}
     bento={[{ k: "🥇 Gold", v: row.gold, acc: hues.gold.base }, { k: "🥈 Silver", v: row.silver, acc: "#C6CDD4" }, { k: "🥉 Bronze", v: row.bronze, acc: "#C57F35" }]}
     game={[
       { tag: "SEASON", name: "Total medals", v: `${row.medals}` },
