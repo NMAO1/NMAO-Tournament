@@ -193,42 +193,42 @@ function Side({
   const first = card.firstName;
   return (
     <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}>
-      {/* the frame fills the whole side, edge to edge */}
+      {/* the frame fills the whole side, edge to edge. The vote CTA lives INSIDE
+          the frame's clipped area, so the border band wraps over/around it and
+          hides any seam — the border is literally in front of the button. */}
       <Frame rarity={rarity} size="ring" fill style={{ flex: 1 }}>
-        <TouchableOpacity activeOpacity={0.95} onPress={onPlay} style={{ flex: 1 }}>
-          <View style={{ flex: 1, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
-            {hasVideo ? (
-              <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
-            ) : null}
-            {/* quiet nameplate at the TOP so the bottom is free for the vote CTA */}
-            <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.7)", paddingVertical: 5, alignItems: "center" }}>
-              <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }} numberOfLines={1}>{card.name}</Text>
-              {card.school ? <Text style={{ color: neutrals.muted2, fontSize: 9 }} numberOfLines={1}>{card.school}</Text> : null}
+        <View style={{ flex: 1 }}>
+          <TouchableOpacity activeOpacity={0.95} onPress={onPlay} style={{ flex: 1 }}>
+            <View style={{ flex: 1, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
+              {hasVideo ? (
+                <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
+              ) : null}
+              {/* quiet nameplate at the TOP so the bottom is free for the vote CTA */}
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.7)", paddingVertical: 5, alignItems: "center" }}>
+                <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }} numberOfLines={1}>{card.name}</Text>
+                {card.school ? <Text style={{ color: neutrals.muted2, fontSize: 9 }} numberOfLines={1}>{card.school}</Text> : null}
+              </View>
+              <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
+                <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
+              </View>
             </View>
-            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
-              <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
-            </View>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+          {/* vote CTA — same badge gradient, sits flush on the inner bottom edge;
+              the frame's border band (a separate, outer layer) draws over its
+              lower/side edges so there is no visible seam. */}
+          <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
+            <LinearGradient
+              colors={rarityStops(rarity)}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 15, paddingBottom: 15, alignItems: "center", opacity: unlocked || voted ? 1 : 0.62 }}
+            >
+              <Text style={{ color: "#0c0a06", fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
+                {voted === choice ? "✓ Voted" : `Vote ${first}`}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </Frame>
-      {/* vote CTA — the SAME badge-border gradient extended full-bleed so it
-          BECOMES the bottom band of the border (no seam, no inner edge). It just
-          curves up into the video with rounded top corners. Dims until unlocked. */}
-      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-        <LinearGradient
-          colors={rarityStops(rarity)}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={{
-            borderTopLeftRadius: 22, borderTopRightRadius: 22,
-            paddingTop: 15, paddingBottom: 20, alignItems: "center",
-            opacity: unlocked || voted ? 1 : 0.62,
-          }}
-        >
-          <Text style={{ color: "#0c0a06", fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
-            {voted === choice ? "✓ Voted" : `Vote ${first}`}
-          </Text>
-        </LinearGradient>
-      </TouchableOpacity>
     </View>
   );
 }
