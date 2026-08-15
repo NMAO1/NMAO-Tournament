@@ -1,17 +1,19 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues } from "@nmao/design-tokens";
-import { BadgeFrame, type FrameRarity } from "../components/BadgeFrame";
+import { BadgeFrame, type FrameRarity, type Motif, type GemKey } from "../components/BadgeFrame";
 
-// Frame Lab — a live on-device preview of the rarity → effect ladder, so we can
-// see and tune each rung before mapping all 100 badges. Each tier wraps a
-// sample "video" so it reads like the Arena.
-const TIERS: { rarity: FrameRarity; label: string; desc: string }[] = [
+// Frame Lab — a live on-device preview of the rarity → effect ladder plus the
+// legendary signature motifs, so we can see and tune each before mapping all
+// 100 badges. Each tile wraps a sample "video" so it reads like the Arena.
+const TIERS: { rarity: FrameRarity; motif?: Motif; gem?: GemKey; label: string; desc: string }[] = [
   { rarity: "common", label: "Common", desc: "Flat bronze · no motion" },
   { rarity: "uncommon", label: "Uncommon", desc: "Brushed silver · soft glow" },
   { rarity: "rare", label: "Rare", desc: "Gold · shimmer sweep + glow pulse" },
   { rarity: "epic", label: "Epic", desc: "Spectrum · rotating shine + sparkles" },
   { rarity: "legendary", label: "Legendary", desc: "Radiant aura · rotating gold + embers" },
+  { rarity: "legendary", motif: "dragon-coil", label: "Gold Medallion", desc: "Legendary motif · dragon-coil + entrance" },
+  { rarity: "legendary", motif: "crowned-gem", gem: "sapphire", label: "Season Champion", desc: "Legendary motif · crowned gem + entrance" },
 ];
 
 export default function FrameLab({ onBack }: { onBack: () => void }) {
@@ -28,8 +30,8 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         {TIERS.map((t) => (
-          <View key={t.rarity} style={{ width: "48%", alignItems: "center", marginBottom: 24 }}>
-            <BadgeFrame rarity={t.rarity} w={W} h={H} radius={18}>
+          <View key={t.label} style={{ width: "48%", alignItems: "center", marginBottom: 24 }}>
+            <BadgeFrame rarity={t.rarity} motif={t.motif} gem={t.gem} w={W} h={H} radius={18}>
               <Sample label={t.label} />
             </BadgeFrame>
             <Text style={{ color: hues.gold.hi, fontSize: 13, fontWeight: "800", letterSpacing: 0.5, marginTop: 12 }}>{t.label}</Text>
