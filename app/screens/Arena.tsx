@@ -143,7 +143,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <TouchableOpacity onPress={() => onClose(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Text style={{ color: neutrals.text, fontSize: 12, letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 6 }}>‹  EXIT RING</Text>
         </TouchableOpacity>
-        <Text style={{ color: neutrals.muted, fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", textShadowColor: "#000", textShadowRadius: 6 }}>
+        <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", textShadowColor: "#000", textShadowRadius: 8, textShadowOffset: { width: 0, height: 1 } }}>
           S1 · Round VIII · {evName(face.type)}
         </Text>
         <View style={{ width: 64 }} />
@@ -203,30 +203,29 @@ function Side({
               {hasVideo ? (
                 <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
               ) : null}
-              {/* quiet nameplate at the TOP so the bottom is free for the vote CTA */}
-              <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.7)", paddingVertical: 5, alignItems: "center" }}>
-                <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }} numberOfLines={1}>{card.name}</Text>
-                {card.school ? <Text style={{ color: neutrals.muted2, fontSize: 9 }} numberOfLines={1}>{card.school}</Text> : null}
+              {/* nameplate at the TOP so the bottom is free for the vote CTA */}
+              <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.72)", paddingVertical: 6, alignItems: "center" }}>
+                <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
+                {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
               </View>
               <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
                 <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
               </View>
             </View>
           </TouchableOpacity>
-          {/* vote CTA — same badge gradient, sits flush on the inner bottom edge;
-              the frame's border band (a separate, outer layer) draws over its
-              lower/side edges so there is no visible seam. */}
-          <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
-            <LinearGradient
-              colors={rarityStops(rarity)}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={{ borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 15, paddingBottom: 15, alignItems: "center", opacity: unlocked || voted ? 1 : 0.62 }}
-            >
-              <Text style={{ color: "#0c0a06", fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
-                {voted === choice ? "✓ Voted" : `Vote ${first}`}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          {/* vote CTA — a compact, squared button with the customizable badge
+              border wrapped directly around it (its own complete border → no seam). */}
+          <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 26, alignItems: "center" }}>
+            <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted}>
+              <Frame rarity={rarity} band={5} radius={7} style={{ opacity: unlocked || voted ? 1 : 0.5 }}>
+                <View style={{ backgroundColor: filled ? cta.base : "#100d07", paddingVertical: 11, paddingHorizontal: 26, alignItems: "center" }}>
+                  <Text style={{ color: filled ? "#0c0a06" : cta.hi, fontWeight: "900", fontSize: 14, letterSpacing: 1, textTransform: "uppercase" }}>
+                    {voted === choice ? "✓ Voted" : `Vote ${first}`}
+                  </Text>
+                </View>
+              </Frame>
+            </TouchableOpacity>
+          </View>
         </View>
       </Frame>
     </View>
