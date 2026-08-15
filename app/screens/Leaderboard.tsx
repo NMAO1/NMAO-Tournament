@@ -4,15 +4,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, type MedalType } from "@nmao/design-tokens";
 import { Medal } from "../components/Medal";
 import { myCompetitors } from "../lib/competitors";
-import { standings, voterBoard, tournamentBoard, schoolBoard, bracketOptions, eventOptions, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow, type SchoolRow, type BracketOption } from "../lib/leaderboard";
+import { standings, voterBoard, tournamentBoard, schoolBoard, bracketOptions, eventOptions, rankOptions, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow, type SchoolRow, type BracketOption } from "../lib/leaderboard";
 
 type Board = "tournament" | "duelists" | "voters" | "schools";
-const DIVS: { key: Division; label: string; hue: string }[] = [
-  { key: "all", label: "All", hue: hues.gold.base },
-  { key: "beginner", label: "Beginner", hue: hues.sapphire.base },
-  { key: "intermediate", label: "Intermediate", hue: hues.amethyst.base },
-  { key: "advanced", label: "Advanced", hue: hues.ruby.base },
-];
+// Per-tier hue cycle for the data-driven division chips (rank tiers from the scheme).
+const DIV_HUES = [hues.sapphire.base, hues.amethyst.base, hues.ruby.base, hues.gold.base];
+type Div = { key: Division; label: string; hue: string };
 const SCOPES: { key: Scope; label: string }[] = [
   { key: "bracket", label: "My Bracket" },
   { key: "school", label: "My School" },
@@ -46,6 +43,7 @@ export default function Leaderboard() {
   const [division, setDivision] = useState<Division>("all");
   const [bracket, setBracket] = useState<string>("all");
   const [brackets, setBrackets] = useState<BracketOption[]>([]);
+  const [divs, setDivs] = useState<Div[]>([{ key: "all", label: "All", hue: hues.gold.base }]);
   const [event, setEvent] = useState<string>("all");
   const [events, setEvents] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("rating");
@@ -61,6 +59,7 @@ export default function Leaderboard() {
   useEffect(() => { myCompetitors().then((c) => setMe(c[0]?.id ?? null)); }, []);
   useEffect(() => { bracketOptions().then(setBrackets); }, []);
   useEffect(() => { eventOptions().then(setEvents); }, []);
+  useEffect(() => { rankOptions().then((rs) => setDivs([{ key: "all", label: "All", hue: hues.gold.base }, ...rs.map((r, i) => ({ key: r.code, label: r.label, hue: DIV_HUES[i % DIV_HUES.length] }))])); }, []);
   useEffect(() => { if (me && board === "duelists") { setDuel(null); standings(me, scope, division, bracket).then(setDuel); } }, [me, scope, division, bracket, board]);
   useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division, tscope, bracket, event).then(setTour); } }, [me, division, tscope, bracket, event, board]);
   useEffect(() => { if (me && board === "voters") { setVote(null); voterBoard(me).then(setVote); } }, [me, board]);
@@ -87,7 +86,7 @@ export default function Leaderboard() {
               <Chip label="Season" active={tscope === "season"} color={hues.gold.hi} spectrum onPress={() => setTscope("season")} />
               <Chip label="All-time" active={tscope === "all"} color={hues.gold.hi} spectrum onPress={() => setTscope("all")} />
             </View>
-            <DivisionRow division={division} setDivision={setDivision} />
+            <DivisionRow divs={divs} division={division} setDivision={setDivision} />
             <BracketRow brackets={brackets} bracket={bracket} setBracket={setBracket} />
             <EventDropdown events={events} event={event} setEvent={setEvent} />
             <Row2Label t="Sort" />
@@ -108,7 +107,7 @@ export default function Leaderboard() {
             <View style={{ flexDirection: "row", marginBottom: 10 }}>
               {SCOPES.map((s) => <Chip key={s.key} label={s.label} active={scope === s.key} color={hues.gold.hi} spectrum onPress={() => setScope(s.key)} />)}
             </View>
-            <DivisionRow division={division} setDivision={setDivision} />
+            <DivisionRow divs={divs} division={division} setDivision={setDivision} />
             <BracketRow brackets={brackets} bracket={bracket} setBracket={setBracket} />
             <Row2Label t="Sort" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
@@ -149,12 +148,12 @@ export default function Leaderboard() {
 
 const sheetScrim = { flex: 1, backgroundColor: "rgba(0,0,0,0.62)", justifyContent: "flex-end" as const };
 
-function DivisionRow({ division, setDivision }: { division: Division; setDivision: (d: Division) => void }) {
+function DivisionRow({ divs, division, setDivision }: { divs: Div[]; division: Division; setDivision: (d: Division) => void }) {
   return (
     <>
       <Row2Label t="Division" />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
-        {DIVS.map((d) => <Chip key={d.key} label={d.label} active={division === d.key} color={d.hue} filled spectrum onPress={() => setDivision(d.key)} />)}
+        {divs.map((d) => <Chip key={d.key} label={d.label} active={division === d.key} color={d.hue} filled spectrum onPress={() => setDivision(d.key)} />)}
       </ScrollView>
     </>
   );

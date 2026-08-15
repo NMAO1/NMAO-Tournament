@@ -1,7 +1,9 @@
 import { supabase } from "./supabase";
 
 export type Scope = "bracket" | "school" | "global";
-export type Division = "all" | "beginner" | "intermediate" | "advanced";
+// Division is a rank-tier code ('all' = every tier); the tier list is data-driven
+// via rankOptions() from the active scheme, so it is a plain string, not a union.
+export type Division = string;
 export type LbRow = {
   rank: number; competitorId: string; name: string; school: string | null; belt: string | null;
   rating: number; wins: number; losses: number; draws: number; streak: number; bestStreak: number;
@@ -49,6 +51,13 @@ export async function schoolBoard(scope: TScope = "season", bracket: string = "a
 export type BracketOption = { code: string; label: string };
 export async function bracketOptions(): Promise<BracketOption[]> {
   const { data } = await supabase.rpc("age_bracket_options");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).map((r) => ({ code: r.code, label: r.label }));
+}
+
+export type RankOption = { code: string; label: string };
+export async function rankOptions(): Promise<RankOption[]> {
+  const { data } = await supabase.rpc("rank_options");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((data ?? []) as any[]).map((r) => ({ code: r.code, label: r.label }));
 }
