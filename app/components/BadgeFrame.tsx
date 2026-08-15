@@ -15,7 +15,7 @@ import { useSharedValue, withTiming, useDerivedValue } from "react-native-reanim
 
 export type FrameRarity = "common" | "uncommon" | "rare" | "epic" | "legendary";
 export type Motif = "dragon-coil" | "crowned-gem";
-export type GemKey = "sapphire" | "amethyst" | "ruby" | "emerald" | "platinum";
+export type GemKey = "sapphire" | "amethyst" | "ruby" | "emerald" | "coral" | "onyx" | "rose" | "turquoise" | "peridot" | "platinum";
 
 const SPECTRUM = ["#ff3b30", "#ff9500", "#ffcc00", "#34c759", "#00c7be", "#007aff", "#5856d6", "#af52de", "#ff2d55", "#ff3b30"];
 const GOLD = ["#f6d878", "#c8962c", "#f6d878", "#8a6a1e", "#f6d878"];
@@ -27,6 +27,11 @@ const GEMS: Record<GemKey, { ring: string[]; light: string; base: string; dark: 
   amethyst: { ring: ["#e9d3ff", "#9a52de", "#5e2a9e", "#9a52de", "#e9d3ff"], light: "#f2e2ff", base: "#9a52de", dark: "#5e2a9e", spark: "#dcbcff" },
   ruby: { ring: ["#ffd0d6", "#e0264a", "#9e0f2c", "#e0264a", "#ffd0d6"], light: "#ffe1e6", base: "#e0264a", dark: "#9e0f2c", spark: "#ffc0cb" },
   emerald: { ring: ["#c8ffe0", "#12b76a", "#0a7a47", "#12b76a", "#c8ffe0"], light: "#e0fff0", base: "#12b76a", dark: "#0a7a47", spark: "#bcffd8" },
+  coral: { ring: ["#ffd9cf", "#ff7a5c", "#d84f36", "#ff7a5c", "#ffd9cf"], light: "#ffe6de", base: "#ff7a5c", dark: "#d84f36", spark: "#ffc8ba" },
+  onyx: { ring: ["#c9ced8", "#3a3e47", "#111319", "#3a3e47", "#c9ced8"], light: "#c9ced8", base: "#3a3e47", dark: "#111319", spark: "#dfe4ee" },
+  rose: { ring: ["#ffe0ee", "#ff5c9e", "#d81f6a", "#ff5c9e", "#ffe0ee"], light: "#ffe9f3", base: "#ff5c9e", dark: "#d81f6a", spark: "#ffc0da" },
+  turquoise: { ring: ["#c8fff5", "#1fc8c0", "#0a8a86", "#1fc8c0", "#c8fff5"], light: "#e0fffb", base: "#1fc8c0", dark: "#0a8a86", spark: "#bcfff5" },
+  peridot: { ring: ["#eaffc8", "#a8d820", "#6e9410", "#a8d820", "#eaffc8"], light: "#f2ffda", base: "#a8d820", dark: "#6e9410", spark: "#dcff9a" },
   platinum: { ring: ["#f4f6fa", "#c7cdd6", "#9aa2ad", "#c7cdd6", "#f4f6fa"], light: "#ffffff", base: "#c7cdd6", dark: "#8a929d", spark: "#ffffff" },
 };
 

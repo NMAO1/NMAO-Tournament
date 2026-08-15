@@ -39,9 +39,37 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
           </View>
         ))}
       </View>
+
+      <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginTop: 10, marginBottom: 4 }}>Season Champions</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 }}>
+        The crowned gem, one color per season won — the rarest set, chased across the decade.
+      </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
+        {SEASONS.map((s) => (
+          <View key={s.gem} style={{ width: "48%", alignItems: "center", marginBottom: 24 }}>
+            <BadgeFrame rarity="legendary" motif="crowned-gem" gem={s.gem} w={W} h={H} radius={18}>
+              <Sample label={s.name} />
+            </BadgeFrame>
+            <Text style={{ color: hues.gold.hi, fontSize: 13, fontWeight: "800", letterSpacing: 0.5, marginTop: 12 }}>{s.s} · {s.name}</Text>
+          </View>
+        ))}
+      </View>
     </ScrollView>
   );
 }
+
+const SEASONS: { s: string; name: string; gem: GemKey }[] = [
+  { s: "S1", name: "Sapphire", gem: "sapphire" },
+  { s: "S2", name: "Amethyst", gem: "amethyst" },
+  { s: "S3", name: "Ruby", gem: "ruby" },
+  { s: "S4", name: "Emerald", gem: "emerald" },
+  { s: "S5", name: "Coral", gem: "coral" },
+  { s: "S6", name: "Onyx", gem: "onyx" },
+  { s: "S7", name: "Rose", gem: "rose" },
+  { s: "S8", name: "Turquoise", gem: "turquoise" },
+  { s: "S9", name: "Peridot", gem: "peridot" },
+  { s: "S10", name: "Platinum", gem: "platinum" },
+];
 
 // A stand-in for the competitor video behind the frame.
 function Sample({ label }: { label: string }) {
