@@ -1,0 +1,106 @@
+code,name,category,rarity,levels,frame_upgrade,hidden,trigger,earn_rule,engine,build_hook,art
+first-step,First Step,First steps,common,,,,on_entry_submitted,Submit your very first entry.,n/a,,ready
+first-bow,First Bow,First steps,common,,,,on_onboarding_complete,Finish your profile and get guardian consent.,n/a,,ready
+first-reveal,First Reveal,First steps,common,,,,on_reveal_viewed,Open your results for the very first time.,n/a,,ready
+first-reflection,First Reflection,First steps,common,,,,on_journal_entry,Write your first journal reflection.,n/a,,ready
+first-medal,First Medal,First steps,uncommon,,,,on_medal_awarded,Earn your first medal of any placement.,n/a,,ready
+on-the-mat,On the Mat,Effort,rare,3/6/9,,,on_result_finalized,"Compete in 3, then 6, then 9 different rounds.",no engine,,ready
+nine-bows,Nine Bows,Effort,rare,,,,on_season_rollup,Compete in all nine season qualifiers.,no engine,,ready
+back-on-the-mat,Back on the Mat,Effort,uncommon,,,,on_entry_submitted,Enter a round after missing the one before.,no engine,,ready
+early-bird,Early Bird,Effort,uncommon,,,,on_entry_submitted,Enter within the first 48h after a window opens.,no engine,,ready
+deadline-warrior,Deadline Warrior,Effort,rare,3/5/10,,,on_entry_submitted,Submit 3/5/10 entries in the last six hours before a deadline.,no engine,,ready
+iron-will,Iron Will,Effort,rare,,,,on_result_finalized,Compete in six rounds in a row.,no engine,,ready
+perfect-attendance,Perfect Attendance,Effort,rare,1-10,yes,,on_season_rollup,"Enter every round in a season; level per perfect season, up to ten.",no engine,,ready
+rising-star,Rising Star,Growth,uncommon,1-10,yes,,on_result_finalized,"Beat your personal-best round score; level up each time, up to ten.",no engine,,ready
+new-heights,New Heights,Growth,uncommon,1-10,yes,,on_rating_updated,"Set a new personal-best rating; level up each time, up to ten.",no engine,,ready
+steady-climb,Steady Climb,Growth,rare,,,,on_result_finalized,Improve your score three rounds in a row.,no engine,,ready
+comeback,Comeback,Growth,uncommon,,,,on_result_finalized,Come back with a higher score after a lower round.,no engine,,ready
+full-circle,Full Circle,Growth,epic,,,,on_mastery_update,Fill every axis of your Mirror radar to 100%.,no engine,,ready
+precision,Precision (Technical),Mastery,rare,1/5/10/25/50,yes,,on_result_finalized,Score above 85 in Technical — new level at 1/5/10/25/50 rounds.,no engine,,ready
+kime,Kime (Power),Mastery,rare,1/5/10/25/50,yes,,on_result_finalized,Score above 85 in Power — new level at 1/5/10/25/50 rounds.,no engine,,ready
+rooted,Rooted (Balance),Mastery,rare,1/5/10/25/50,yes,,on_result_finalized,Score above 85 in Balance — new level at 1/5/10/25/50 rounds.,no engine,,ready
+flow,Flow (Timing),Mastery,rare,1/5/10/25/50,yes,,on_result_finalized,Score above 85 in Timing — new level at 1/5/10/25/50 rounds.,no engine,,ready
+spirit,Spirit (Presentation),Mastery,rare,1/5/10/25/50,yes,,on_result_finalized,Score above 85 in Presentation — new level at 1/5/10/25/50 rounds.,no engine,,ready
+innovator,Innovator (Difficulty),Mastery,rare,1/5/10/25/50,yes,,on_result_finalized,Score above 85 in Difficulty — new level at 1/5/10/25/50 rounds.,no engine,,ready
+grandmaster,Grandmaster,Mastery,legendary,,,,on_mastery_update,Reach gold in all six masteries.,no engine,,ready
+both-hands,Both Hands,Events,uncommon,,,,on_result_finalized,Compete in both forms and weapons events.,no engine,,ready
+open-mind,Open Mind,Events,uncommon,,,,on_entry_submitted,Enter your first Open event.,no engine,,ready
+traditionalist,Traditionalist,Events,rare,,,,on_season_rollup,Keep every entry in a season Traditional.,no engine,,ready
+weapon-master,Weapon Master,Events,rare,5/10/25/50,yes,,on_medal_awarded,Win gold medals in weapon events — new level at 5/10/25/50.,no engine,,ready
+style-explorer,Style Explorer,Events,uncommon,,,,on_entry_submitted,Compete in 5 Traditional and 5 Open events.,no engine,,ready
+well-rounded,Well-Rounded,Events,rare,,,,on_season_rollup,Compete in every event category in a single season.,no engine,,ready
+podium,Podium,Placement,uncommon,,,,on_medal_awarded,Finish in the top three.,no engine,,ready
+sweep,Sweep,Placement,epic,,,,on_result_finalized,Win gold in more than one event in the same round.,no engine,,ready
+undefeated,Undefeated,Placement,rare,5/10/25/50,yes,,on_result_finalized,Win first place in consecutive rounds — new level at 5/10/25/50.,no engine,,ready
+podium-season,Podium Season,Placement,epic,,,,on_season_rollup,Earn a medal in every round of a season.,no engine,,pending
+gold-medallion,Gold Medallion,Placement,legendary,,,,on_season_rollup,Win gold in every qualifying round for a perfect season.,no engine,,ready
+first-bronze,Bronze Path,Placement,common,1/5/10/25/50/100,yes,,on_medal_awarded,Earn bronze medals — new level at 1/5/10/25/50/100.,no engine,,pending
+first-silver,Silver Path,Placement,uncommon,1/5/10/25/50/100,yes,,on_medal_awarded,Earn silver medals — new level at 1/5/10/25/50/100.,no engine,,pending
+first-gold,Gold Path,Placement,rare,1/5/10/25/50/100,yes,,on_medal_awarded,Earn gold medals — new level at 1/5/10/25/50/100.,no engine,,ready
+semifinalist,Semifinalist,Championship,rare,,,,on_bracket_advance,Reach the semifinals.,no engine,,ready
+finalist,Finalist,Championship,epic,,,,on_bracket_advance,Reach the finals.,no engine,,ready
+grand-champion,Grand Champion,Championship,legendary,,,,on_bracket_advance,Win the Grand Finale.,no engine,,ready
+sponsors-champion,Sponsor's Champion,Championship,legendary,,,,on_bracket_advance,Win a sponsor tournament.,no engine,,pending
+giant-slayer,Giant Slayer,Championship,epic,10/20/30,yes,,on_result_finalized,Beat an opponent rated above you — new level for rating gaps of 10/20/30.,no engine,,ready
+season-champion-s1,Season Champion S1 (Sapphire),Championship,legendary,,,,on_season_rollup,Be crowned Season 1 overall champion.,no engine,,ready
+season-champion-s2,Season Champion S2 (Amethyst),Championship,legendary,,,,on_season_rollup,Be crowned Season 2 overall champion.,no engine,,ready
+season-champion-s3,Season Champion S3 (Ruby),Championship,legendary,,,,on_season_rollup,Be crowned Season 3 overall champion.,no engine,,ready
+season-champion-s4,Season Champion S4 (Emerald),Championship,legendary,,,,on_season_rollup,Be crowned Season 4 overall champion.,no engine,,ready
+season-champion-s5,Season Champion S5 (Coral),Championship,legendary,,,,on_season_rollup,Be crowned Season 5 overall champion.,no engine,,ready
+season-champion-s6,Season Champion S6 (Onyx),Championship,legendary,,,,on_season_rollup,Be crowned Season 6 overall champion.,no engine,,ready
+season-champion-s7,Season Champion S7 (Rose),Championship,legendary,,,,on_season_rollup,Be crowned Season 7 overall champion.,no engine,,ready
+season-champion-s8,Season Champion S8 (Turquoise),Championship,legendary,,,,on_season_rollup,Be crowned Season 8 overall champion.,no engine,,ready
+season-champion-s9,Season Champion S9 (Peridot),Championship,legendary,,,,on_season_rollup,Be crowned Season 9 overall champion.,no engine,,ready
+season-champion-s10,Season Champion S10 (Platinum),Championship,legendary,,,,on_season_rollup,Be crowned Season 10 overall champion.,no engine,,ready
+imprint-complete,Imprint Complete,Imprint & Gem,rare,,,,on_season_rollup,Complete all nine Imprint segments in a season.,no engine,,ready
+season-keepsake,Season Keepsake,Imprint & Gem,rare,,,,on_season_rollup,Finish both the physical and digital Imprint for a season.,no engine,,ready
+decade-of-dedication,Decade of Dedication,Imprint & Gem,legendary,,,,on_season_rollup,Complete ten seasons.,no engine,,ready
+gem-s1,Gem Series S1 (Sapphire),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 1 to earn its Sapphire gem.,no engine,,ready
+gem-s2,Gem Series S2 (Amethyst),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 2 to earn its Amethyst gem.,no engine,,ready
+gem-s3,Gem Series S3 (Ruby),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 3 to earn its Ruby gem.,no engine,,ready
+gem-s4,Gem Series S4 (Emerald),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 4 to earn its Emerald gem.,no engine,,pending
+gem-s5,Gem Series S5 (Coral),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 5 to earn its Coral gem.,no engine,,ready
+gem-s6,Gem Series S6 (Onyx),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 6 to earn its Onyx gem.,no engine,,ready
+gem-s7,Gem Series S7 (Rose),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 7 to earn its Rose gem.,no engine,,ready
+gem-s8,Gem Series S8 (Turquoise),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 8 to earn its Turquoise gem.,no engine,,ready
+gem-s9,Gem Series S9 (Peridot),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 9 to earn its Peridot gem.,no engine,,ready
+gem-s10,Gem Series S10 (Platinum),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 10 to earn its Platinum gem.,no engine,,ready
+seasons-veteran,Seasons Veteran,Imprint & Gem,rare,2/3/5/7,yes,,on_season_rollup,"Compete across 2, 3, 5, then 7 seasons.",no engine · season-participation count,,pending
+consistent-journaler,Consistent Journaler,Journal,rare,3/10/25,,,on_journal_entry,"Journal after 3, 10, then 25 reveals.",no engine,,pending
+reflective-warrior,Reflective Warrior,Journal,rare,,,,on_season_rollup,Journal after every round in a season.,no engine,,ready
+first-duel,First Duel,Dueling,common,,,,on_duel_completed,Complete your first duel.,LIVE,,ready
+duelist,Duelist,Dueling,rare,10/25/50,yes,,on_duel_completed,"Complete 10, then 25, then 50 duels.",LIVE (config),,ready
+first-blood,First Blood,Dueling,uncommon,,,,on_duel_completed,Win your first duel.,LIVE,,ready
+warpath,Warpath,Dueling,rare,,,,on_duel_completed,Win three duels in a row.,LIVE (config=3),,ready
+peoples-champion,People's Champion,Dueling,rare,3/10/25/50,yes,,on_duel_completed,Win duels by an 80%+ community landslide — new level at 3/10/25/50.,single-shot only — needs tier logic,,ready
+road-warrior,Road Warrior,Dueling,rare,5/10/25/50,yes,,on_duel_completed,Duel opponents from different schools — new level at 5/10/25/50.,single-shot only — needs tier logic,,ready
+rivalry,Rivalry,Dueling,uncommon,,,,on_duel_completed,Rematch an opponent you have already dueled.,LIVE,,ready
+undefeated-duelist,Undefeated Duelist,Dueling,epic,5/10/25/50/100,yes,,on_duel_completed,Win duels with a spotless record — new level at 5/10/25/50/100.,single-shot only — needs tier logic,,ready
+fearless,Relentless (was Fearless Challenger),Dueling,rare,1/3/5/7/12,yes,,on_duel_completed,Submit 5 duels a week — new level at 1/3/5/7/12 months of the pace.,no engine,,ready
+iron-duelist,Iron Duelist,Dueling,rare,,,,on_duel_completed,Duel at least once a week for a full month.,no engine · overlaps Relentless,,ready
+duel-legend,Duel Legend,Dueling,legendary,,,,on_duel_completed,Reach number one on a dueling leaderboard.,no engine,,ready
+deadlock,Deadlock,Dueling,epic,,,,on_duel_completed,Battle to a true draw that survives sudden death.,LIVE,,ready
+dueling-master,Dueling Master,Dueling,legendary,100/150/200/250/500/1000,yes,,on_duel_completed,"Complete 100 to 1,000 duels.",no engine,,pending
+underdog,Underdog,Dueling,rare,1/5/10/25,yes,,on_duel_completed,Win a duel as the lower-rated duelist.,no engine · rating-at-duel-time,,pending
+clutch,Clutch,Dueling,epic,,,,on_duel_completed,Win a duel in sudden death.,no engine · sudden-death flag,,pending
+flawless-victory,Flawless Victory,Dueling,epic,,,,on_duel_completed,Win a duel with every community vote.,no engine · 100% vote share,,pending
+photo-finish,Photo Finish,Dueling,uncommon,,yes,,on_duel_completed,Win a duel by a single vote.,no engine · 1-vote margin (hidden),,pending
+redemption,Redemption,Dueling,rare,,,,on_duel_completed,Beat an opponent who has beaten you before.,no engine · duel history,,pending
+first-vote,First Vote,Voting,common,,,,on_duel_vote_cast,Cast your first vote.,LIVE,,ready
+voice-of-the-people,Voice of the People,Voting,rare,25/100/500/1000/5000,yes,,on_duel_vote_cast,"Cast 25 to 5,000 votes.",first 3 tiers only — add 4/5,,ready
+daily-voter,Daily Voter,Voting,uncommon,5/10/25/50/100,yes,,on_duel_vote_cast,Vote on consecutive days — new level at 5/10/25/50/100.,single-shot only — needs tier logic,,ready
+sharp-eye,Sharp Eye,Voting,rare,10/25/50/100/250,yes,,on_duel_completed,Pick the winning side in >=70% of your votes — new level at 10/25/50/100/250.,single-shot only — needs tier logic,,ready
+kingmaker,Kingmaker,Voting,rare,5/10/25/50/100,yes,,on_duel_completed,Cast the final vote for a duel's winner — new level at 5/10/25/50/100.,redefined — needs engine,,ready
+fair-witness,Honorable Voter (was Fair Witness),Voting,uncommon,,,,on_duel_completed,Pick the duel winner more than 85% of the time. Drop below and you lose it.,REVOCABLE — needs delete/deactivate,,ready
+oracle,Oracle,Voting,rare,1/5/10/25,yes,,on_duel_completed,Vote for an underdog who goes on to win.,no engine · voted lower-rated winner,,pending
+superfan,Superfan,Voting,uncommon,10/25/50/100/250,yes,,on_duel_vote_cast,Watch duels start to finish.,needs watch-time persisted,,pending
+teammate,Teammate,Community & Charter,common,,,,on_result_finalized,Compete in the same round as a schoolmate.,no engine,,ready
+globetrotter,Globetrotter,Community & Charter,rare,,,,on_result_finalized,Compete alongside students from many different schools.,no engine,,pending
+anniversary,Anniversary,Community & Charter,uncommon,,,,on_scheduled,Reach one year since you joined.,no engine,,ready
+trendsetter,Trendsetter,Community & Charter,rare,,,,on_badge_award,Be the first at your school to earn a rare or higher badge.,no engine · META hook on any award,,pending
+perfect-score,Perfect Score,Community & Charter,legendary,,,,on_result_finalized,Score above 96 in every judging criterion.,no engine,,ready
+zen,Zen,Community & Charter,epic,,yes,,on_result_finalized,Score above 95 overall in a single performance.,no engine (hidden),,ready
+buzzer-beater,Buzzer Beater,Community & Charter,uncommon,,yes,,on_entry_submitted,Submit an entry in the final minute before a deadline.,no engine · <60s to deadline (hidden),,pending
+charter-member,Charter Member,Community & Charter,legendary,,,,on_onboarding_complete,Compete in the very first season.,no engine,,ready
+trailblazer,Trailblazer,Community & Charter,legendary,,,,on_onboarding_complete,Be one of the first 100 competitors ever to join.,no engine,,pending
+ascent,Ascent,Growth,rare,60/70/80/90/95,yes,,on_rating_updated,"Reach a rating of 60, 70, 80, 90, then 95.",no engine · skill_ratings absolute threshold,,pending
