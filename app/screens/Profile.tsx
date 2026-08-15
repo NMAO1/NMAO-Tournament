@@ -46,7 +46,7 @@ export default function Profile() {
             {info.photo ? <Image source={{ uri: info.photo }} style={{ width: 84, height: 84 }} /> : <Text style={{ color: hues.gold.hi, fontSize: 28, fontWeight: "800" }}>{initials}</Text>}
           </View>
         </Frame>
-        <Text style={{ color: neutrals.text, fontSize: 22, fontWeight: "800", marginTop: 12 }}>{info.firstName} {info.lastName}</Text>
+        <Text style={{ color: neutrals.text, fontSize: 22, fontWeight: "800", marginTop: 12 }}>{info.firstName}{info.lastName ? ` ${info.lastName[0]}.` : ""}</Text>
         <Text style={{ color: neutrals.muted2, fontSize: 12, textTransform: "capitalize" }}>{[RANK(info.rank), info.style, info.school?.name].filter(Boolean).join(" · ")}</Text>
         <View style={{ flexDirection: "row", marginTop: 14 }}>
           <Stat v={info.rating != null ? String(info.rating) : "—"} l="Rating" />
