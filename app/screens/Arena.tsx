@@ -215,13 +215,6 @@ function Side({
               <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.72)", paddingVertical: 6, alignItems: "center" }}>
                 <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
                 {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
-                {card.frame ? (
-                  <TouchableOpacity onPress={onCrest} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: "rgba(0,0,0,0.4)", borderWidth: 1, borderColor: rarityBase(card.frame.rarity) + "88" }}>
-                    {emblemUrl(card.frame.code) ? <Image source={{ uri: emblemUrl(card.frame.code)! }} style={{ width: 15, height: 15 }} resizeMode="contain" /> : null}
-                    <Text style={{ color: rarityBase(card.frame.rarity), fontSize: 9, letterSpacing: 1, textTransform: "uppercase", fontWeight: "800" }} numberOfLines={1}>{card.frame.name}</Text>
-                    <Text style={{ color: neutrals.muted2, fontSize: 9 }}>ⓘ</Text>
-                  </TouchableOpacity>
-                ) : null}
               </View>
               <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
                 <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
@@ -239,7 +232,39 @@ function Side({
           {voted === choice ? "✓ Voted" : `Vote ${first}`}
         </Text>
       </TouchableOpacity>
+
+      {/* worn crest — a single inset "dragonball" imprint, mirrored to the outer
+          lower corner (challenger → left, opponent → right) for a balanced look;
+          tap it to reveal the badge name + how it's earned. Rendered last so it
+          sits above the vote CTA and catches the corner tap. */}
+      {card.frame ? (
+        <CrestInset frame={card.frame} corner={choice === "challenger" ? "left" : "right"} onPress={onCrest} />
+      ) : null}
     </View>
+  );
+}
+
+// A single circular crest gem, inset into a lower corner of the frame band.
+function CrestInset({ frame, corner, onPress }: { frame: Crest; corner: "left" | "right"; onPress: () => void }) {
+  const ring = rarityBase(frame.rarity);
+  const url = emblemUrl(frame.code);
+  const D = 46;
+  return (
+    <TouchableOpacity
+      onPress={onPress} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      style={{ position: "absolute", bottom: (64 - D) / 2, ...(corner === "left" ? { left: 12 } : { right: 12 }), width: D, height: D, borderRadius: D / 2, shadowColor: ring, shadowOpacity: 0.85, shadowRadius: 7, shadowOffset: { width: 0, height: 0 } }}
+    >
+      {/* the inset well: dark rim + rarity ring around the emblem sphere */}
+      <View style={{ width: D, height: D, borderRadius: D / 2, borderWidth: 2, borderColor: ring, backgroundColor: "#0b0805", overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+        {url ? (
+          <Image source={{ uri: url }} style={{ width: D, height: D }} resizeMode="cover" />
+        ) : (
+          <Text style={{ color: ring, fontSize: 18 }}>◆</Text>
+        )}
+      </View>
+      {/* glossy top highlight → reads as a set "dragonball" sphere */}
+      <View pointerEvents="none" style={{ position: "absolute", top: 5, left: D * 0.26, width: D * 0.48, height: D * 0.3, borderRadius: D / 2, backgroundColor: "rgba(255,255,255,0.20)" }} />
+    </TouchableOpacity>
   );
 }
 
