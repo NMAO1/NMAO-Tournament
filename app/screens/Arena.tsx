@@ -211,18 +211,17 @@ function Side({
           </View>
         </TouchableOpacity>
       </Frame>
-      {/* vote CTA — filled with the SAME badge-border gradient and flush against
-          the bottom band so it merges into the border (no gap). Dims until unlocked. */}
-      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 16, right: 16, bottom: 16 }}>
+      {/* vote CTA — the SAME badge-border gradient extended full-bleed so it
+          BECOMES the bottom band of the border (no seam, no inner edge). It just
+          curves up into the video with rounded top corners. Dims until unlocked. */}
+      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}>
         <LinearGradient
           colors={rarityStops(rarity)}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={{
-            borderTopLeftRadius: 14, borderTopRightRadius: 14, borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
-            paddingTop: 14, paddingBottom: 16, alignItems: "center",
-            borderTopWidth: 1.5, borderLeftWidth: 1.5, borderRightWidth: 1.5, borderColor: cta.hi,
-            opacity: unlocked || voted ? 1 : 0.6,
-            shadowColor: cta.hi, shadowOpacity: filled ? 0.9 : 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
+            borderTopLeftRadius: 22, borderTopRightRadius: 22,
+            paddingTop: 15, paddingBottom: 20, alignItems: "center",
+            opacity: unlocked || voted ? 1 : 0.62,
           }}
         >
           <Text style={{ color: "#0c0a06", fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
