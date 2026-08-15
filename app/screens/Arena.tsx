@@ -1,27 +1,42 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
+import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
-import { faceOff, castVote, type FaceOff, type Choice, type Card } from "../lib/duel";
+import { faceOff, castVote, playbackUrls, type FaceOff, type Choice, type Card } from "../lib/duel";
 
 // The Arena "ring" — the crown-jewel voting screen. Landscape (via guarded
 // expo-screen-orientation; falls back to portrait if not installed). Two forms
 // side by side in their collectible frames; watch to unlock the vote; the tally
-// stays hidden. Video playback = a poster placeholder for now (expo-video drops
-// into <Poster/> later; the 15s gate already tracks "watch" time on tap-to-play).
+// stays hidden. Real playback via expo-video (signed URLs from get-playback-url);
+// the watch-to-vote gate accrues only while a real video is actually playing.
+// If a side has no signed URL yet, it falls back to a tap-to-accrue poster.
 
 const WATCH_GOAL = 15;
+type Urls = { challenger: string | null; opponent: string | null };
+// event code (open_forms) → display label (Open Forms)
+const evName = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function Arena({ duelId, voterId, onClose }: { duelId: string; voterId: string; onClose: (voted?: boolean) => void }) {
   const [face, setFace] = useState<FaceOff | null>(null);
+  const [phase, setPhase] = useState<"tale" | "ring">("tale");
+  const [count, setCount] = useState(10);
+  const [urls, setUrls] = useState<Urls>({ challenger: null, opponent: null });
   const [watched, setWatched] = useState(0);
   const [active, setActive] = useState<Choice | null>(null);
   const [voting, setVoting] = useState(false);
   const [voted, setVoted] = useState<Choice | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const flash = useRef(new Animated.Value(0)).current;
+
+  // one player per side; source is swapped in once the signed URLs arrive
+  const chPlayer = useVideoPlayer(null, (p) => { p.loop = false; p.muted = false; });
+  const opPlayer = useVideoPlayer(null, (p) => { p.loop = false; p.muted = false; });
+  useEffect(() => { if (urls.challenger) chPlayer.replace(urls.challenger); }, [urls.challenger, chPlayer]);
+  useEffect(() => { if (urls.opponent) opPlayer.replace(urls.opponent); }, [urls.opponent, opPlayer]);
+  useEffect(() => { playbackUrls(duelId).then(setUrls); }, [duelId]);
 
   // landscape while the ring is mounted (guarded — no crash if lib absent)
   useEffect(() => {
@@ -34,12 +49,39 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
 
   useEffect(() => { faceOff(duelId).then(setFace); }, [duelId]);
 
-  // accumulate watch time while a side is "playing"
+  // "Tale of the Path" opening — a ~10s fight-card face-off before the ring.
+  useEffect(() => {
+    if (!face || phase !== "tale") return;
+    if (count <= 0) { setPhase("ring"); return; }
+    const t = setTimeout(() => setCount((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [face, phase, count]);
+
+  // accumulate watch time — only while a real video is actually playing (a
+  // poster side, with no signed URL, accrues on tap so it stays votable).
   useEffect(() => {
     if (!active) return;
-    const t = setInterval(() => setWatched((w) => Math.min(WATCH_GOAL, w + 0.1)), 100);
+    const player = active === "challenger" ? chPlayer : opPlayer;
+    const hasVideo = active === "challenger" ? !!urls.challenger : !!urls.opponent;
+    const t = setInterval(() => {
+      if (!hasVideo || player.playing) setWatched((w) => Math.min(WATCH_GOAL, w + 0.1));
+    }, 100);
     return () => clearInterval(t);
-  }, [active]);
+  }, [active, urls, chPlayer, opPlayer]);
+
+  // tap a side to play it (and pause the other); tap again to pause
+  function togglePlay(side: Choice) {
+    const player = side === "challenger" ? chPlayer : opPlayer;
+    const other = side === "challenger" ? opPlayer : chPlayer;
+    const hasVideo = side === "challenger" ? !!urls.challenger : !!urls.opponent;
+    if (active === side) {
+      if (hasVideo) player.pause();
+      setActive(null);
+    } else {
+      if (hasVideo) { other.pause(); player.play(); }
+      setActive(side);
+    }
+  }
 
   const unlocked = watched >= WATCH_GOAL;
 
@@ -67,6 +109,10 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
     );
   }
 
+  if (phase === "tale") {
+    return <TaleOfThePath face={face} count={count} onEnter={() => setPhase("ring")} onExit={() => onClose(false)} />;
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: "#060504" }}>
       {/* top HUD */}
@@ -75,7 +121,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           <Text style={{ color: neutrals.muted, fontSize: 12, letterSpacing: 1 }}>‹  EXIT RING</Text>
         </TouchableOpacity>
         <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase" }}>
-          S1 · Round VIII · {face.type}
+          S1 · Round VIII · {evName(face.type)}
         </Text>
         <View style={{ width: 64 }} />
       </View>
@@ -98,7 +144,8 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <Side
           card={face.challenger} choice="challenger" rarity={face.challenger.frame?.rarity ?? "legendary"}
           active={active === "challenger"} unlocked={unlocked} voted={voted}
-          onPlay={() => setActive("challenger")} onVote={() => vote("challenger")}
+          player={chPlayer} hasVideo={!!urls.challenger}
+          onPlay={() => togglePlay("challenger")} onVote={() => vote("challenger")}
         />
         <View style={{ width: 40, alignItems: "center" }}>
           <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: hues.gold.base }}>
@@ -108,7 +155,8 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
           active={active === "opponent"} unlocked={unlocked} voted={voted}
-          onPlay={() => setActive("opponent")} onVote={() => vote("opponent")}
+          player={opPlayer} hasVideo={!!urls.opponent}
+          onPlay={() => togglePlay("opponent")} onVote={() => vote("opponent")}
         />
       </View>
 
@@ -130,10 +178,11 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
 }
 
 function Side({
-  card, choice, rarity, active, unlocked, voted, onPlay, onVote,
+  card, choice, rarity, active, unlocked, voted, player, hasVideo, onPlay, onVote,
 }: {
   card: Card; choice: Choice; rarity: "common" | "rare" | "epic" | "legendary";
-  active: boolean; unlocked: boolean; voted: Choice | null; onPlay: () => void; onVote: () => void;
+  active: boolean; unlocked: boolean; voted: Choice | null;
+  player: VideoPlayer; hasVideo: boolean; onPlay: () => void; onVote: () => void;
 }) {
   const dim = voted && voted !== choice;
   const border = rarityBase(rarity);
@@ -142,8 +191,12 @@ function Side({
     <View style={{ flex: 1, opacity: dim ? 0.4 : 1 }}>
       <Frame rarity={rarity} size="ring">
         <TouchableOpacity activeOpacity={0.9} onPress={onPlay}>
-          <View style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
-            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center" }}>
+          <View style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            {hasVideo ? (
+              <VideoView player={player} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" nativeControls={false} />
+            ) : null}
+            {/* play/pause affordance — dims once a real video is rolling */}
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.25 : 1 }}>
               <Text style={{ color: "#fff", fontSize: 16 }}>{active ? "❚❚" : "▶"}</Text>
             </View>
           </View>
@@ -174,4 +227,77 @@ function Side({
 
 function closesIn(face: FaceOff): string {
   return face.status === "voting" ? "soon" : "—";
+}
+
+// ── "Tale of the Path" — the fight-card face-off before the ring (spec §2a) ──
+function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count: number; onEnter: () => void; onExit: () => void }) {
+  return (
+    <View style={{ flex: 1, backgroundColor: "#060504", paddingTop: 40 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 }}>
+        <TouchableOpacity onPress={onExit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={{ color: neutrals.muted, fontSize: 12, letterSpacing: 1 }}>‹  EXIT</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onEnter}><Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 1 }}>Skip ›</Text></TouchableOpacity>
+      </View>
+
+      <View style={{ alignItems: "center", marginTop: 4 }}>
+        <Text style={{ color: hues.gold.hi, fontSize: 13, letterSpacing: 4, fontWeight: "800" }}>⚔  TALE OF THE PATH</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginTop: 3 }}>{evName(face.type)} · S1 · Round VIII</Text>
+      </View>
+
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 12 }}>
+        <Fighter card={face.challenger} align="right" />
+        <View style={{ width: 54, alignItems: "center" }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: hues.gold.base, alignItems: "center", justifyContent: "center", shadowColor: hues.gold.hi, shadowOpacity: 0.7, shadowRadius: 14 }}>
+            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 14, fontStyle: "italic" }}>VS</Text>
+          </View>
+        </View>
+        <Fighter card={face.opponent} align="left" />
+      </View>
+
+      <View style={{ alignItems: "center", paddingBottom: 22 }}>
+        <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderRadius: 12, overflow: "hidden", minWidth: 220 }}>
+          <LinearGradient colors={rarityStops("legendary")} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 12, alignItems: "center" }}>
+            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 13, letterSpacing: 0.5 }}>ENTER THE ARENA  →</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+        <Text style={{ color: neutrals.muted2, fontSize: 10, marginTop: 8, letterSpacing: 1 }}>Auto-enters in {count}s</Text>
+      </View>
+    </View>
+  );
+}
+
+function Fighter({ card, align }: { card: Card; align: "left" | "right" }) {
+  const rarity = card.frame?.rarity ?? "epic";
+  const glow = rarityBase(rarity);
+  const initials = card.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const rows: [string, string | number][] = [
+    ["Team", card.school ?? "—"],
+    ["Rank", (card.rank ?? "—").replace("_", " ")],
+    ["Duel Wins", card.duelWins],
+    ["Win Streak", `${card.winStreak}🔥`],
+    ["Rating", card.rating.toLocaleString()],
+  ];
+  return (
+    <View style={{ flex: 1, alignItems: "center", maxWidth: 260 }}>
+      {/* spotlight photo / silhouette on the badge-color glow */}
+      <View style={{ width: 92, height: 92, borderRadius: 46, alignItems: "center", justifyContent: "center", backgroundColor: glow + "26", borderWidth: 2, borderColor: glow, shadowColor: glow, shadowOpacity: 0.8, shadowRadius: 18, overflow: "hidden" }}>
+        {card.photo ? (
+          <Image source={{ uri: card.photo }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+        ) : (
+          <Text style={{ color: glow, fontSize: 30, fontWeight: "900" }}>{initials}</Text>
+        )}
+      </View>
+      <Text numberOfLines={1} style={{ color: neutrals.text, fontSize: 18, fontWeight: "900", marginTop: 10, textAlign: "center" }}>{card.name}</Text>
+      {card.frame ? <Text style={{ color: glow, fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "800", marginTop: 2 }}>{card.frame.name}</Text> : null}
+      <View style={{ marginTop: 10, alignSelf: "stretch", paddingHorizontal: align === "right" ? 12 : 12 }}>
+        {rows.map(([k, v]) => (
+          <View key={k} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, borderBottomWidth: 1, borderColor: "#1c1712" }}>
+            <Text style={{ color: neutrals.muted2, fontSize: 11 }}>{k}</Text>
+            <Text numberOfLines={1} style={{ color: neutrals.text, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums"], textTransform: "capitalize", flex: 1, textAlign: "right", marginLeft: 10 }}>{v}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 }
