@@ -72,8 +72,8 @@
 | Undefeated ⬆ | rare | 5/10/25/50 | `on_result_finalized` | Win first place in consecutive rounds — new level at 5/10/25/50. | no engine | ready |
 | Podium Season | epic | — | `on_season_rollup` | Earn a medal in every round of a season. | no engine | ready |
 | Gold Medallion | legendary | — | `on_season_rollup` | Win gold in every qualifying round for a perfect season. | no engine | ready |
-| Bronze Path ⬆ | common | 1/5/10/25/50/100 | `on_medal_awarded` | Earn bronze medals — new level at 1/5/10/25/50/100. | no engine | pending |
-| Silver Path ⬆ | uncommon | 1/5/10/25/50/100 | `on_medal_awarded` | Earn silver medals — new level at 1/5/10/25/50/100. | no engine | pending |
+| Bronze Path ⬆ | common | 1/5/10/25/50/100 | `on_medal_awarded` | Earn bronze medals — new level at 1/5/10/25/50/100. | no engine | ready |
+| Silver Path ⬆ | uncommon | 1/5/10/25/50/100 | `on_medal_awarded` | Earn silver medals — new level at 1/5/10/25/50/100. | no engine | ready |
 | Gold Path ⬆ | rare | 1/5/10/25/50/100 | `on_medal_awarded` | Earn gold medals — new level at 1/5/10/25/50/100. | no engine | ready |
 
 ## Championship
@@ -106,7 +106,7 @@
 | Gem Series S1 (Sapphire) | legendary | — | `on_season_rollup` | Complete Season 1 to earn its Sapphire gem. | no engine | ready |
 | Gem Series S2 (Amethyst) | legendary | — | `on_season_rollup` | Complete Season 2 to earn its Amethyst gem. | no engine | ready |
 | Gem Series S3 (Ruby) | legendary | — | `on_season_rollup` | Complete Season 3 to earn its Ruby gem. | no engine | ready |
-| Gem Series S4 (Emerald) | legendary | — | `on_season_rollup` | Complete Season 4 to earn its Emerald gem. | no engine | pending |
+| Gem Series S4 (Emerald) | legendary | — | `on_season_rollup` | Complete Season 4 to earn its Emerald gem. | no engine | ready |
 | Gem Series S5 (Coral) | legendary | — | `on_season_rollup` | Complete Season 5 to earn its Coral gem. | no engine | ready |
 | Gem Series S6 (Onyx) | legendary | — | `on_season_rollup` | Complete Season 6 to earn its Onyx gem. | no engine | ready |
 | Gem Series S7 (Rose) | legendary | — | `on_season_rollup` | Complete Season 7 to earn its Rose gem. | no engine | ready |

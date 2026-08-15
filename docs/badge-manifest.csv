@@ -48,7 +48,7 @@ file_name,art_status,code,name,category,rarity,tiered,hidden,trigger_event,earn_
 45-gem-s1-sapphire.png,ready,gem-s1,Gem Series S1 (Sapphire),Gem Series,flagship,,,on_season_rollup,Completed season S1; award the Sapphire gem yin-yang,
 46-gem-s2-amethyst.png,ready,gem-s2,Gem Series S2 (Amethyst),Gem Series,flagship,,,on_season_rollup,Completed season S2; award the Amethyst gem yin-yang,
 47-gem-s3-ruby.png,ready,gem-s3,Gem Series S3 (Ruby),Gem Series,flagship,,,on_season_rollup,Completed season S3; award the Ruby gem yin-yang,
-48-gem-s4-emerald.png,pending,gem-s4,Gem Series S4 (Emerald),Gem Series,flagship,,,on_season_rollup,Completed season S4; award the Emerald gem yin-yang,
+48-gem-s4-emerald.png,ready,gem-s4,Gem Series S4 (Emerald),Gem Series,flagship,,,on_season_rollup,Completed season S4; award the Emerald gem yin-yang,
 49-gem-s5-coral.png,ready,gem-s5,Gem Series S5 (Coral),Gem Series,flagship,,,on_season_rollup,Completed season S5; award the Coral gem yin-yang,
 50-gem-s6-onyx.png,ready,gem-s6,Gem Series S6 (Onyx),Gem Series,flagship,,,on_season_rollup,Completed season S6; award the Onyx gem yin-yang,
 51-gem-s7-rose.png,ready,gem-s7,Gem Series S7 (Rose),Gem Series,flagship,,,on_season_rollup,Completed season S7; award the Rose gem yin-yang,

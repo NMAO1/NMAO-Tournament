@@ -156,6 +156,9 @@ REGISTRY = {
   "starred championship": "41-sponsors-champion",
   "blazing a new trail ahead": "trendsetter",
   "two racers in martial arts uniforms": "photo-finish",
+  "bronze victory trophy cup": "first-bronze",
+  "silver victory trophy cup": "first-silver",
+  "gold victory trophy cup": "first-gold",
 }
 
 def main():

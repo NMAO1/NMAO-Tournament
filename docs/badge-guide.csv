@@ -34,8 +34,8 @@ sweep,Sweep,Placement,epic,,,,on_result_finalized,Win gold in more than one even
 undefeated,Undefeated,Placement,rare,5/10/25/50,yes,,on_result_finalized,Win first place in consecutive rounds — new level at 5/10/25/50.,no engine,,ready
 podium-season,Podium Season,Placement,epic,,,,on_season_rollup,Earn a medal in every round of a season.,no engine,,ready
 gold-medallion,Gold Medallion,Placement,legendary,,,,on_season_rollup,Win gold in every qualifying round for a perfect season.,no engine,,ready
-first-bronze,Bronze Path,Placement,common,1/5/10/25/50/100,yes,,on_medal_awarded,Earn bronze medals — new level at 1/5/10/25/50/100.,no engine,,pending
-first-silver,Silver Path,Placement,uncommon,1/5/10/25/50/100,yes,,on_medal_awarded,Earn silver medals — new level at 1/5/10/25/50/100.,no engine,,pending
+first-bronze,Bronze Path,Placement,common,1/5/10/25/50/100,yes,,on_medal_awarded,Earn bronze medals — new level at 1/5/10/25/50/100.,no engine,,ready
+first-silver,Silver Path,Placement,uncommon,1/5/10/25/50/100,yes,,on_medal_awarded,Earn silver medals — new level at 1/5/10/25/50/100.,no engine,,ready
 first-gold,Gold Path,Placement,rare,1/5/10/25/50/100,yes,,on_medal_awarded,Earn gold medals — new level at 1/5/10/25/50/100.,no engine,,ready
 semifinalist,Semifinalist,Championship,rare,,,,on_bracket_advance,Reach the semifinals.,no engine,,ready
 finalist,Finalist,Championship,epic,,,,on_bracket_advance,Reach the finals.,no engine,,ready
@@ -58,7 +58,7 @@ decade-of-dedication,Decade of Dedication,Imprint & Gem,legendary,,,,on_season_r
 gem-s1,Gem Series S1 (Sapphire),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 1 to earn its Sapphire gem.,no engine,,ready
 gem-s2,Gem Series S2 (Amethyst),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 2 to earn its Amethyst gem.,no engine,,ready
 gem-s3,Gem Series S3 (Ruby),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 3 to earn its Ruby gem.,no engine,,ready
-gem-s4,Gem Series S4 (Emerald),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 4 to earn its Emerald gem.,no engine,,pending
+gem-s4,Gem Series S4 (Emerald),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 4 to earn its Emerald gem.,no engine,,ready
 gem-s5,Gem Series S5 (Coral),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 5 to earn its Coral gem.,no engine,,ready
 gem-s6,Gem Series S6 (Onyx),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 6 to earn its Onyx gem.,no engine,,ready
 gem-s7,Gem Series S7 (Rose),Imprint & Gem,legendary,,,,on_season_rollup,Complete Season 7 to earn its Rose gem.,no engine,,ready
