@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, type MedalType } from "@nmao/design-tokens";
 import { Medal } from "../components/Medal";
 import { myCompetitors } from "../lib/competitors";
-import { standings, voterBoard, tournamentBoard, type Scope, type Division, type LbRow, type VoterRow, type TourRow } from "../lib/leaderboard";
+import { standings, voterBoard, tournamentBoard, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow } from "../lib/leaderboard";
 
 type Board = "duelists" | "tournament" | "voters";
 const DIVS: { key: Division; label: string; hue: string }[] = [
@@ -46,6 +46,7 @@ export default function Leaderboard() {
   const [division, setDivision] = useState<Division>("all");
   const [sort, setSort] = useState<SortKey>("rating");
   const [tsort, setTsort] = useState<TSortKey>("points");
+  const [tscope, setTscope] = useState<TScope>("season");
   const [duel, setDuel] = useState<LbRow[] | null>(null);
   const [tour, setTour] = useState<TourRow[] | null>(null);
   const [vote, setVote] = useState<VoterRow[] | null>(null);
@@ -54,7 +55,7 @@ export default function Leaderboard() {
 
   useEffect(() => { myCompetitors().then((c) => setMe(c[0]?.id ?? null)); }, []);
   useEffect(() => { if (me && board === "duelists") { setDuel(null); standings(me, scope, division).then(setDuel); } }, [me, scope, division, board]);
-  useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division).then(setTour); } }, [me, division, board]);
+  useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division, tscope).then(setTour); } }, [me, division, tscope, board]);
   useEffect(() => { if (me && board === "voters") { setVote(null); voterBoard(me).then(setVote); } }, [me, board]);
 
   const sortDef = SORTS.find((s) => s.key === sort)!;
@@ -91,13 +92,18 @@ export default function Leaderboard() {
           </>
         ) : board === "tournament" ? (
           <>
+            <View style={{ flexDirection: "row", marginBottom: 10 }}>
+              <Chip label="Season" active={tscope === "season"} color={hues.gold.hi} spectrum onPress={() => setTscope("season")} />
+              <Chip label="All-time" active={tscope === "all"} color={hues.gold.hi} spectrum onPress={() => setTscope("all")} />
+            </View>
             <DivisionRow division={division} setDivision={setDivision} />
             <Row2Label t="Sort" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               {TSORTS.map((s) => <Chip key={s.key} label={s.label} active={tsort === s.key} color={hues.gold.base} filled spectrum onPress={() => setTsort(s.key)} />)}
             </ScrollView>
             {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : (() => {
-              const showMove = division === "all" && tsort === "points";
+              // Movement basis is the all-time snapshot, so only surface arrows on the all-time view.
+              const showMove = tscope === "all" && division === "all" && tsort === "points";
               return trows.map((r, i) => {
                 const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
                 return <TourRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={tsortDef.unit} sub={tsortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelT(r)} />;
