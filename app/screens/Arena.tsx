@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet, Modal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase } from "@nmao/design-tokens";
+import { Frame } from "../components/Frame";
+import { emblemUrl } from "../lib/badges";
 import { faceOff, castVote, playbackUrls, type FaceOff, type Choice, type Card } from "../lib/duel";
+
+// A worn frame/crest (equipped badge) — what the crest popover reveals.
+type Crest = NonNullable<Card["frame"]>;
+const RARITY_LABEL: Record<string, string> = { legendary: "Legendary", epic: "Epic", rare: "Rare", common: "Common" };
 
 // The Arena "ring" — the crown-jewel voting screen. Landscape (via guarded
 // expo-screen-orientation; falls back to portrait if not installed). Two forms
@@ -28,6 +34,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   const [voting, setVoting] = useState(false);
   const [voted, setVoted] = useState<Choice | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [crest, setCrest] = useState<Crest | null>(null);
   const flash = useRef(new Animated.Value(0)).current;
 
   // one player per side; source is swapped in once the signed URLs arrive
@@ -123,12 +130,14 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           active={active === "challenger"} unlocked={unlocked} voted={voted}
           player={chPlayer} hasVideo={!!urls.challenger}
           onPlay={() => togglePlay("challenger")} onVote={() => vote("challenger")}
+          onCrest={() => face.challenger.frame && setCrest(face.challenger.frame)}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
           active={active === "opponent"} unlocked={unlocked} voted={voted}
           player={opPlayer} hasVideo={!!urls.opponent}
           onPlay={() => togglePlay("opponent")} onVote={() => vote("opponent")}
+          onCrest={() => face.opponent.frame && setCrest(face.opponent.frame)}
         />
       </View>
 
@@ -170,16 +179,19 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         pointerEvents="none"
         style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "#FFF3C0", opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] }) }}
       />
+
+      {/* tap a competitor's worn crest → what the badge is + how it's earned */}
+      <CrestModal frame={crest} onClose={() => setCrest(null)} />
     </View>
   );
 }
 
 function Side({
-  card, choice, rarity, active, unlocked, voted, player, hasVideo, onPlay, onVote,
+  card, choice, rarity, active, unlocked, voted, player, hasVideo, onPlay, onVote, onCrest,
 }: {
   card: Card; choice: Choice; rarity: "common" | "rare" | "epic" | "legendary";
   active: boolean; unlocked: boolean; voted: Choice | null;
-  player: VideoPlayer; hasVideo: boolean; onPlay: () => void; onVote: () => void;
+  player: VideoPlayer; hasVideo: boolean; onPlay: () => void; onVote: () => void; onCrest: () => void;
 }) {
   const dim = voted && voted !== choice;
   const glow = rarityBase(rarity);
@@ -203,6 +215,13 @@ function Side({
               <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.72)", paddingVertical: 6, alignItems: "center" }}>
                 <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
                 {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
+                {card.frame ? (
+                  <TouchableOpacity onPress={onCrest} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: "rgba(0,0,0,0.4)", borderWidth: 1, borderColor: rarityBase(card.frame.rarity) + "88" }}>
+                    {emblemUrl(card.frame.code) ? <Image source={{ uri: emblemUrl(card.frame.code)! }} style={{ width: 15, height: 15 }} resizeMode="contain" /> : null}
+                    <Text style={{ color: rarityBase(card.frame.rarity), fontSize: 9, letterSpacing: 1, textTransform: "uppercase", fontWeight: "800" }} numberOfLines={1}>{card.frame.name}</Text>
+                    <Text style={{ color: neutrals.muted2, fontSize: 9 }}>ⓘ</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
               <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
                 <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
@@ -254,6 +273,7 @@ function closesIn(face: FaceOff): string {
 // VS pops (spring overshoot) in the centre.
 function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count: number; onEnter: () => void; onExit: () => void }) {
   const w = Dimensions.get("window").width;
+  const [crest, setCrest] = useState<Crest | null>(null);
   const slideL = useRef(new Animated.Value(-w)).current;
   const slideR = useRef(new Animated.Value(w)).current;
   const vs = useRef(new Animated.Value(0)).current;
@@ -283,7 +303,7 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
 
       <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
         <Animated.View style={{ flex: 1, alignItems: "center", transform: [{ translateX: slideL }] }}>
-          <Fighter card={face.challenger} align="right" />
+          <Fighter card={face.challenger} align="right" onCrest={() => face.challenger.frame && setCrest(face.challenger.frame)} />
         </Animated.View>
         <Animated.View style={{ width: 88, alignItems: "center", transform: [{ scale: vs }] }}>
           <View style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: hues.gold.base, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: hues.gold.hi, shadowColor: hues.gold.hi, shadowOpacity: 0.9, shadowRadius: 24 }}>
@@ -291,7 +311,7 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
           </View>
         </Animated.View>
         <Animated.View style={{ flex: 1, alignItems: "center", transform: [{ translateX: slideR }] }}>
-          <Fighter card={face.opponent} align="left" />
+          <Fighter card={face.opponent} align="left" onCrest={() => face.opponent.frame && setCrest(face.opponent.frame)} />
         </Animated.View>
       </View>
 
@@ -303,11 +323,49 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
         </TouchableOpacity>
         <Text style={{ color: neutrals.muted2, fontSize: 10, marginTop: 8, letterSpacing: 1 }}>Auto-enters in {count}s</Text>
       </View>
+
+      <CrestModal frame={crest} onClose={() => setCrest(null)} />
     </View>
   );
 }
 
-function Fighter({ card, align }: { card: Card; align: "left" | "right" }) {
+// ── Crest popover — tap a fighter's worn frame to see what the badge is and how
+// it's earned (the same how-to-earn copy as the Honors vault). ──
+function CrestModal({ frame, onClose }: { frame: Crest | null; onClose: () => void }) {
+  return (
+    <Modal visible={!!frame} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableOpacity activeOpacity={1} onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)", justifyContent: "flex-end" }}>
+        {frame ? (
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: "#161618", borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderColor: "#2a2a2e", padding: 22, paddingBottom: 34, alignItems: "center" }}>
+            <View style={{ width: 40, height: 4, borderRadius: 3, backgroundColor: "#3a3a3e", marginBottom: 16 }} />
+            <Frame rarity={frame.rarity} size="mini" radius={40} glow>
+              <View style={{ width: 88, height: 88, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
+                {emblemUrl(frame.code) ? (
+                  <Image source={{ uri: emblemUrl(frame.code)! }} style={{ width: 88, height: 88 }} resizeMode="contain" />
+                ) : (
+                  <Text style={{ color: "#EFC24E", fontSize: 32 }}>◆</Text>
+                )}
+              </View>
+            </Frame>
+            <Text style={{ color: neutrals.text, fontSize: 20, fontWeight: "800", marginTop: 14 }}>{frame.name}</Text>
+            <Text style={{ color: rarityBase(frame.rarity), fontSize: 11, letterSpacing: 2, fontWeight: "800", textTransform: "uppercase", marginTop: 3 }}>
+              {RARITY_LABEL[frame.rarity] ?? frame.rarity} · Worn frame
+            </Text>
+            {frame.description ? (
+              <View style={{ marginTop: 18, alignItems: "center" }}>
+                <Text style={{ color: hues.gold.hi, fontSize: 10, letterSpacing: 2, fontWeight: "800" }}>HOW TO EARN</Text>
+                <Text style={{ color: neutrals.muted, fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 }}>{frame.description}</Text>
+              </View>
+            ) : null}
+            <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Close</Text></TouchableOpacity>
+          </TouchableOpacity>
+        ) : null}
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+function Fighter({ card, align, onCrest }: { card: Card; align: "left" | "right"; onCrest: () => void }) {
   const rarity = card.frame?.rarity ?? "epic";
   const glow = rarityBase(rarity);
   const initials = card.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
@@ -329,7 +387,13 @@ function Fighter({ card, align }: { card: Card; align: "left" | "right" }) {
         )}
       </View>
       <Text numberOfLines={1} style={{ color: neutrals.text, fontSize: 18, fontWeight: "900", marginTop: 10, textAlign: "center" }}>{card.name}</Text>
-      {card.frame ? <Text style={{ color: glow, fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "800", marginTop: 2 }}>{card.frame.name}</Text> : null}
+      {card.frame ? (
+        <TouchableOpacity onPress={onCrest} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
+          {emblemUrl(card.frame.code) ? <Image source={{ uri: emblemUrl(card.frame.code)! }} style={{ width: 16, height: 16 }} resizeMode="contain" /> : null}
+          <Text style={{ color: glow, fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "800" }}>{card.frame.name}</Text>
+          <Text style={{ color: neutrals.muted2, fontSize: 9 }}>ⓘ</Text>
+        </TouchableOpacity>
+      ) : null}
       <View style={{ marginTop: 10, alignSelf: "stretch", paddingHorizontal: align === "right" ? 12 : 12 }}>
         {rows.map(([k, v]) => (
           <View key={k} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, borderBottomWidth: 1, borderColor: "#1c1712" }}>
