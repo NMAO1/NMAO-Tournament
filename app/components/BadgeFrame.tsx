@@ -156,8 +156,13 @@ function LegendaryFrame({ w, h, r, motif, gem, children }: { w: number; h: numbe
         {Array.from({ length: parts }).map((_, i) => (
           <Ember key={i} clock={clock} i={i} n={parts} w={w} h={h} band={band} color={motif === "crowned-gem" ? GEMS[gem].spark : "#ffcf6b"} />
         ))}
-        {/* signature motif */}
-        {motif === "dragon-coil" ? <DragonCoil clock={clock} cx={cx} cy={cy} w={w} h={h} r={r} band={band} /> : null}
+        {/* signature motif — a coiling dragon (gold on Gold Medallion, the season
+            gem's color on each Season Champion); the crowned gem sits on top */}
+        {motif === "dragon-coil" || motif === "crowned-gem" ? (
+          <DragonSerpent clock={clock} cx={cx} cy={cy} w={w} h={h} band={band}
+            color={motif === "crowned-gem" ? GEMS[gem].base : "#ffd76a"}
+            headColor={motif === "crowned-gem" ? GEMS[gem].light : "#ffe08a"} />
+        ) : null}
         {motif === "crowned-gem" ? <CrownedGem clock={clock} cx={cx} band={band} gem={gem} /> : null}
         {/* one-time entrance bloom */}
         <Circle cx={cx} cy={cy} r={flareR} opacity={flareO}>
@@ -168,21 +173,38 @@ function LegendaryFrame({ w, h, r, motif, gem, children }: { w: number; h: numbe
   );
 }
 
-// DRAGON-COIL (parametric V1) — a bright golden comet coiling the border fast,
-// blurred to read as living energy. Real dragon art swaps in here later.
-function DragonCoil({ clock, cx, cy, w, h, band }: { clock: ReturnType<typeof useClock>; cx: number; cy: number; w: number; h: number; r: number; band: number }) {
-  const coil = useDerivedValue(() => [{ rotate: (clock.value / 1500) % (Math.PI * 2) }]);
-  const coil2 = useDerivedValue(() => [{ rotate: ((clock.value / 1500) + Math.PI) % (Math.PI * 2) }]);
-  const HEAD = ["rgba(255,215,110,0)", "rgba(255,215,110,0)", "rgba(255,215,110,0)", "#fff6c8", "#ffcf5a", "rgba(255,190,60,0)", "rgba(255,215,110,0)", "rgba(255,215,110,0)"];
-  const TAIL = ["rgba(255,215,110,0)", "rgba(255,215,110,0)", "rgba(255,215,110,0)", "rgba(255,215,110,0)", "#ffd97a", "rgba(255,215,110,0)", "rgba(255,215,110,0)", "rgba(255,215,110,0)"];
+// DRAGON — a serpentine dragon of golden light coiling the frame: a glowing head
+// leads a tapering body of scales around the border. Parametric (traces an oval
+// hugging the edges); a hand-drawn dragon can swap into this slot later.
+const DRAGON_SPEED = 1700; // ms per radian-ish
+const DRAGON_STEP = 0.30;  // angular spacing between body segments
+const DRAGON_N = 13;
+function DragonSerpent({ clock, cx, cy, w, h, band, color, headColor }: { clock: ReturnType<typeof useClock>; cx: number; cy: number; w: number; h: number; band: number; color: string; headColor: string }) {
+  const a = w / 2 - band * 0.55;
+  const b = h / 2 - band * 0.55;
   return (
-    <Group layer={<Paint><Blur blur={4} /></Paint>}>
-      <RoundedRect x={band / 2} y={band / 2} width={w - band} height={h - band} r={18} style="stroke" strokeWidth={band * 0.95}>
-        <SweepGradient c={vec(cx, cy)} origin={vec(cx, cy)} transform={coil} colors={HEAD} />
-      </RoundedRect>
-      <RoundedRect x={band / 2} y={band / 2} width={w - band} height={h - band} r={18} style="stroke" strokeWidth={band * 0.7}>
-        <SweepGradient c={vec(cx, cy)} origin={vec(cx, cy)} transform={coil2} colors={TAIL} />
-      </RoundedRect>
+    <Group layer={<Paint><Blur blur={2.2} /></Paint>}>
+      {Array.from({ length: DRAGON_N }).map((_, i) => (
+        <DragonSeg key={i} clock={clock} i={i} cx={cx} cy={cy} a={a} b={b} band={band} color={color} />
+      ))}
+      <DragonHead clock={clock} cx={cx} cy={cy} a={a} b={b} band={band} headColor={headColor} />
+    </Group>
+  );
+}
+function DragonSeg({ clock, i, cx, cy, a, b, band, color }: { clock: ReturnType<typeof useClock>; i: number; cx: number; cy: number; a: number; b: number; band: number; color: string }) {
+  const px = useDerivedValue(() => cx + a * Math.cos(-(clock.value / DRAGON_SPEED) - i * DRAGON_STEP));
+  const py = useDerivedValue(() => cy + b * Math.sin(-(clock.value / DRAGON_SPEED) - i * DRAGON_STEP));
+  const rad = Math.max(1.3, band * 0.44 * (1 - (i / DRAGON_N) * 0.72));
+  const op = 0.92 - (i / DRAGON_N) * 0.5;
+  return <Circle cx={px} cy={py} r={rad} color={color} opacity={op} />;
+}
+function DragonHead({ clock, cx, cy, a, b, band, headColor }: { clock: ReturnType<typeof useClock>; cx: number; cy: number; a: number; b: number; band: number; headColor: string }) {
+  const hx = useDerivedValue(() => cx + a * Math.cos(-(clock.value / DRAGON_SPEED) + 0.16));
+  const hy = useDerivedValue(() => cy + b * Math.sin(-(clock.value / DRAGON_SPEED) + 0.16));
+  return (
+    <Group>
+      <Circle cx={hx} cy={hy} r={band * 0.6} color={headColor} />
+      <Circle cx={hx} cy={hy} r={band * 0.3} color="#ffffff" />
     </Group>
   );
 }
