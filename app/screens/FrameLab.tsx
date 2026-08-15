@@ -2,6 +2,7 @@ import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { BadgeFrame, type FrameRarity, type Motif, type GemKey } from "../components/BadgeFrame";
+import { DragonBand, type DragonTint } from "../components/DragonBand";
 
 // Frame Lab — a live on-device preview of the rarity → effect ladder plus the
 // legendary signature motifs, so we can see and tune each before mapping all
@@ -40,6 +41,19 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
         ))}
       </View>
 
+      <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginTop: 10, marginBottom: 4 }}>Dragon (MJ art) · bottom band</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 16 }}>
+        High-quality dragon art, silver master tinted to any season, with subtle life (breath · aura · eye glint).
+      </Text>
+      <View style={{ alignItems: "center", marginBottom: 24 }}>
+        {DRAGONS.map((d) => (
+          <View key={d.tint} style={{ marginBottom: 16, alignItems: "center" }}>
+            <DragonBand tint={d.tint} border={d.border} w={360} h={210} />
+            <Text style={{ color: hues.gold.hi, fontSize: 13, fontWeight: "800", marginTop: 8 }}>{d.label}</Text>
+          </View>
+        ))}
+      </View>
+
       <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginTop: 10, marginBottom: 4 }}>Season Champions</Text>
       <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 }}>
         The crowned gem, one color per season won — the rarest set, chased across the decade.
@@ -57,6 +71,13 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
     </ScrollView>
   );
 }
+
+const DRAGONS: { tint: DragonTint; border: string; label: string }[] = [
+  { tint: "silver", border: "#c7cdd6", label: "Silver (master)" },
+  { tint: "gold", border: "#f6d878", label: "Gold Medallion" },
+  { tint: "sapphire", border: "#2f7bff", label: "S1 · Sapphire" },
+  { tint: "ruby", border: "#e0264a", label: "S3 · Ruby" },
+];
 
 const SEASONS: { s: string; name: string; gem: GemKey }[] = [
   { s: "S1", name: "Sapphire", gem: "sapphire" },
