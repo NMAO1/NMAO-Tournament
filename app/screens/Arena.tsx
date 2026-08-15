@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet, Modal } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase } from "@nmao/design-tokens";
-import { Frame } from "../components/Frame";
 import { emblemUrl } from "../lib/badges";
 import { faceOff, castVote, playbackUrls, type FaceOff, type Choice, type Card } from "../lib/duel";
 
 // A worn frame/crest (equipped badge) — what the crest popover reveals.
 type Crest = NonNullable<Card["frame"]>;
+// The tapped crest + which lower corner it sits in, so the popup anchors beside it.
+type CrestAnchor = { frame: Crest; corner: "left" | "right" };
 const RARITY_LABEL: Record<string, string> = { legendary: "Legendary", epic: "Epic", rare: "Rare", common: "Common" };
 
 // The Arena "ring" — the crown-jewel voting screen. Landscape (via guarded
@@ -34,7 +35,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   const [voting, setVoting] = useState(false);
   const [voted, setVoted] = useState<Choice | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [crest, setCrest] = useState<Crest | null>(null);
+  const [crest, setCrest] = useState<CrestAnchor | null>(null);
   const flash = useRef(new Animated.Value(0)).current;
 
   // one player per side; source is swapped in once the signed URLs arrive
@@ -130,14 +131,14 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           active={active === "challenger"} unlocked={unlocked} voted={voted}
           player={chPlayer} hasVideo={!!urls.challenger}
           onPlay={() => togglePlay("challenger")} onVote={() => vote("challenger")}
-          onCrest={() => face.challenger.frame && setCrest(face.challenger.frame)}
+          onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
           active={active === "opponent"} unlocked={unlocked} voted={voted}
           player={opPlayer} hasVideo={!!urls.opponent}
           onPlay={() => togglePlay("opponent")} onVote={() => vote("opponent")}
-          onCrest={() => face.opponent.frame && setCrest(face.opponent.frame)}
+          onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
         />
       </View>
 
@@ -178,7 +179,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
       />
 
       {/* tap a competitor's worn crest → what the badge is + how it's earned */}
-      <CrestModal frame={crest} onClose={() => setCrest(null)} />
+      <CrestPopup crest={crest} onClose={() => setCrest(null)} />
     </View>
   );
 }
@@ -295,7 +296,7 @@ function closesIn(face: FaceOff): string {
 // VS pops (spring overshoot) in the centre.
 function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count: number; onEnter: () => void; onExit: () => void }) {
   const w = Dimensions.get("window").width;
-  const [crest, setCrest] = useState<Crest | null>(null);
+  const [crest, setCrest] = useState<CrestAnchor | null>(null);
   const slideL = useRef(new Animated.Value(-w)).current;
   const slideR = useRef(new Animated.Value(w)).current;
   const vs = useRef(new Animated.Value(0)).current;
@@ -325,7 +326,7 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
 
       <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
         <Animated.View style={{ flex: 1, alignItems: "center", transform: [{ translateX: slideL }] }}>
-          <Fighter card={face.challenger} align="right" onCrest={() => face.challenger.frame && setCrest(face.challenger.frame)} />
+          <Fighter card={face.challenger} align="right" onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })} />
         </Animated.View>
         <Animated.View style={{ width: 88, alignItems: "center", transform: [{ scale: vs }] }}>
           <View style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: hues.gold.base, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: hues.gold.hi, shadowColor: hues.gold.hi, shadowOpacity: 0.9, shadowRadius: 24 }}>
@@ -333,57 +334,55 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
           </View>
         </Animated.View>
         <Animated.View style={{ flex: 1, alignItems: "center", transform: [{ translateX: slideR }] }}>
-          <Fighter card={face.opponent} align="left" onCrest={() => face.opponent.frame && setCrest(face.opponent.frame)} />
+          <Fighter card={face.opponent} align="left" onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })} />
         </Animated.View>
       </View>
 
-      <View style={{ alignItems: "center", paddingBottom: 20 }}>
-        <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderRadius: 12, overflow: "hidden", minWidth: 240 }}>
-          <LinearGradient colors={rarityStops("legendary")} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 12, alignItems: "center" }}>
-            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 13, letterSpacing: 0.5 }}>ENTER THE ARENA  →</Text>
+      <View style={{ alignItems: "center", paddingBottom: 12 }}>
+        <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderRadius: 10, overflow: "hidden", minWidth: 184 }}>
+          <LinearGradient colors={rarityStops("legendary")} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 9, alignItems: "center" }}>
+            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 12, letterSpacing: 0.5 }}>ENTER THE ARENA  →</Text>
           </LinearGradient>
         </TouchableOpacity>
-        <Text style={{ color: neutrals.muted2, fontSize: 10, marginTop: 8, letterSpacing: 1 }}>Auto-enters in {count}s</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 9, marginTop: 6, letterSpacing: 1 }}>Auto-enters in {count}s</Text>
       </View>
 
-      <CrestModal frame={crest} onClose={() => setCrest(null)} />
+      <CrestPopup crest={crest} onClose={() => setCrest(null)} />
     </View>
   );
 }
 
-// ── Crest popover — tap a fighter's worn frame to see what the badge is and how
-// it's earned (the same how-to-earn copy as the Honors vault). ──
-function CrestModal({ frame, onClose }: { frame: Crest | null; onClose: () => void }) {
+// ── Crest popover — tap a fighter's worn crest to see the badge name + how it's
+// earned. A tiny in-view card (not a Modal, so it never covers the videos or
+// conflicts with the landscape lock) anchored right beside the tapped corner
+// gem; tap anywhere to dismiss. ──
+function CrestPopup({ crest, onClose }: { crest: CrestAnchor | null; onClose: () => void }) {
+  if (!crest) return null;
+  const { frame, corner } = crest;
   return (
-    <Modal visible={!!frame} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity activeOpacity={1} onPress={onClose} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.66)", justifyContent: "flex-end" }}>
-        {frame ? (
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: "#161618", borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderColor: "#2a2a2e", padding: 22, paddingBottom: 34, alignItems: "center" }}>
-            <View style={{ width: 40, height: 4, borderRadius: 3, backgroundColor: "#3a3a3e", marginBottom: 16 }} />
-            <Frame rarity={frame.rarity} size="mini" radius={40} glow>
-              <View style={{ width: 88, height: 88, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
-                {emblemUrl(frame.code) ? (
-                  <Image source={{ uri: emblemUrl(frame.code)! }} style={{ width: 88, height: 88 }} resizeMode="contain" />
-                ) : (
-                  <Text style={{ color: "#EFC24E", fontSize: 32 }}>◆</Text>
-                )}
-              </View>
-            </Frame>
-            <Text style={{ color: neutrals.text, fontSize: 20, fontWeight: "800", marginTop: 14 }}>{frame.name}</Text>
-            <Text style={{ color: rarityBase(frame.rarity), fontSize: 11, letterSpacing: 2, fontWeight: "800", textTransform: "uppercase", marginTop: 3 }}>
-              {RARITY_LABEL[frame.rarity] ?? frame.rarity} · Worn frame
-            </Text>
-            {frame.description ? (
-              <View style={{ marginTop: 18, alignItems: "center" }}>
-                <Text style={{ color: hues.gold.hi, fontSize: 10, letterSpacing: 2, fontWeight: "800" }}>HOW TO EARN</Text>
-                <Text style={{ color: neutrals.muted, fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 }}>{frame.description}</Text>
-              </View>
-            ) : null}
-            <TouchableOpacity onPress={onClose} style={{ marginTop: 20 }}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Close</Text></TouchableOpacity>
-          </TouchableOpacity>
+    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+      {/* transparent catcher — tap anywhere off the card to dismiss; no dimming
+          so the videos stay fully visible behind it */}
+      <TouchableOpacity activeOpacity={1} onPress={onClose} style={StyleSheet.absoluteFill} />
+      {/* the little card, sitting just above the corner gem it belongs to */}
+      <View
+        style={{
+          position: "absolute", bottom: 62, maxWidth: 188,
+          ...(corner === "left" ? { left: 12 } : { right: 12 }),
+          backgroundColor: "rgba(16,14,16,0.97)", borderRadius: 12, borderWidth: 1,
+          borderColor: rarityBase(frame.rarity) + "AA", paddingVertical: 9, paddingHorizontal: 12,
+          shadowColor: "#000", shadowOpacity: 0.5, shadowRadius: 12, shadowOffset: { width: 0, height: 4 },
+        }}
+      >
+        <Text style={{ color: neutrals.text, fontSize: 13, fontWeight: "800" }}>{frame.name}</Text>
+        <Text style={{ color: rarityBase(frame.rarity), fontSize: 8, letterSpacing: 1.2, fontWeight: "800", textTransform: "uppercase", marginTop: 1 }}>
+          {RARITY_LABEL[frame.rarity] ?? frame.rarity}
+        </Text>
+        {frame.description ? (
+          <Text style={{ color: neutrals.muted, fontSize: 11, lineHeight: 15, marginTop: 5 }}>{frame.description}</Text>
         ) : null}
-      </TouchableOpacity>
-    </Modal>
+      </View>
+    </View>
   );
 }
 
@@ -399,28 +398,28 @@ function Fighter({ card, align, onCrest }: { card: Card; align: "left" | "right"
     ["Rating", card.rating.toLocaleString()],
   ];
   return (
-    <View style={{ flex: 1, alignItems: "center", maxWidth: 260 }}>
+    <View style={{ flex: 1, alignItems: "center", maxWidth: 344 }}>
       {/* spotlight photo / silhouette on the badge-color glow */}
-      <View style={{ width: 92, height: 92, borderRadius: 46, alignItems: "center", justifyContent: "center", backgroundColor: glow + "26", borderWidth: 2, borderColor: glow, shadowColor: glow, shadowOpacity: 0.8, shadowRadius: 18, overflow: "hidden" }}>
+      <View style={{ width: 68, height: 68, borderRadius: 34, alignItems: "center", justifyContent: "center", backgroundColor: glow + "26", borderWidth: 2, borderColor: glow, shadowColor: glow, shadowOpacity: 0.8, shadowRadius: 12, overflow: "hidden" }}>
         {card.photo ? (
           <Image source={{ uri: card.photo }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
         ) : (
-          <Text style={{ color: glow, fontSize: 30, fontWeight: "900" }}>{initials}</Text>
+          <Text style={{ color: glow, fontSize: 22, fontWeight: "900" }}>{initials}</Text>
         )}
       </View>
-      <Text numberOfLines={1} style={{ color: neutrals.text, fontSize: 18, fontWeight: "900", marginTop: 10, textAlign: "center" }}>{card.name}</Text>
+      <Text numberOfLines={1} style={{ color: neutrals.text, fontSize: 15, fontWeight: "900", marginTop: 7, textAlign: "center" }}>{card.name}</Text>
       {card.frame ? (
-        <TouchableOpacity onPress={onCrest} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 }}>
-          {emblemUrl(card.frame.code) ? <Image source={{ uri: emblemUrl(card.frame.code)! }} style={{ width: 16, height: 16 }} resizeMode="contain" /> : null}
-          <Text style={{ color: glow, fontSize: 9, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "800" }}>{card.frame.name}</Text>
-          <Text style={{ color: neutrals.muted2, fontSize: 9 }}>ⓘ</Text>
+        <TouchableOpacity onPress={onCrest} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 }}>
+          {emblemUrl(card.frame.code) ? <Image source={{ uri: emblemUrl(card.frame.code)! }} style={{ width: 14, height: 14 }} resizeMode="contain" /> : null}
+          <Text style={{ color: glow, fontSize: 8.5, letterSpacing: 1.5, textTransform: "uppercase", fontWeight: "800" }}>{card.frame.name}</Text>
+          <Text style={{ color: neutrals.muted2, fontSize: 8.5 }}>ⓘ</Text>
         </TouchableOpacity>
       ) : null}
-      <View style={{ marginTop: 10, alignSelf: "stretch", paddingHorizontal: align === "right" ? 12 : 12 }}>
+      <View style={{ marginTop: 8, width: 224, maxWidth: "100%", paddingHorizontal: 4 }}>
         {rows.map(([k, v]) => (
-          <View key={k} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 3, borderBottomWidth: 1, borderColor: "#1c1712" }}>
-            <Text style={{ color: neutrals.muted2, fontSize: 11 }}>{k}</Text>
-            <Text numberOfLines={1} style={{ color: neutrals.text, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums"], textTransform: "capitalize", flex: 1, textAlign: "right", marginLeft: 10 }}>{v}</Text>
+          <View key={k} style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 3.5, borderBottomWidth: 1, borderColor: "#1c1712" }}>
+            <Text style={{ color: neutrals.muted2, fontSize: 12 }}>{k}</Text>
+            <Text numberOfLines={1} style={{ color: neutrals.text, fontSize: 13, fontWeight: "700", fontVariant: ["tabular-nums"], textTransform: "capitalize", flex: 1, textAlign: "right", marginLeft: 10 }}>{v}</Text>
           </View>
         ))}
       </View>
