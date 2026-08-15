@@ -130,8 +130,8 @@
     <!-- POD / DIVISION SETTINGS -->
     <div class="card">
       <div class="hd">
-        <h2><span class="rail"></span>Pod &amp; Division Settings <span class="lock" id="schemeTag"></span></h2>
-        <div class="sub">Pods cap competitors per division; at the split threshold a pod divides. Applies to the active season's scheme.</div>
+        <h2><span class="rail"></span>Pods, Ranks &amp; Divisions <span class="lock" id="schemeTag"></span></h2>
+        <div class="sub">Rank tiers + pod sizing for the active season's scheme. Events &amp; age brackets edited above sync here automatically, so the division engine always matches the config.</div>
       </div>
       <div class="settings" id="podSettings"></div>
     </div>
@@ -258,17 +258,39 @@ async function loadPodSettings(){
   if (!s){ $('podSettings').innerHTML = '<div class="muted">No active season scheme found.</div>'; return; }
   $('schemeTag').textContent = `${s.season_name} · scheme v${s.version}${s.locked ? ' · LOCKED' : ''}`;
   const dis = s.locked ? 'disabled' : '';
+  const ranks = (s.ranks || []).join(', ');
   $('podSettings').innerHTML = `
     <div><label>Pod cap (max per division)</label><input id="podCap" type="number" value="${esc(s.pod_cap)}" ${dis}/></div>
     <div><label>Split threshold (divide at)</label><input id="podSplit" type="number" value="${esc(s.pod_split_threshold)}" ${dis}/></div>
     <div><label>Pod floor (min to run)</label><input id="podFloor" type="number" value="${esc(s.pod_floor)}" ${dis}/></div>
+    <div style="grid-column:1/-1">
+      <label>Rank tiers — order matters (comma-separated)</label>
+      <div style="display:flex;gap:8px">
+        <input id="rankTiers" value="${esc(ranks)}" placeholder="beginner, intermediate, advanced" ${dis}/>
+        <button class="btn" id="saveRanks" ${dis} style="white-space:nowrap">Save ranks</button>
+      </div>
+    </div>
     <div class="foot">
-      <span class="lock">${s.locked ? '🔒 Scheme is locked — unlock in the round engine to edit.' : 'Changes apply to the active season only.'}</span>
-      <button class="btn gold" id="savePods" ${dis}>Save settings</button>
+      <span class="lock">${s.locked ? '🔒 Scheme is locked — unlock in the round engine to edit.' : '↻ Events &amp; age brackets auto-sync to this scheme on save.'}</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="resyncBtn" ${dis}>Re-sync scheme</button>
+        <button class="btn gold" id="savePods" ${dis}>Save pod settings</button>
+      </div>
     </div>`;
-  if (!s.locked) $('savePods').onclick = async () => {
+  if (s.locked) return;
+  $('savePods').onclick = async () => {
     const { error } = await sb.rpc('admin_save_pod_settings', { p_cap:Number($('podCap').value), p_split:Number($('podSplit').value), p_floor:Number($('podFloor').value) });
     error ? toast(error.message,'err') : (toast('Pod settings saved','ok'), loadPodSettings());
+  };
+  $('saveRanks').onclick = async () => {
+    const tiers = $('rankTiers').value.split(',').map(t => t.trim()).filter(Boolean);
+    if (!tiers.length) return toast('At least one rank tier required','err');
+    const { error } = await sb.rpc('admin_save_scheme_ranks', { p_tiers: tiers });
+    error ? toast(error.message,'err') : (toast('Rank tiers saved','ok'), loadPodSettings());
+  };
+  $('resyncBtn').onclick = async () => {
+    const { data, error } = await sb.rpc('admin_sync_active_scheme');
+    error ? toast(error.message,'err') : toast(data || 'Synced','ok');
   };
 }
 
