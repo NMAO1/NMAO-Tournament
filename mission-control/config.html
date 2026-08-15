@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NMAO — Tournament Config</title>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  const SUPABASE_URL = 'https://oxzuavpyoetchwebdejp.supabase.co';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94enVhdnB5b2V0Y2h3ZWJkZWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgyNjUsImV4cCI6MjEwMTU0NDI2NX0.SEBXeo_FqsyqV8xS5dwaGymXI6mYPy8-9uMAgaX4fhg';
+  window.__mc = { createClient, SUPABASE_URL, ANON };
+</script>
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b;
+    --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
+    --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22;
+    --ruby:#FF2E3B; --amethyst:#A32BF7; --sapphire:#1F7BFF;
+    --success:#5DCAA5; --danger:#E07070;
+    --spectrum:linear-gradient(180deg,#1F7BFF 0%,#A32BF7 50%,#FF2E3B 100%);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#141220 0%,var(--bg) 60%);color:var(--text);
+       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;padding:22px}
+  .wrap{max-width:1040px;margin:0 auto}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer}
+  .btn:hover{border-color:#3a3a40}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
+  .btn.danger{border-color:#4a2b2b;color:#E9A0A0;background:#1c1414}
+  .btn.sm{padding:5px 9px;font-size:12px}
+  .hide{display:none!important}
+  input,select{font-family:inherit}
+
+  .login{max-width:360px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .login h1{font-size:18px;margin:0 0 4px}
+  .login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .login label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+  .login input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+  .login .btn{width:100%;margin-top:16px;justify-content:center;text-align:center}
+  .msg{font-size:12.5px;margin-top:10px;min-height:16px}
+  .msg.err{color:var(--danger)} .msg.ok{color:var(--success)}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F5F0E8 0 50%,#141210 0 100%);border:1px solid var(--gold)}
+  .brand h1{font-size:16px;margin:0;letter-spacing:.02em}
+  .brand small{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .actions{display:flex;gap:8px;align-items:center}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:18px}
+  .card > .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd h2{font-size:14px;margin:0;display:flex;align-items:center;gap:9px}
+  .hd .sub{font-size:12px;color:var(--muted);max-width:460px;text-align:right}
+  .rail{width:4px;height:15px;border-radius:2px;background:var(--spectrum)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line)}
+  td{padding:7px 12px;border-bottom:1px solid #202024;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  td input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 9px;font-size:13px}
+  td input:read-only{opacity:.6;border-color:transparent;background:transparent;padding-left:0}
+  td.code{font-family:ui-monospace,Menlo,monospace;color:var(--muted)}
+  .rowbtns{display:flex;gap:6px;justify-content:flex-end}
+  .num{max-width:92px}
+  .settings{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px 18px}
+  .settings label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  .settings input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:9px 11px;font-size:14px}
+  .settings .foot{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+  .lock{font-size:12px;color:var(--muted)}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);
+         border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px}
+  .toast.err{border-color:#4a2b2b;color:#E9A0A0} .toast.ok{border-color:#2b4a3a;color:#a9f0c1}
+  .foot-note{margin-top:12px;color:var(--muted2);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div class="login" id="loginCard">
+    <h1 class="serif">Tournament Config</h1>
+    <p>Sign in with your NMAO staff account.</p>
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" />
+    <div id="pwWrap"><label>Password</label><input id="password" type="password" autocomplete="current-password" /></div>
+    <div id="codeWrap" class="hide"><label>6-digit code (emailed)</label><input id="code" inputmode="numeric" maxlength="6" /></div>
+    <button class="btn gold" id="loginBtn">Sign in</button>
+    <button class="btn" id="codeToggle" style="width:100%;margin-top:8px">Email me a code instead</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- CONSOLE -->
+  <div id="console" class="hide">
+    <header>
+      <div class="brand"><span class="yy"></span>
+        <div><h1 class="serif">Tournament Config</h1><small>Mission Control</small></div></div>
+      <div class="actions">
+        <a class="btn" href="./live.html">← Live console</a>
+        <button class="btn" id="signoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <!-- EVENTS -->
+    <div class="card">
+      <div class="hd">
+        <h2><span class="rail"></span>Events</h2>
+        <div class="sub">Event types drive division building and the app's event filter. Code is the stable key — change names freely.</div>
+      </div>
+      <table>
+        <thead><tr><th style="width:150px">Code</th><th>Name</th><th style="width:150px">Discipline</th><th style="width:150px">Style</th><th style="width:150px"></th></tr></thead>
+        <tbody id="eventsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- AGE BRACKETS -->
+    <div class="card">
+      <div class="hd">
+        <h2><span class="rail"></span>Age Brackets</h2>
+        <div class="sub">Editable over time. The app's Age filter and duel bracket matching read these live — no app deploy needed.</div>
+      </div>
+      <table>
+        <thead><tr><th style="width:150px">Code</th><th>Label</th><th style="width:120px">Min age</th><th style="width:120px">Max age</th><th style="width:150px"></th></tr></thead>
+        <tbody id="bracketsBody"></tbody>
+      </table>
+    </div>
+
+    <!-- POD / DIVISION SETTINGS -->
+    <div class="card">
+      <div class="hd">
+        <h2><span class="rail"></span>Pod &amp; Division Settings <span class="lock" id="schemeTag"></span></h2>
+        <div class="sub">Pods cap competitors per division; at the split threshold a pod divides. Applies to the active season's scheme.</div>
+      </div>
+      <div class="settings" id="podSettings"></div>
+    </div>
+
+    <div class="foot-note">Writes are staff-gated (SECURITY DEFINER). Tournament suite — separate product from the membership platform.</div>
+  </div>
+</div>
+
+<script type="module">
+const { createClient, SUPABASE_URL, ANON } = window.__mc;
+const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function setMsg(id, t, cls){ const el=$(id); el.textContent=t; el.className='msg '+(cls||''); }
+let toastT;
+function toast(t, cls){ let el=document.querySelector('.toast'); if(!el){el=document.createElement('div');document.body.appendChild(el);} el.className='toast '+(cls||''); el.textContent=t; clearTimeout(toastT); toastT=setTimeout(()=>el.remove(), 2600); }
+
+// ---------- auth (same flow as the live console) ----------
+let codeMode = false;
+$('codeToggle').onclick = async () => {
+  const email = $('email').value.trim();
+  if (codeMode) { codeMode=false; $('pwWrap').classList.remove('hide'); $('codeWrap').classList.add('hide'); $('codeToggle').textContent='Email me a code instead'; $('loginBtn').textContent='Sign in'; return; }
+  if (!email) return setMsg('loginMsg','Enter your email first.','err');
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+  if (error) return setMsg('loginMsg', error.message, 'err');
+  codeMode=true; $('pwWrap').classList.add('hide'); $('codeWrap').classList.remove('hide');
+  $('codeToggle').textContent='Use password instead'; $('loginBtn').textContent='Verify code';
+  setMsg('loginMsg','Code sent — check your email.','ok');
+};
+$('loginBtn').onclick = async () => {
+  const email = $('email').value.trim();
+  $('loginBtn').disabled = true;
+  try {
+    if (codeMode) { const { error } = await sb.auth.verifyOtp({ email, token: $('code').value.trim(), type:'email' }); if (error) throw error; }
+    else { const { error } = await sb.auth.signInWithPassword({ email, password: $('password').value }); if (error) throw error; }
+    await afterLogin();
+  } catch(e){ setMsg('loginMsg', e.message || 'Sign-in failed.', 'err'); }
+  finally { $('loginBtn').disabled = false; }
+};
+$('signoutBtn').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function afterLogin(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if (!user) return setMsg('loginMsg','Session expired — sign in again.','err');
+  const { data: staff } = await sb.from('staff').select('id').eq('auth_user_id', user.id).maybeSingle();
+  if (!staff) return setMsg('loginMsg','This account is not NMAO staff.','err');
+  $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
+  await Promise.all([loadEvents(), loadBrackets(), loadPodSettings()]);
+}
+
+// ---------- events ----------
+async function loadEvents(){
+  const { data, error } = await sb.rpc('admin_event_types');
+  if (error) return toast(error.message,'err');
+  const rows = (data||[]).map(e => eventRow(e.code, e.name, e.discipline, e.style, false)).join('');
+  $('eventsBody').innerHTML = rows + eventRow('', '', '', '', true);
+}
+function eventRow(code, name, disc, style, isNew){
+  const ro = isNew ? '' : 'readonly';
+  return `<tr>
+    <td class="code"><input data-f="code" ${ro} value="${esc(code)}" placeholder="${isNew?'new_code':''}"/></td>
+    <td><input data-f="name" value="${esc(name)}" placeholder="${isNew?'New event name':''}"/></td>
+    <td><input data-f="discipline" value="${esc(disc)}" placeholder="forms / weapons"/></td>
+    <td><input data-f="style" value="${esc(style)}" placeholder="traditional / open"/></td>
+    <td class="rowbtns">
+      <button class="btn gold sm" data-act="save-event">${isNew?'Add':'Save'}</button>
+      ${isNew?'':'<button class="btn danger sm" data-act="del-event">Delete</button>'}
+    </td></tr>`;
+}
+$('eventsBody').addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('button'); if (!btn) return;
+  const tr = btn.closest('tr'); const g = f => tr.querySelector(`[data-f="${f}"]`).value.trim();
+  if (btn.dataset.act === 'save-event'){
+    if (!g('code')) return toast('Code required','err');
+    const { error } = await sb.rpc('admin_save_event_type', { p_code:g('code'), p_name:g('name'), p_discipline:g('discipline'), p_style:g('style') });
+    error ? toast(error.message,'err') : (toast('Event saved','ok'), loadEvents());
+  } else if (btn.dataset.act === 'del-event'){
+    if (!confirm(`Delete event "${g('code')}"? Existing medals keep their event text.`)) return;
+    const { error } = await sb.rpc('admin_delete_event_type', { p_code:g('code') });
+    error ? toast(error.message,'err') : (toast('Event deleted','ok'), loadEvents());
+  }
+});
+
+// ---------- age brackets ----------
+async function loadBrackets(){
+  const { data, error } = await sb.rpc('admin_age_brackets');
+  if (error) return toast(error.message,'err');
+  const rows = (data||[]).map(b => bracketRow(b.code, b.label, b.min_age, b.max_age, false)).join('');
+  $('bracketsBody').innerHTML = rows + bracketRow('', '', '', '', true);
+}
+function bracketRow(code, label, min, max, isNew){
+  const ro = isNew ? '' : 'readonly';
+  return `<tr>
+    <td class="code"><input data-f="code" ${ro} value="${esc(code)}" placeholder="${isNew?'e.g. 6_8':''}"/></td>
+    <td><input data-f="label" value="${esc(label)}" placeholder="${isNew?'e.g. 6–8':''}"/></td>
+    <td><input class="num" data-f="min" type="number" value="${esc(min)}"/></td>
+    <td><input class="num" data-f="max" type="number" value="${esc(max)}" placeholder="blank = no cap"/></td>
+    <td class="rowbtns">
+      <button class="btn gold sm" data-act="save-bracket">${isNew?'Add':'Save'}</button>
+      ${isNew?'':'<button class="btn danger sm" data-act="del-bracket">Delete</button>'}
+    </td></tr>`;
+}
+$('bracketsBody').addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('button'); if (!btn) return;
+  const tr = btn.closest('tr'); const g = f => tr.querySelector(`[data-f="${f}"]`).value.trim();
+  if (btn.dataset.act === 'save-bracket'){
+    if (!g('code')) return toast('Code required','err');
+    if (g('min') === '') return toast('Min age required','err');
+    const max = g('max') === '' ? null : Number(g('max'));
+    const { error } = await sb.rpc('admin_save_age_bracket', { p_code:g('code'), p_label:g('label'), p_min:Number(g('min')), p_max:max });
+    error ? toast(error.message,'err') : (toast('Bracket saved','ok'), loadBrackets());
+  } else if (btn.dataset.act === 'del-bracket'){
+    if (!confirm(`Delete bracket "${g('code')}"?`)) return;
+    const { error } = await sb.rpc('admin_delete_age_bracket', { p_code:g('code') });
+    error ? toast(error.message,'err') : (toast('Bracket deleted','ok'), loadBrackets());
+  }
+});
+
+// ---------- pod / division settings ----------
+async function loadPodSettings(){
+  const { data, error } = await sb.rpc('admin_pod_settings');
+  if (error) return toast(error.message,'err');
+  const s = (data||[])[0];
+  if (!s){ $('podSettings').innerHTML = '<div class="muted">No active season scheme found.</div>'; return; }
+  $('schemeTag').textContent = `${s.season_name} · scheme v${s.version}${s.locked ? ' · LOCKED' : ''}`;
+  const dis = s.locked ? 'disabled' : '';
+  $('podSettings').innerHTML = `
+    <div><label>Pod cap (max per division)</label><input id="podCap" type="number" value="${esc(s.pod_cap)}" ${dis}/></div>
+    <div><label>Split threshold (divide at)</label><input id="podSplit" type="number" value="${esc(s.pod_split_threshold)}" ${dis}/></div>
+    <div><label>Pod floor (min to run)</label><input id="podFloor" type="number" value="${esc(s.pod_floor)}" ${dis}/></div>
+    <div class="foot">
+      <span class="lock">${s.locked ? '🔒 Scheme is locked — unlock in the round engine to edit.' : 'Changes apply to the active season only.'}</span>
+      <button class="btn gold" id="savePods" ${dis}>Save settings</button>
+    </div>`;
+  if (!s.locked) $('savePods').onclick = async () => {
+    const { error } = await sb.rpc('admin_save_pod_settings', { p_cap:Number($('podCap').value), p_split:Number($('podSplit').value), p_floor:Number($('podFloor').value) });
+    error ? toast(error.message,'err') : (toast('Pod settings saved','ok'), loadPodSettings());
+  };
+}
+
+// resume session
+(async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
+</script>
+</body>
+</html>
