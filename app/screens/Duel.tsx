@@ -7,8 +7,8 @@ import { Frame } from "../components/Frame";
 import { myCompetitors } from "../lib/competitors";
 import { uploadDuelVideo } from "../lib/upload";
 import {
-  weekStatus, myActiveDuels, voteQueue, findOpponents, createDuel, respondToDuel, submitDuelVideo,
-  type WeekStatus, type ActiveDuel, type QueueDuel, type Opponent, type DuelType,
+  weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo,
+  type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent,
 } from "../lib/duel";
 import Arena from "./Arena";
 
@@ -27,7 +27,7 @@ export default function Duel() {
   const [refreshing, setRefreshing] = useState(false);
   const [openDuel, setOpenDuel] = useState<string | null>(null);
   const [challenging, setChallenging] = useState(false);
-  const [opponents, setOpponents] = useState<Opponent[]>([]);
+  const [events, setEvents] = useState<DuelEvent[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (id: string) => {
@@ -48,16 +48,16 @@ export default function Duel() {
   async function refresh() { if (!me) return; setRefreshing(true); await load(me); setRefreshing(false); }
   async function runSearch(text: string) { setSearch(text); if (me) setQueue(await voteQueue(me, text.trim())); }
 
-  async function openChallenge() { if (!me) return; setChallenging(true); setOpponents(await findOpponents(me)); }
-  async function challenge(opp: Opponent, type: DuelType) {
+  async function openChallenge() { if (!me) return; setChallenging(true); if (events.length === 0) setEvents(await duelEvents()); }
+  async function request(ev: DuelEvent) {
     if (!me) return;
-    setBusyId(opp.id);
-    const r = await createDuel(me, opp.id, type);
+    setBusyId(ev.code);
+    const r = await requestDuel(me, ev.code);
     setBusyId(null);
-    if (!r.ok) { Alert.alert("Challenge", prettyErr(r.error)); return; }
-    setChallenging(false); setOpponents([]);
+    if (!r.ok) { Alert.alert("Find a match", prettyErr(r.error)); return; }
+    setChallenging(false);
     await load(me);
-    Alert.alert("Challenge sent", `${opp.name} has 48 hours to accept.`);
+    Alert.alert("You're matched", "A mystery opponent has been drawn — they have 48 hours to accept. Identities are revealed at the end.");
   }
   async function respond(d: ActiveDuel, accept: boolean) {
     setBusyId(d.id);
@@ -118,26 +118,21 @@ export default function Duel() {
       {week?.remaining === 0 ? <Text style={{ color: neutrals.muted2, fontSize: 11, textAlign: "center", marginBottom: 6 }}>Weekly limit reached — resets soon.</Text> : null}
 
       {challenging ? (
-        <View style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, padding: 10, marginTop: 6, marginBottom: 6 }}>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-            <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 12 }}>Pick an opponent</Text>
+        <View style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, padding: 12, marginTop: 6, marginBottom: 6 }}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
+            <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 12 }}>Choose your event</Text>
             <TouchableOpacity onPress={() => setChallenging(false)}><Text style={{ color: neutrals.muted2, fontSize: 12 }}>Close</Text></TouchableOpacity>
           </View>
-          {opponents.length === 0 ? (
-            <Text style={{ color: neutrals.muted2, fontSize: 12 }}>No eligible opponents right now.</Text>
-          ) : opponents.map((o) => (
-            <View key={o.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 6 }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: neutrals.text, fontSize: 13 }}>{o.name}</Text>
-                <Text style={{ color: neutrals.muted2, fontSize: 10 }}>{[o.school, o.rank].filter(Boolean).join(" · ")}</Text>
-              </View>
-              <TouchableOpacity onPress={() => challenge(o, "kata")} disabled={busyId === o.id} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: hues.gold.shadow, marginRight: 6 }}>
-                <Text style={{ color: hues.gold.hi, fontSize: 11, fontWeight: "700" }}>Kata</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => challenge(o, "weapon")} disabled={busyId === o.id} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: hues.amethyst.shadow }}>
-                <Text style={{ color: hues.amethyst.hi, fontSize: 11, fontWeight: "700" }}>Weapon</Text>
-              </TouchableOpacity>
-            </View>
+          <Text style={{ color: neutrals.muted2, fontSize: 11, marginBottom: 10 }}>We'll match you with a random opponent at your rank, age, and rating. You won't see who until the reveal.</Text>
+          {events.length === 0 ? (
+            <Text style={{ color: neutrals.muted2, fontSize: 12 }}>Loading events…</Text>
+          ) : events.map((ev) => (
+            <TouchableOpacity key={ev.code} onPress={() => request(ev)} disabled={busyId !== null} activeOpacity={0.85} style={{ marginBottom: 8, borderRadius: 10, overflow: "hidden", opacity: busyId !== null && busyId !== ev.code ? 0.5 : 1 }}>
+              <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, paddingHorizontal: 14 }}>
+                <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>{ev.name}</Text>
+                <Text style={{ color: "rgba(255,255,255,0.85)", fontSize: 12, fontWeight: "700" }}>{busyId === ev.code ? "Matching…" : "Find match ›"}</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           ))}
         </View>
       ) : null}
@@ -170,13 +165,13 @@ export default function Duel() {
 }
 
 function subtitle(d: ActiveDuel): string {
-  if (d.status === "pending") return d.role === "opponent" ? `challenged you · ${d.type}` : `awaiting response · ${d.type}`;
-  if (d.status === "accepted") return d.myVideoIn ? "awaiting opponent's form" : "accepted · upload your form";
+  if (d.status === "pending") return d.role === "opponent" ? `mystery challenge · ${d.event}` : `awaiting response · ${d.event}`;
+  if (d.status === "accepted") return d.myVideoIn ? "awaiting opponent's form" : `accepted · upload your ${d.event}`;
   return "live — the community is voting";
 }
 
 function ActiveCard({ d, busy, onRespond, onUpload }: { d: ActiveDuel; busy: boolean; onRespond: (d: ActiveDuel, a: boolean) => void; onUpload: (d: ActiveDuel) => void }) {
-  const title = d.status === "pending" && d.role === "opponent" ? d.opponentName : `vs ${d.opponentName}`;
+  const title = d.status === "pending" && d.role === "opponent" ? "⚔  Mystery challenger" : "vs Mystery opponent";
   return (
     <View style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, backgroundColor: neutrals.surface, padding: 12, marginBottom: 8 }}>
       <View style={{ flexDirection: "row", alignItems: "center" }}>

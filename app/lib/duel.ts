@@ -6,7 +6,9 @@ import type { Rarity } from "@nmao/design-tokens";
 // All the SECURITY DEFINER RPCs enforce auth via nmao.competitor_ids().
 // ============================================================
 
-export type DuelType = "kata" | "weapon";
+// A duel's event is an event_types code/name (Traditional Forms, …); kept as a
+// string since the event list is data-driven.
+export type DuelType = string;
 export type Choice = "challenger" | "opponent";
 
 function asRarity(r: string | null): Rarity {
@@ -60,16 +62,19 @@ export async function castVote(duelId: string, voterId: string, choice: Choice, 
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
-// ---- matchmaking + create (find_duel_opponents → create_duel) ----
-export type Opponent = { id: string; name: string; school: string | null; rank: string | null; ageBracket: string | null };
-export async function findOpponents(competitorId: string, type: DuelType | null = null, limit = 20): Promise<Opponent[]> {
-  const { data, error } = await supabase.rpc("find_duel_opponents", { p_competitor_id: competitorId, p_type: type, p_limit: limit });
+// ---- request a duel (random, system-matched opponent) ----
+// The competitor picks only the EVENT; request_duel selects a random,
+// rating-proximate, same-rank + same-age-bracket + in-geo opponent. No
+// cherry-picking, and the opponent stays a mystery until the reveal.
+export type DuelEvent = { code: string; name: string };
+export async function duelEvents(): Promise<DuelEvent[]> {
+  const { data, error } = await supabase.rpc("duel_events");
   if (error || !data) return [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data as any[]).map((o) => ({ id: o.competitor_id, name: o.name, school: o.school, rank: o.declared_rank, ageBracket: o.age_bracket }));
+  return (data as any[]).map((e) => ({ code: e.code, name: e.name }));
 }
-export async function createDuel(challengerId: string, opponentId: string, type: DuelType): Promise<{ ok: boolean; duelId?: string; error?: string }> {
-  const { data, error } = await supabase.rpc("create_duel", { p_challenger_id: challengerId, p_opponent_id: opponentId, p_type: type });
+export async function requestDuel(competitorId: string, eventCode: string): Promise<{ ok: boolean; duelId?: string; error?: string }> {
+  const { data, error } = await supabase.rpc("request_duel", { p_competitor_id: competitorId, p_event: eventCode });
   return error ? { ok: false, error: error.message } : { ok: true, duelId: data as string };
 }
 
@@ -85,35 +90,19 @@ export async function submitDuelVideo(duelId: string, competitorId: string, vide
   return error ? { ok: false, error: error.message } : { ok: true, result: data as string };
 }
 
-// ---- my active duels (Compete section cards) ----
+// ---- my active duels (Compete cards) — opponent MASKED until the reveal ----
 export type ActiveDuel = {
-  id: string; type: DuelType; status: string; role: Choice;
-  opponentId: string; opponentName: string; myVideoIn: boolean; deadline: string | null;
+  id: string; event: string; status: string; role: Choice;
+  opponentName: string; myVideoIn: boolean; deadline: string | null;
 };
 export async function myActiveDuels(competitorId: string): Promise<ActiveDuel[]> {
-  const { data, error } = await supabase
-    .from("duels")
-    .select("id, type, status, challenger_id, opponent_id, challenger_video, opponent_video, response_deadline, upload_deadline, closes_vote_at, created_at")
-    .or(`challenger_id.eq.${competitorId},opponent_id.eq.${competitorId}`)
-    .in("status", ["pending", "accepted", "voting"])
-    .order("created_at", { ascending: false });
+  const { data, error } = await supabase.rpc("my_active_duels", { p_competitor_id: competitorId });
   if (error || !data) return [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const rows = data as any[];
-  const oppIds = rows.map((d) => (d.challenger_id === competitorId ? d.opponent_id : d.challenger_id));
-  const names = new Map<string, string>();
-  if (oppIds.length) {
-    const { data: comps } = await supabase.from("competitors").select("id, first_name, last_name").in("id", oppIds);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (comps as any[] | null)?.forEach((c) => names.set(c.id, `${c.first_name} ${c.last_name}`));
-  }
-  return rows.map((d) => {
-    const role: Choice = d.challenger_id === competitorId ? "challenger" : "opponent";
-    const opponentId = role === "challenger" ? d.opponent_id : d.challenger_id;
-    const myVideoIn = role === "challenger" ? !!d.challenger_video : !!d.opponent_video;
-    const deadline = d.status === "pending" ? d.response_deadline : d.status === "accepted" ? d.upload_deadline : d.closes_vote_at;
-    return { id: d.id, type: d.type, status: d.status, role, opponentId, opponentName: names.get(opponentId) ?? "Opponent", myVideoIn, deadline };
-  });
+  return (data as any[]).map((d) => ({
+    id: d.duel_id, event: d.event, status: d.status, role: d.role as Choice,
+    opponentName: d.opp_name, myVideoIn: !!d.my_video_in, deadline: d.deadline ?? null,
+  }));
 }
 
 // ---- face-off (duel_faceoff) — both Tale-of-the-Path cards, no tally ----
