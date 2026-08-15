@@ -115,34 +115,10 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
 
   return (
     <View style={{ flex: 1, backgroundColor: "#060504" }}>
-      {/* top HUD */}
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 40, paddingHorizontal: 16, paddingBottom: 6 }}>
-        <TouchableOpacity onPress={() => onClose(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={{ color: neutrals.muted, fontSize: 12, letterSpacing: 1 }}>‹  EXIT RING</Text>
-        </TouchableOpacity>
-        <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase" }}>
-          S1 · Round VIII · {evName(face.type)}
-        </Text>
-        <View style={{ width: 64 }} />
-      </View>
-
-      {/* watch-to-vote meter */}
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 6 }}>
-        <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "700" }}>Watch to vote</Text>
-        <View style={{ flex: 1, height: 5, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.08)", overflow: "hidden" }}>
-          <LinearGradient
-            colors={rarityStops("legendary")}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={{ height: "100%", width: `${(watched / WATCH_GOAL) * 100}%`, borderRadius: 5 }}
-          />
-        </View>
-        <Text style={{ color: neutrals.muted2, fontSize: 10 }}>{Math.floor(watched)}s / {WATCH_GOAL}s</Text>
-      </View>
-
-      {/* the ring — each badge frame FILLS its whole side, full-bleed to the
-          screen edges (room for customization + sponsorship on the band). The
-          VS clash sits over the centre seam. */}
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "stretch", gap: 2 }}>
+      {/* the ring — the two badge frames FILL the whole screen, full-bleed to
+          every edge (max band real estate for customization + sponsorship). All
+          HUD/meter/tally/vote controls float on top. */}
+      <View style={{ flex: 1, flexDirection: "row" }}>
         <Side
           card={face.challenger} choice="challenger" rarity={face.challenger.frame?.rarity ?? "legendary"}
           active={active === "challenger"} unlocked={unlocked} voted={voted}
@@ -155,15 +131,37 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           player={opPlayer} hasVideo={!!urls.opponent}
           onPlay={() => togglePlay("opponent")} onVote={() => vote("opponent")}
         />
-        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
-          <VsBadge />
-        </View>
       </View>
 
-      {/* hidden tally */}
-      <View style={{ alignItems: "center", paddingBottom: 12 }}>
-        <Text style={{ color: neutrals.muted2, fontSize: 10 }}>
-          {voted ? "Vote counted — the tally reveals when the duel closes" : `👁 Tally hidden · closes ${closesIn(face)}`}
+      {/* VS clash over the centre seam */}
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: "center", justifyContent: "center" }]}>
+        <VsBadge />
+      </View>
+
+      {/* top HUD overlay */}
+      <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 38, paddingHorizontal: 16 }}>
+        <TouchableOpacity onPress={() => onClose(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <Text style={{ color: neutrals.text, fontSize: 12, letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 6 }}>‹  EXIT RING</Text>
+        </TouchableOpacity>
+        <Text style={{ color: neutrals.muted, fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", textShadowColor: "#000", textShadowRadius: 6 }}>
+          S1 · Round VIII · {evName(face.type)}
+        </Text>
+        <View style={{ width: 64 }} />
+      </View>
+
+      {/* watch-to-vote meter overlay */}
+      <View pointerEvents="none" style={{ position: "absolute", top: 66, left: 0, right: 0, flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16 }}>
+        <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "700", textShadowColor: "#000", textShadowRadius: 5 }}>Watch to vote</Text>
+        <View style={{ flex: 1, height: 5, borderRadius: 5, backgroundColor: "rgba(0,0,0,0.5)", overflow: "hidden" }}>
+          <LinearGradient colors={rarityStops("legendary")} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: "100%", width: `${(watched / WATCH_GOAL) * 100}%`, borderRadius: 5 }} />
+        </View>
+        <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>{Math.floor(watched)}s / {WATCH_GOAL}s</Text>
+      </View>
+
+      {/* hidden-tally note overlay (bottom centre, between the two vote CTAs) */}
+      <View pointerEvents="none" style={{ position: "absolute", bottom: 8, left: 0, right: 0, alignItems: "center" }}>
+        <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>
+          {voted ? "Vote counted — tally reveals when the duel closes" : `👁 Tally hidden · closes ${closesIn(face)}`}
         </Text>
         {err ? <Text style={{ color: hues.ruby.hi, fontSize: 11, marginTop: 4 }}>{err}</Text> : null}
       </View>
@@ -177,9 +175,9 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   );
 }
 
-// A colour that CONTRASTS the frame band so the vote CTA pops.
-function contrastOf(rarity: "common" | "rare" | "epic" | "legendary") {
-  return rarity === "legendary" ? hues.amethyst : rarity === "epic" ? hues.gold : hues.gold;
+// The frame band's own hue — the vote CTA fills with the same custom border colour.
+function bandHue(rarity: "common" | "rare" | "epic" | "legendary") {
+  return rarity === "epic" ? hues.amethyst : rarity === "rare" ? hues.sapphire : hues.gold;
 }
 
 function Side({
@@ -190,38 +188,38 @@ function Side({
   player: VideoPlayer; hasVideo: boolean; onPlay: () => void; onVote: () => void;
 }) {
   const dim = voted && voted !== choice;
-  const cta = contrastOf(rarity);          // contrasting vote-button colour
+  const cta = bandHue(rarity);             // vote CTA = same custom border colour
   const filled = unlocked || voted === choice;
   const first = card.firstName;
   return (
     <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}>
-      {/* the frame fills the whole side */}
+      {/* the frame fills the whole side, edge to edge */}
       <Frame rarity={rarity} size="ring" fill style={{ flex: 1 }}>
         <TouchableOpacity activeOpacity={0.95} onPress={onPlay} style={{ flex: 1 }}>
           <View style={{ flex: 1, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
             {hasVideo ? (
               <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
             ) : null}
-            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
-              <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
-            </View>
-            {/* quiet nameplate overlaid at the bottom of the video */}
-            <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(8,6,4,0.8)", paddingVertical: 5, alignItems: "center" }}>
+            {/* quiet nameplate at the TOP so the bottom is free for the vote CTA */}
+            <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.7)", paddingVertical: 5, alignItems: "center" }}>
               <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }} numberOfLines={1}>{card.name}</Text>
               {card.school ? <Text style={{ color: neutrals.muted2, fontSize: 9 }} numberOfLines={1}>{card.school}</Text> : null}
+            </View>
+            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
+              <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
             </View>
           </View>
         </TouchableOpacity>
       </Frame>
-      {/* contrasting vote bar */}
-      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ marginTop: 6 }}>
+      {/* contrasting vote CTA — floats over the bottom of the frame */}
+      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 16, right: 16, bottom: 26 }}>
         <View
           style={{
-            borderRadius: 11, paddingVertical: 13, alignItems: "center",
+            borderRadius: 12, paddingVertical: 14, alignItems: "center",
             borderWidth: 2, borderColor: cta.base,
-            backgroundColor: filled ? cta.base : "rgba(12,10,6,0.9)",
-            opacity: unlocked ? 1 : 0.5,
-            shadowColor: cta.hi, shadowOpacity: filled ? 0.8 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
+            backgroundColor: filled ? cta.base : "rgba(10,8,5,0.82)",
+            opacity: unlocked ? 1 : 0.55,
+            shadowColor: cta.hi, shadowOpacity: filled ? 0.9 : 0, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
           }}
         >
           <Text style={{ color: filled ? "#0c0a06" : cta.hi, fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
