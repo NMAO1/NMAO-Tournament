@@ -211,21 +211,24 @@ function Side({
           </View>
         </TouchableOpacity>
       </Frame>
-      {/* contrasting vote CTA — floats over the bottom of the frame */}
-      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 16, right: 16, bottom: 26 }}>
-        <View
+      {/* vote CTA — filled with the SAME badge-border gradient and flush against
+          the bottom band so it merges into the border (no gap). Dims until unlocked. */}
+      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ position: "absolute", left: 16, right: 16, bottom: 16 }}>
+        <LinearGradient
+          colors={rarityStops(rarity)}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={{
-            borderRadius: 12, paddingVertical: 14, alignItems: "center",
-            borderWidth: 2, borderColor: cta.base,
-            backgroundColor: filled ? cta.base : "rgba(10,8,5,0.82)",
-            opacity: unlocked ? 1 : 0.55,
-            shadowColor: cta.hi, shadowOpacity: filled ? 0.9 : 0, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
+            borderTopLeftRadius: 14, borderTopRightRadius: 14, borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+            paddingTop: 14, paddingBottom: 16, alignItems: "center",
+            borderTopWidth: 1.5, borderLeftWidth: 1.5, borderRightWidth: 1.5, borderColor: cta.hi,
+            opacity: unlocked || voted ? 1 : 0.6,
+            shadowColor: cta.hi, shadowOpacity: filled ? 0.9 : 0.3, shadowRadius: 16, shadowOffset: { width: 0, height: 0 },
           }}
         >
-          <Text style={{ color: filled ? "#0c0a06" : cta.hi, fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
+          <Text style={{ color: "#0c0a06", fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
             {voted === choice ? "✓ Voted" : `Vote ${first}`}
           </Text>
-        </View>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
