@@ -173,38 +173,105 @@ function LegendaryFrame({ w, h, r, motif, gem, children }: { w: number; h: numbe
   );
 }
 
-// DRAGON — a serpentine dragon of golden light coiling the frame: a glowing head
-// leads a tapering body of scales around the border. Parametric (traces an oval
-// hugging the edges); a hand-drawn dragon can swap into this slot later.
-const DRAGON_SPEED = 1700; // ms per radian-ish
-const DRAGON_STEP = 0.30;  // angular spacing between body segments
-const DRAGON_N = 13;
+// DRAGON — an Eastern dragon (snout, horns, eye, spiked tapering body) drawn as
+// real Skia paths along an oval that hugs the border, rotated as one rigid coil
+// so it circles the frame edges and never crosses the centered video.
+// A drawn, fierce Eastern-dragon head in profile: snarling open maw with fangs,
+// brow ridge, twin swept horns, a spiked mane, and whiskers. Nose points +x,
+// neck at the origin so it attaches to the body. Composed from several paths.
+const DRAGON_HEAD_SVG = "M0 -4 L4 -9 Q10 -12 15 -9 L17 -6 L23 -8 L27 -3 L25 -1 L27 0 L19 0 L13 -2 L5 -3 Z";
+const DRAGON_JAW_SVG = "M5 -1 L13 2 L22 3 L27 3 L24 6 L15 6 L8 4 L4 2 Z";
+const DRAGON_TEETH_SVG = "M22 0 L23 4 L24 0 Z M18 0 L19 2 L20 0 Z M20 3 L21 -1 L22 3 Z M15 4 L16 2 L17 4 Z";
+const DRAGON_HORNS_SVG = "M4 -8 Q-3 -13 -9 -24 Q-2 -15 7 -9 Z M9 -10 Q5 -15 1 -23 Q7 -15 13 -10 Z";
+const DRAGON_FRILL_SVG = "M0 -4 L-6 -7 L-1 -2 L-7 -1 L-2 2 L-6 5 L0 3 Z";
+const DRAGON_BROW_SVG = "M9 -7 L16 -8 L14 -5 Z";
+const DRAGON_WHISK_SVG = "M26 -2 Q16 -9 4 -13 M26 1 Q18 7 6 11";
+const DRAGON_EARFIN_SVG = "M7 -7 L2 -12 L9 -8 L4 -14 L11 -8 Z";
+const DRAGON_TONGUE_SVG = "M24 3 L31 4 L28 3 L32 2 L27 2 Z";
+// Undulation params (shared by the body worklet and the head anchor).
+const D_SEGS = 40, D_SPAN = 4.5, D_WSPEED = 780, D_WAVES = 2.3, D_SPIN = 3600, D_AMPF = 0.42;
 function DragonSerpent({ clock, cx, cy, w, h, band, color, headColor }: { clock: ReturnType<typeof useClock>; cx: number; cy: number; w: number; h: number; band: number; color: string; headColor: string }) {
-  const a = w / 2 - band * 0.55;
-  const b = h / 2 - band * 0.55;
+  const a = w / 2 - band * 0.5;
+  const b = h / 2 - band * 0.5;
+  const amp = band * D_AMPF, HW = band * 0.5;
+  // Animated body — a snaking ribbon + dorsal spikes rebuilt each frame with a
+  // traveling wave down the spine, so the dragon slithers as it coils.
+  const bodyPath = useDerivedValue(() => {
+    const t = clock.value;
+    const p = Skia.Path.Make();
+    const xs: number[] = [], ys: number[] = [], nxs: number[] = [], nys: number[] = [], hws: number[] = [];
+    for (let k = 0; k <= D_SEGS; k++) {
+      const s = k / D_SEGS;
+      const ang = -s * D_SPAN;
+      const bx = cx + a * Math.cos(ang), by = cy + b * Math.sin(ang);
+      const tx = -a * Math.sin(ang), ty = b * Math.cos(ang);
+      const tl = Math.hypot(tx, ty) || 1;
+      const nx = -ty / tl, ny = tx / tl;
+      const off = amp * Math.sin(s * D_WAVES * 6.28318 - t / D_WSPEED) * (1 - s * 0.25);
+      xs.push(bx + nx * off); ys.push(by + ny * off); nxs.push(nx); nys.push(ny);
+      hws.push(Math.max(0.35, HW * (1 - s * 0.9)));
+    }
+    p.moveTo(xs[0] + nxs[0] * hws[0], ys[0] + nys[0] * hws[0]);
+    for (let k = 1; k <= D_SEGS; k++) p.lineTo(xs[k] + nxs[k] * hws[k], ys[k] + nys[k] * hws[k]);
+    for (let k = D_SEGS; k >= 0; k--) p.lineTo(xs[k] - nxs[k] * hws[k], ys[k] - nys[k] * hws[k]);
+    p.close();
+    for (let k = 3; k < D_SEGS - 1; k += 3) {
+      const tall = 1 - k / D_SEGS;
+      const bdx = xs[k] - xs[k + 1], bdy = ys[k] - ys[k + 1];
+      p.moveTo(xs[k] + nxs[k] * hws[k], ys[k] + nys[k] * hws[k]);
+      p.lineTo(xs[k] + nxs[k] * (hws[k] + band * (0.4 + tall * 0.85)) + bdx * 1.4, ys[k] + nys[k] * (hws[k] + band * (0.4 + tall * 0.85)) + bdy * 1.4);
+      p.lineTo(xs[k + 1] + nxs[k + 1] * hws[k + 1], ys[k + 1] + nys[k + 1] * hws[k + 1]);
+      p.close();
+    }
+    return p;
+  });
+  // Head follows the leading end of the wave (ang 0), tangent points +y there.
+  const headTransform = useDerivedValue(() => {
+    const off = amp * Math.sin(-clock.value / D_WSPEED);
+    return [{ translateX: cx + a - off }, { translateY: cy }, { rotate: Math.PI / 2 }, { scale: band * 0.18 }];
+  });
+  const headP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_HEAD_SVG)!, []);
+  const jawP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_JAW_SVG)!, []);
+  const teethP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_TEETH_SVG)!, []);
+  const hornsP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_HORNS_SVG)!, []);
+  const frillP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_FRILL_SVG)!, []);
+  const browP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_BROW_SVG)!, []);
+  const whiskP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_WHISK_SVG)!, []);
+  const earP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_EARFIN_SVG)!, []);
+  const tongueP = useMemo(() => Skia.Path.MakeFromSVGString(DRAGON_TONGUE_SVG)!, []);
+  // a flicking tongue + a subtle head bob
+  const tongueTf = useDerivedValue(() => [{ scaleX: 0.7 + 0.4 * Math.abs(Math.sin(clock.value / 260)) }]);
+  const spin = useDerivedValue(() => [{ rotate: (clock.value / D_SPIN) % (Math.PI * 2) }]);
   return (
-    <Group layer={<Paint><Blur blur={2.2} /></Paint>}>
-      {Array.from({ length: DRAGON_N }).map((_, i) => (
-        <DragonSeg key={i} clock={clock} i={i} cx={cx} cy={cy} a={a} b={b} band={band} color={color} />
-      ))}
-      <DragonHead clock={clock} cx={cx} cy={cy} a={a} b={b} band={band} headColor={headColor} />
-    </Group>
-  );
-}
-function DragonSeg({ clock, i, cx, cy, a, b, band, color }: { clock: ReturnType<typeof useClock>; i: number; cx: number; cy: number; a: number; b: number; band: number; color: string }) {
-  const px = useDerivedValue(() => cx + a * Math.cos(-(clock.value / DRAGON_SPEED) - i * DRAGON_STEP));
-  const py = useDerivedValue(() => cy + b * Math.sin(-(clock.value / DRAGON_SPEED) - i * DRAGON_STEP));
-  const rad = Math.max(1.3, band * 0.44 * (1 - (i / DRAGON_N) * 0.72));
-  const op = 0.92 - (i / DRAGON_N) * 0.5;
-  return <Circle cx={px} cy={py} r={rad} color={color} opacity={op} />;
-}
-function DragonHead({ clock, cx, cy, a, b, band, headColor }: { clock: ReturnType<typeof useClock>; cx: number; cy: number; a: number; b: number; band: number; headColor: string }) {
-  const hx = useDerivedValue(() => cx + a * Math.cos(-(clock.value / DRAGON_SPEED) + 0.16));
-  const hy = useDerivedValue(() => cy + b * Math.sin(-(clock.value / DRAGON_SPEED) + 0.16));
-  return (
-    <Group>
-      <Circle cx={hx} cy={hy} r={band * 0.6} color={headColor} />
-      <Circle cx={hx} cy={hy} r={band * 0.3} color="#ffffff" />
+    <Group origin={vec(cx, cy)} transform={spin}>
+      {/* body (soft glow) */}
+      <Group layer={<Paint><Blur blur={1.0} /></Paint>}>
+        <Path path={bodyPath}>
+          <SkLinearGradient start={vec(cx, cy - b)} end={vec(cx, cy + b)} colors={[headColor, color]} />
+        </Path>
+      </Group>
+      {/* drawn head (crisper, so the detail reads) */}
+      <Group transform={headTransform}>
+        <Group layer={<Paint><Blur blur={0.4} /></Paint>}>
+          <Path path={whiskP} style="stroke" strokeWidth={0.9} color={headColor} opacity={0.75} />
+          <Path path={earP} color={color} />
+          <Path path={hornsP} color={color} />
+          <Path path={frillP} color={color} />
+          <Group origin={vec(25, 3)} transform={tongueTf}><Path path={tongueP} color="#ff3b30" /></Group>
+          <Path path={headP}>
+            <SkLinearGradient start={vec(6, -10)} end={vec(6, 4)} colors={[headColor, color]} />
+          </Path>
+          <Path path={jawP} color={color} />
+          <Path path={teethP} color="#fff7e0" />
+          <Path path={browP} color="#1a0500" opacity={0.65} />
+          {/* nostril */}
+          <Circle cx={23} cy={-2} r={0.7} color="#1a0500" opacity={0.7} />
+          {/* menacing glowing eye */}
+          <Circle cx={12} cy={-5} r={2.8} color="#ff2d00" opacity={0.5} />
+          <Circle cx={12} cy={-5} r={1.6} color="#ffd23b" />
+          <Circle cx={12} cy={-5} r={0.7} color="#1a0500" />
+        </Group>
+      </Group>
     </Group>
   );
 }
