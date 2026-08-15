@@ -21,6 +21,8 @@ export function Frame({
   aspectRatio,
   radius,
   glow = true,
+  fill = false,
+  band,
   style,
   children,
 }: {
@@ -32,12 +34,16 @@ export function Frame({
   aspectRatio?: number;
   radius?: number;
   glow?: boolean;
+  /** stretch the frame to fill its parent (ignores aspectRatio) */
+  fill?: boolean;
+  /** override the border-band thickness (px) — wider = more room for sponsorship */
+  band?: number;
   style?: ViewStyle;
   children?: ReactNode;
 }) {
   const stops = hue ? metalStops(hue) : rarityStops(rarity ?? "legendary");
   const glowColor = hue ? hues[hue].base : rarityBase(rarity ?? "legendary");
-  const pad = size === "ring" ? 16 : 4;
+  const pad = band ?? (size === "ring" ? 16 : 4);
   const r = radius ?? (size === "ring" ? 16 : 11);
 
   return (
@@ -45,10 +51,11 @@ export function Frame({
       style={[
         glow && {
           shadowColor: glowColor,
-          shadowOpacity: 0.55,
-          shadowRadius: size === "ring" ? 22 : 12,
+          shadowOpacity: 0.6,
+          shadowRadius: size === "ring" ? 26 : 12,
           shadowOffset: { width: 0, height: 0 },
         },
+        fill && { flex: 1 },
         style,
       ]}
     >
@@ -56,9 +63,9 @@ export function Frame({
         colors={stops}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ padding: pad, borderRadius: r }}
+        style={{ padding: pad, borderRadius: r, ...(fill && { flex: 1 }) }}
       >
-        <View style={{ borderRadius: Math.max(2, r - pad + 1), overflow: "hidden", aspectRatio }}>
+        <View style={{ borderRadius: Math.max(2, r - pad + 1), overflow: "hidden", ...(fill ? { flex: 1 } : { aspectRatio }) }}>
           {children}
         </View>
       </LinearGradient>

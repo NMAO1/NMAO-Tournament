@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
@@ -139,26 +139,25 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <Text style={{ color: neutrals.muted2, fontSize: 10 }}>{Math.floor(watched)}s / {WATCH_GOAL}s</Text>
       </View>
 
-      {/* the ring — badge frames run full-bleed to the screen edges (room for
-          customization + sponsorship on the band) */}
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 0, gap: 0 }}>
+      {/* the ring — each badge frame FILLS its whole side, full-bleed to the
+          screen edges (room for customization + sponsorship on the band). The
+          VS clash sits over the centre seam. */}
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "stretch", gap: 2 }}>
         <Side
           card={face.challenger} choice="challenger" rarity={face.challenger.frame?.rarity ?? "legendary"}
           active={active === "challenger"} unlocked={unlocked} voted={voted}
           player={chPlayer} hasVideo={!!urls.challenger}
           onPlay={() => togglePlay("challenger")} onVote={() => vote("challenger")}
         />
-        <View style={{ width: 40, alignItems: "center" }}>
-          <View style={{ width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center", backgroundColor: hues.gold.base }}>
-            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 12 }}>VS</Text>
-          </View>
-        </View>
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
           active={active === "opponent"} unlocked={unlocked} voted={voted}
           player={opPlayer} hasVideo={!!urls.opponent}
           onPlay={() => togglePlay("opponent")} onVote={() => vote("opponent")}
         />
+        <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
+          <VsBadge />
+        </View>
       </View>
 
       {/* hidden tally */}
@@ -178,6 +177,11 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   );
 }
 
+// A colour that CONTRASTS the frame band so the vote CTA pops.
+function contrastOf(rarity: "common" | "rare" | "epic" | "legendary") {
+  return rarity === "legendary" ? hues.amethyst : rarity === "epic" ? hues.gold : hues.gold;
+}
+
 function Side({
   card, choice, rarity, active, unlocked, voted, player, hasVideo, onPlay, onVote,
 }: {
@@ -186,42 +190,66 @@ function Side({
   player: VideoPlayer; hasVideo: boolean; onPlay: () => void; onVote: () => void;
 }) {
   const dim = voted && voted !== choice;
-  const border = rarityBase(rarity);
+  const cta = contrastOf(rarity);          // contrasting vote-button colour
+  const filled = unlocked || voted === choice;
   const first = card.firstName;
   return (
-    <View style={{ flex: 1, opacity: dim ? 0.4 : 1 }}>
-      <Frame rarity={rarity} size="ring">
-        <TouchableOpacity activeOpacity={0.9} onPress={onPlay}>
-          <View style={{ width: "100%", aspectRatio: 16 / 9, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+    <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}>
+      {/* the frame fills the whole side */}
+      <Frame rarity={rarity} size="ring" fill style={{ flex: 1 }}>
+        <TouchableOpacity activeOpacity={0.95} onPress={onPlay} style={{ flex: 1 }}>
+          <View style={{ flex: 1, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
             {hasVideo ? (
-              <VideoView player={player} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} contentFit="cover" nativeControls={false} />
+              <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
             ) : null}
-            {/* play/pause affordance — dims once a real video is rolling */}
-            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.25 : 1 }}>
-              <Text style={{ color: "#fff", fontSize: 16 }}>{active ? "❚❚" : "▶"}</Text>
+            <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
+              <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
             </View>
-          </View>
-          {/* nameplate (centered) */}
-          <View style={{ backgroundColor: "rgba(8,6,4,0.92)", paddingVertical: 5, alignItems: "center" }}>
-            <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 12 }}>{card.name}</Text>
-            {card.school ? <Text style={{ color: neutrals.muted2, fontSize: 9 }}>{card.school}</Text> : null}
+            {/* quiet nameplate overlaid at the bottom of the video */}
+            <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: "rgba(8,6,4,0.8)", paddingVertical: 5, alignItems: "center" }}>
+              <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }} numberOfLines={1}>{card.name}</Text>
+              {card.school ? <Text style={{ color: neutrals.muted2, fontSize: 9 }} numberOfLines={1}>{card.school}</Text> : null}
+            </View>
           </View>
         </TouchableOpacity>
       </Frame>
-      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ marginTop: 8 }}>
+      {/* contrasting vote bar */}
+      <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ marginTop: 6 }}>
         <View
           style={{
-            borderRadius: 10, paddingVertical: 10, alignItems: "center",
-            borderWidth: 1.5, borderColor: border,
-            backgroundColor: voted === choice ? border : "rgba(12,10,6,0.92)",
-            opacity: unlocked ? 1 : 0.4,
+            borderRadius: 11, paddingVertical: 13, alignItems: "center",
+            borderWidth: 2, borderColor: cta.base,
+            backgroundColor: filled ? cta.base : "rgba(12,10,6,0.9)",
+            opacity: unlocked ? 1 : 0.5,
+            shadowColor: cta.hi, shadowOpacity: filled ? 0.8 : 0, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
           }}
         >
-          <Text style={{ color: voted === choice ? "#0c0a06" : border, fontWeight: "800", fontSize: 12, letterSpacing: 0.5, textTransform: "uppercase" }}>
-            {voted === choice ? "Voted ✓" : `Vote ${first}`}
+          <Text style={{ color: filled ? "#0c0a06" : cta.hi, fontWeight: "900", fontSize: 15, letterSpacing: 1, textTransform: "uppercase" }}>
+            {voted === choice ? "✓ Voted" : `Vote ${first}`}
           </Text>
         </View>
       </TouchableOpacity>
+    </View>
+  );
+}
+
+// ── Edgy, video-game "VS" clash badge — a slanted metallic slab with a
+// ruby↔sapphire clash gradient and a heavy italic glowing VS. ──
+function VsBadge() {
+  return (
+    <View style={{ alignItems: "center", justifyContent: "center", transform: [{ rotate: "-8deg" }] }}>
+      {/* outer glow slab */}
+      <View style={{ shadowColor: hues.ruby.hi, shadowOpacity: 0.95, shadowRadius: 26, shadowOffset: { width: 0, height: 0 } }}>
+        <LinearGradient
+          colors={[hues.ruby.base, "#120b06", hues.sapphire.base]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 5, borderWidth: 2.5, borderColor: hues.gold.hi, transform: [{ skewX: "-12deg" }] }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "900", fontStyle: "italic", fontSize: 44, letterSpacing: 2, transform: [{ skewX: "12deg" }], textShadowColor: hues.ruby.hi, textShadowRadius: 14, textShadowOffset: { width: 0, height: 0 } }}>
+            VS
+          </Text>
+        </LinearGradient>
+      </View>
     </View>
   );
 }
