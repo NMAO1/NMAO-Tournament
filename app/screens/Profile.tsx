@@ -7,8 +7,9 @@ import { myCompetitors } from "../lib/competitors";
 import { loadProfile, loadNotifPrefs, setNotifPref, type ProfileInfo } from "../lib/profile";
 import Journal from "./Journal";
 import Home from "./Home";
+import FrameLab from "./FrameLab";
 
-type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store";
+type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "framelab";
 const RANK = (r: string | null) => (r ? r.replace("_", " ") : "");
 
 const NOTIF_TYPES = [
@@ -32,6 +33,7 @@ export default function Profile() {
   if (sub === "notifs" && me) return <NotifPanel competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "dojo") return <Panel title="My Dojo" onBack={() => setSub(null)}>{info?.school ? <Text style={{ color: neutrals.text, fontSize: 16, fontWeight: "700" }}>{info.school.name}</Text> : <Text style={{ color: neutrals.muted2 }}>No school linked yet.</Text>}</Panel>;
   if (sub === "rules") return <Panel title="Rules & Help" onBack={() => setSub(null)}><RulesText /></Panel>;
+  if (sub === "framelab") return <FrameLab onBack={() => setSub(null)} />;
   if (sub === "store") return <Panel title="Membership & Store" onBack={() => setSub(null)}><Text style={{ color: neutrals.muted, lineHeight: 20 }}>The Duelist membership ($3.99) and season-pass frames arrive here soon.</Text></Panel>;
 
   if (!info) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
