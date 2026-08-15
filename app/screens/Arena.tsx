@@ -213,17 +213,24 @@ function Side({
               </View>
             </View>
           </TouchableOpacity>
-          {/* vote CTA — a compact, squared button with the customizable badge
-              border wrapped directly around it (its own complete border → no seam). */}
-          <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 26, alignItems: "center" }}>
-            <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted}>
-              <Frame rarity={rarity} band={5} radius={7} style={{ opacity: unlocked || voted ? 1 : 0.5 }}>
-                <View style={{ backgroundColor: filled ? cta.base : "#100d07", paddingVertical: 11, paddingHorizontal: 26, alignItems: "center" }}>
-                  <Text style={{ color: filled ? "#0c0a06" : cta.hi, fontWeight: "900", fontSize: 14, letterSpacing: 1, textTransform: "uppercase" }}>
-                    {voted === choice ? "✓ Voted" : `Vote ${first}`}
-                  </Text>
-                </View>
-              </Frame>
+          {/* vote CTA — docked onto the bottom border. The badge border wraps its
+              top + sides and its OPEN bottom flows straight into the frame's bottom
+              band, so the customizable border runs continuously up to the button. */}
+          <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center" }}>
+            <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ opacity: unlocked || voted ? 1 : 0.55 }}>
+              <View
+                style={{
+                  backgroundColor: filled ? cta.base : "#100d07",
+                  borderTopWidth: 6, borderLeftWidth: 6, borderRightWidth: 6, borderColor: cta.base,
+                  borderTopLeftRadius: 12, borderTopRightRadius: 12,
+                  paddingTop: 12, paddingBottom: 12, paddingHorizontal: 32,
+                  shadowColor: cta.hi, shadowOpacity: filled ? 0.75 : 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
+                }}
+              >
+                <Text style={{ color: filled ? "#0c0a06" : cta.hi, fontWeight: "900", fontSize: 14, letterSpacing: 1, textTransform: "uppercase" }}>
+                  {voted === choice ? "✓ Voted" : `Vote ${first}`}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
