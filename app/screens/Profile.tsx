@@ -122,14 +122,87 @@ function NotifPanel({ competitorId, onBack }: { competitorId: string; onBack: ()
   );
 }
 
+type RuleItem = { label?: string; text: string };
+const RULES: { title: string; items: RuleItem[] }[] = [
+  {
+    title: "Dueling",
+    items: [
+      { text: "Same monthly password on your unedited form." },
+      { text: "Watch both forms for 15s before you can vote." },
+      { text: "The tally stays hidden until a duel closes." },
+      { text: "4 duels per week; opponents match your rank & age." },
+      { text: "Badges & medals reveal at the monthly ceremony." },
+      { text: "Every effort counts — win or learn, then compete again." },
+    ],
+  },
+  {
+    title: "Tournament categories",
+    items: [
+      { label: "Open Traditional Forms", text: "Unaltered forms from hard and soft styles — Karate, Kenpo/Kempo, Taekwondo, Tang Soo Do, Shotokan, Wushu and their derivatives. Presented without alteration. No inversions or flips." },
+      { label: "Open Creative Forms", text: "Traditional or modern forms; at least 2/3 of the moves must be martial-arts techniques. Inversions, flips, jumps and spins allowed. Judged on technique, skill, balance, power, speed and style. No music." },
+      { label: "Open Traditional Weapons", text: "Unaltered historical weapon forms — sword, jo staff, bo staff, spear, nunchucks, sai, kama, escrima. No flips or inversions. No music." },
+      { label: "Open Creative Weapons", text: "Any weapon, traditional or modern; most of the routine must be martial-arts technique. Inversions, flips, jumps and spins allowed. No music. No sharp weapons." },
+    ],
+  },
+  {
+    title: "Video submission",
+    items: [
+      { label: "Location", text: "Film submissions from the same school in a consistent location." },
+      { label: "Two angles", text: "Record front and side — two devices, or film the form twice (once front, once side)." },
+      { label: "Stability", text: "Keep the camera steady on a tripod or stable surface." },
+      { label: "Unedited", text: "Footage must be unedited start to finish — no cuts." },
+      { label: "Lighting", text: "Well-lit; avoid shadows or glare that obscure the movement." },
+      { label: "Audio", text: "Clear audio, free of distortion or background noise." },
+      { label: "Duration", text: "30 seconds to 2 minutes, including any intro." },
+      { label: "Performance area", text: "Clear of obstacles; no posters, text, branding or images." },
+      { label: "Full body", text: "Keep your entire body in frame throughout the form." },
+      { label: "Format", text: "Follow the specified file type, resolution and size." },
+      { label: "Display info", text: "Before your form, show your name, date, event category and the tournament password on screen." },
+    ],
+  },
+  {
+    title: "Uniform",
+    items: [
+      { label: "Color", text: "Black or white uniform — your choice; it doesn't affect scoring." },
+      { label: "Patches", text: "A small school patch on the left chest; up to 3 country flags (left shoulder, right shoulder, under back of neck)." },
+      { label: "Condition", text: "Clean and in good repair — not torn or excessively worn." },
+      { label: "Sleeves", text: "May be rolled to 3/4 or just below the elbow — neat and even on both sides." },
+      { label: "Pants", text: "Long enough to cover the lower shin, short enough to clear the feet and ankle." },
+      { label: "Belt", text: "Wear your current rank belt, tied snugly; ends roughly even and not past mid-thigh." },
+      { label: "Footwear", text: "Barefoot, unless a health or medical need requires footwear (black or white, non-marking)." },
+      { label: "Jewelry", text: "No watches, bracelets, necklaces or earrings during competition — for safety." },
+    ],
+  },
+  {
+    title: "Age rule",
+    items: [
+      { text: "Compete in the age division for your age as of the tournament date; if your birthday falls on event day, compete in the corresponding division." },
+      { text: "Handle your weapon with control — reckless handling may be disqualified." },
+      { text: "Don't submit a video with a dropped weapon, or one that strikes an object or wall — it will be disqualified." },
+      { text: "Advanced competitors submit two different forms (no repeats): the first is judged in the preliminary round, the second when advancing or as a tie-breaker." },
+    ],
+  },
+];
+
 function RulesText() {
-  const lines = [
-    "Same monthly password on your unedited form.",
-    "Watch both forms for 15s before you can vote.",
-    "The tally stays hidden until a duel closes.",
-    "4 duels per week; opponents match your rank & age.",
-    "Badges & medals reveal at the monthly ceremony.",
-    "Every effort counts — win or learn, then compete again.",
-  ];
-  return <View>{lines.map((l, i) => <Text key={i} style={{ color: neutrals.muted, fontSize: 13, lineHeight: 22, marginBottom: 4 }}>•  {l}</Text>)}</View>;
+  return (
+    <View>
+      {RULES.map((sec) => (
+        <View key={sec.title} style={{ marginBottom: 22 }}>
+          <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 10 }}>{sec.title}</Text>
+          {sec.items.map((it, i) => (
+            <View key={i} style={{ flexDirection: "row", marginBottom: 8 }}>
+              <Text style={{ color: hues.gold.base, fontSize: 13, marginRight: 8, lineHeight: 20 }}>•</Text>
+              <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 20, flex: 1 }}>
+                {it.label ? <Text style={{ color: neutrals.text, fontWeight: "700" }}>{it.label}: </Text> : null}{it.text}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ))}
+      <Text style={{ color: neutrals.muted2, fontSize: 12, fontStyle: "italic", lineHeight: 18 }}>
+        Your uniform should never distract from your performance — it should enhance it by showing respect for the art and its traditions.
+      </Text>
+    </View>
+  );
 }
