@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
@@ -139,8 +139,9 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <Text style={{ color: neutrals.muted2, fontSize: 10 }}>{Math.floor(watched)}s / {WATCH_GOAL}s</Text>
       </View>
 
-      {/* the ring */}
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 14, gap: 4 }}>
+      {/* the ring — badge frames run full-bleed to the screen edges (room for
+          customization + sponsorship on the band) */}
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 0, gap: 0 }}>
         <Side
           card={face.challenger} choice="challenger" rarity={face.challenger.frame?.rarity ?? "legendary"}
           active={active === "challenger"} unlocked={unlocked} voted={voted}
@@ -230,33 +231,53 @@ function closesIn(face: FaceOff): string {
 }
 
 // ── "Tale of the Path" — the fight-card face-off before the ring (spec §2a) ──
+// Landscape cinematic: the two panels slide in from opposite edges while a large
+// VS pops (spring overshoot) in the centre.
 function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count: number; onEnter: () => void; onExit: () => void }) {
+  const w = Dimensions.get("window").width;
+  const slideL = useRef(new Animated.Value(-w)).current;
+  const slideR = useRef(new Animated.Value(w)).current;
+  const vs = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(slideL, { toValue: 0, useNativeDriver: true, friction: 9, tension: 55 }),
+      Animated.spring(slideR, { toValue: 0, useNativeDriver: true, friction: 9, tension: 55 }),
+      Animated.sequence([
+        Animated.delay(240),
+        Animated.spring(vs, { toValue: 1, useNativeDriver: true, friction: 3.5, tension: 140 }),
+      ]),
+    ]).start();
+  }, [slideL, slideR, vs]);
+
   return (
-    <View style={{ flex: 1, backgroundColor: "#060504", paddingTop: 40 }}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16 }}>
+    <View style={{ flex: 1, backgroundColor: "#060504", paddingTop: 34 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20 }}>
         <TouchableOpacity onPress={onExit} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={{ color: neutrals.muted, fontSize: 12, letterSpacing: 1 }}>‹  EXIT</Text>
         </TouchableOpacity>
+        <View style={{ alignItems: "center" }}>
+          <Text style={{ color: hues.gold.hi, fontSize: 13, letterSpacing: 4, fontWeight: "800" }}>⚔  TALE OF THE PATH</Text>
+          <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>{evName(face.type)} · S1 · Round VIII</Text>
+        </View>
         <TouchableOpacity onPress={onEnter}><Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 1 }}>Skip ›</Text></TouchableOpacity>
       </View>
 
-      <View style={{ alignItems: "center", marginTop: 4 }}>
-        <Text style={{ color: hues.gold.hi, fontSize: 13, letterSpacing: 4, fontWeight: "800" }}>⚔  TALE OF THE PATH</Text>
-        <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginTop: 3 }}>{evName(face.type)} · S1 · Round VIII</Text>
-      </View>
-
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 12 }}>
-        <Fighter card={face.challenger} align="right" />
-        <View style={{ width: 54, alignItems: "center" }}>
-          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: hues.gold.base, alignItems: "center", justifyContent: "center", shadowColor: hues.gold.hi, shadowOpacity: 0.7, shadowRadius: 14 }}>
-            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 14, fontStyle: "italic" }}>VS</Text>
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", paddingHorizontal: 24 }}>
+        <Animated.View style={{ flex: 1, alignItems: "center", transform: [{ translateX: slideL }] }}>
+          <Fighter card={face.challenger} align="right" />
+        </Animated.View>
+        <Animated.View style={{ width: 88, alignItems: "center", transform: [{ scale: vs }] }}>
+          <View style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: hues.gold.base, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: hues.gold.hi, shadowColor: hues.gold.hi, shadowOpacity: 0.9, shadowRadius: 24 }}>
+            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 26, fontStyle: "italic" }}>VS</Text>
           </View>
-        </View>
-        <Fighter card={face.opponent} align="left" />
+        </Animated.View>
+        <Animated.View style={{ flex: 1, alignItems: "center", transform: [{ translateX: slideR }] }}>
+          <Fighter card={face.opponent} align="left" />
+        </Animated.View>
       </View>
 
-      <View style={{ alignItems: "center", paddingBottom: 22 }}>
-        <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderRadius: 12, overflow: "hidden", minWidth: 220 }}>
+      <View style={{ alignItems: "center", paddingBottom: 20 }}>
+        <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderRadius: 12, overflow: "hidden", minWidth: 240 }}>
           <LinearGradient colors={rarityStops("legendary")} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 12, alignItems: "center" }}>
             <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 13, letterSpacing: 0.5 }}>ENTER THE ARENA  →</Text>
           </LinearGradient>
