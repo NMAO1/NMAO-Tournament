@@ -36,12 +36,12 @@ file_name,art_status,code,name,category,rarity,tiered,hidden,trigger_event,earn_
 35-gold-rush.png,ready,gold-rush,Gold Rush x3/x5,Placement,tiered,yes,,on_result_finalized,Lifetime golds >= 3/5 (tier),
 36-sweep.png,ready,sweep,Sweep,Placement,Epic,,,on_result_finalized,Gold in multiple events in one round,
 37-undefeated-dragon.png,ready,undefeated,Undefeated,Placement,Rare,,,on_result_finalized,Win streak of N (consecutive placement=1),
-71-podium-season.png,pending,podium-season,Podium Season,Placement,Epic,,,on_season_rollup,Placement medal in every round of the season,
+71-podium-season.png,ready,podium-season,Podium Season,Placement,Epic,,,on_season_rollup,Placement medal in every round of the season,
 72-gold-medallion-nmao-dragon.png,ready,gold-medallion,Gold Medallion,Placement,Legendary,,,on_season_rollup,Gold in every qualifying round (perfect season),
 38-semifinalist.png,ready,semifinalist,Semifinalist,Championship,Rare,,,on_bracket_advance,Reached the semifinals,
 39-finalist.png,ready,finalist,Finalist,Championship,Epic,,,on_bracket_advance,Reached the finals,
 40-grand-champion.png,ready,grand-champion,Grand Champion,Championship,Legendary,,,on_bracket_advance,Won the Grand Finale,
-41-sponsors-champion.png,pending,sponsors-champion,Sponsor's Champion,Championship,Legendary,,,on_bracket_advance,Won a sponsor tournament,
+41-sponsors-champion.png,ready,sponsors-champion,Sponsor's Champion,Championship,Legendary,,,on_bracket_advance,Won a sponsor tournament,
 42-giant-slayer.png,ready,giant-slayer,Giant Slayer,Championship,Epic,,,on_result_finalized,Beat an opponent rated >= X higher,
 43-imprint-complete.png,ready,imprint-complete,Imprint Complete,Imprint,Rare,,,on_season_rollup,Completed all 9 Imprint segments (showed up all season),
 44-season-keepsake.png,ready,season-keepsake,Season Keepsake,Imprint,Rare,,,on_season_rollup,Finished season's physical + digital Imprint,
@@ -56,7 +56,7 @@ file_name,art_status,code,name,category,rarity,tiered,hidden,trigger_event,earn_
 53-gem-s9-peridot.png,ready,gem-s9,Gem Series S9 (Peridot),Gem Series,flagship,,,on_season_rollup,Completed season S9; award the Peridot gem yin-yang,
 54-gem-s10-platinum.png,ready,gem-s10,Gem Series S10 (Platinum),Gem Series,flagship,,,on_season_rollup,Completed season S10; award the Platinum gem yin-yang,
 55-decade-of-dedication.png,ready,decade-of-dedication,Decade of Dedication,Imprint,Legendary,,,on_season_rollup,Completed 10 seasons,
-56-consistent-journaler.png,pending,consistent-journaler,Consistent Journaler I/II/III,Journal,tiered,yes,,on_journal_entry,Journaled after 3/10/25 reveals (tier),
+56-consistent-journaler.png,ready,consistent-journaler,Consistent Journaler I/II/III,Journal,tiered,yes,,on_journal_entry,Journaled after 3/10/25 reveals (tier),
 57-reflective-warrior.png,ready,reflective-warrior,Reflective Warrior,Journal,Rare,,,on_season_rollup,Journaled every round in a season,
 58-goal-keeper.png,ready,goal-keeper,Goal Keeper,Journal,Uncommon,,,on_season_rollup,Set and reached a season goal,
 59-first-duel.png,ready,first-duel,First Duel,Dueling,Common,,,on_duel_completed,First completed duel,
@@ -84,7 +84,7 @@ file_name,art_status,code,name,category,rarity,tiered,hidden,trigger_event,earn_
 85-zen.png,ready,zen,Zen,Hidden,Epic,,yes,on_result_finalized,"A flawless, composed performance (hidden)",
 86-ghost.png,ready,ghost,Ghost,Hidden,Rare,,yes,special,A fun secret condition (hidden),
 69-charter-member.png,ready,charter-member,Charter Member,Charter,Legendary,,,on_onboarding_complete,Competed in the very first season (limited),
-70-trailblazer.png,pending,trailblazer,Trailblazer,Charter,Legendary,,,on_onboarding_complete,Among the first N competitors ever (limited),
+70-trailblazer.png,ready,trailblazer,Trailblazer,Charter,Legendary,,,on_onboarding_complete,Among the first N competitors ever (limited),
 season-champion-s1.png,ready,season-champion-s1,Season Champion S1 (Sapphire),Championship,Legendary,,,on_season_rollup,Awarded to season S1 overall champion; dragon medallion colored to the Sapphire gem,letter with letter_champion.py S{s[1:]}
 season-champion-s2.png,ready,season-champion-s2,Season Champion S2 (Amethyst),Championship,Legendary,,,on_season_rollup,Awarded to season S2 overall champion; dragon medallion colored to the Amethyst gem,letter with letter_champion.py S{s[1:]}
 season-champion-s3.png,ready,season-champion-s3,Season Champion S3 (Ruby),Championship,Legendary,,,on_season_rollup,Awarded to season S3 overall champion; dragon medallion colored to the Ruby gem,letter with letter_champion.py S{s[1:]}
@@ -98,4 +98,4 @@ season-champion-s10.png,ready,season-champion-s10,Season Champion S10 (Platinum)
 87-mentor.png,pending,mentor,Mentor,Community,Rare,,,on_cheer_sent,A senior belt sends approved encouragement to N newer students,NEW - proposed
 88-anniversary.png,ready,anniversary,Anniversary,Community,Uncommon,,,on_scheduled,One year since joining the platform,NEW - proposed
 89-well-rounded.png,ready,well-rounded,Well-Rounded,Events,Rare,,,on_season_rollup,Competed in every event category in one season,NEW - proposed
-90-globetrotter.png,pending,globetrotter,Globetrotter,Community,Rare,,,on_result_finalized,Competed alongside competitors from many different schools,NEW - proposed
+90-globetrotter.png,ready,globetrotter,Globetrotter,Community,Rare,,,on_result_finalized,Competed alongside competitors from many different schools,NEW - proposed

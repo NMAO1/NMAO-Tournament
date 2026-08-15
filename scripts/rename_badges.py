@@ -152,6 +152,10 @@ REGISTRY = {
   "two racers crossing a glowing finish line neck and neck": "photo-finish",
   "glowing clock striking zero as a final strike lands": "buzzer-beater",
   "broken chain reforged into a glowing blade": "redemption",
+  # batch 05 — reworded-prompt aliases
+  "starred championship": "41-sponsors-champion",
+  "blazing a new trail ahead": "trendsetter",
+  "two racers in martial arts uniforms": "photo-finish",
 }
 
 def main():

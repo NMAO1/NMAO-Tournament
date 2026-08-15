@@ -38,7 +38,7 @@
 | Steady Climb | rare | — | `on_result_finalized` | Improve your score three rounds in a row. | no engine | ready |
 | Comeback | uncommon | — | `on_result_finalized` | Come back with a higher score after a lower round. | no engine | ready |
 | Full Circle | epic | — | `on_mastery_update` | Fill every axis of your Mirror radar to 100%. | no engine | ready |
-| Ascent ⬆ | rare | 60/70/80/90/95 | `on_rating_updated` | Reach a rating of 60, 70, 80, 90, then 95. | no engine · skill_ratings absolute threshold | pending |
+| Ascent ⬆ | rare | 60/70/80/90/95 | `on_rating_updated` | Reach a rating of 60, 70, 80, 90, then 95. | no engine · skill_ratings absolute threshold | ready |
 
 ## Mastery
 
@@ -70,7 +70,7 @@
 | Podium | uncommon | — | `on_medal_awarded` | Finish in the top three. | no engine | ready |
 | Sweep | epic | — | `on_result_finalized` | Win gold in more than one event in the same round. | no engine | ready |
 | Undefeated ⬆ | rare | 5/10/25/50 | `on_result_finalized` | Win first place in consecutive rounds — new level at 5/10/25/50. | no engine | ready |
-| Podium Season | epic | — | `on_season_rollup` | Earn a medal in every round of a season. | no engine | pending |
+| Podium Season | epic | — | `on_season_rollup` | Earn a medal in every round of a season. | no engine | ready |
 | Gold Medallion | legendary | — | `on_season_rollup` | Win gold in every qualifying round for a perfect season. | no engine | ready |
 | Bronze Path ⬆ | common | 1/5/10/25/50/100 | `on_medal_awarded` | Earn bronze medals — new level at 1/5/10/25/50/100. | no engine | pending |
 | Silver Path ⬆ | uncommon | 1/5/10/25/50/100 | `on_medal_awarded` | Earn silver medals — new level at 1/5/10/25/50/100. | no engine | pending |
@@ -83,7 +83,7 @@
 | Semifinalist | rare | — | `on_bracket_advance` | Reach the semifinals. | no engine | ready |
 | Finalist | epic | — | `on_bracket_advance` | Reach the finals. | no engine | ready |
 | Grand Champion | legendary | — | `on_bracket_advance` | Win the Grand Finale. | no engine | ready |
-| Sponsor's Champion | legendary | — | `on_bracket_advance` | Win a sponsor tournament. | no engine | pending |
+| Sponsor's Champion | legendary | — | `on_bracket_advance` | Win a sponsor tournament. | no engine | ready |
 | Giant Slayer ⬆ | epic | 10/20/30 | `on_result_finalized` | Beat an opponent rated above you — new level for rating gaps of 10/20/30. | no engine | ready |
 | Season Champion S1 (Sapphire) | legendary | — | `on_season_rollup` | Be crowned Season 1 overall champion. | no engine | ready |
 | Season Champion S2 (Amethyst) | legendary | — | `on_season_rollup` | Be crowned Season 2 overall champion. | no engine | ready |
@@ -113,13 +113,13 @@
 | Gem Series S8 (Turquoise) | legendary | — | `on_season_rollup` | Complete Season 8 to earn its Turquoise gem. | no engine | ready |
 | Gem Series S9 (Peridot) | legendary | — | `on_season_rollup` | Complete Season 9 to earn its Peridot gem. | no engine | ready |
 | Gem Series S10 (Platinum) | legendary | — | `on_season_rollup` | Complete Season 10 to earn its Platinum gem. | no engine | ready |
-| Seasons Veteran ⬆ | rare | 2/3/5/7 | `on_season_rollup` | Compete across 2, 3, 5, then 7 seasons. | no engine · season-participation count | pending |
+| Seasons Veteran ⬆ | rare | 2/3/5/7 | `on_season_rollup` | Compete across 2, 3, 5, then 7 seasons. | no engine · season-participation count | ready |
 
 ## Journal
 
 | name | rarity | levels | trigger | how earned | engine / build | art |
 |---|---|---|---|---|---|---|
-| Consistent Journaler | rare | 3/10/25 | `on_journal_entry` | Journal after 3, 10, then 25 reveals. | no engine | pending |
+| Consistent Journaler | rare | 3/10/25 | `on_journal_entry` | Journal after 3, 10, then 25 reveals. | no engine | ready |
 | Reflective Warrior | rare | — | `on_season_rollup` | Journal after every round in a season. | no engine | ready |
 
 ## Dueling
@@ -138,12 +138,12 @@
 | Iron Duelist | rare | — | `on_duel_completed` | Duel at least once a week for a full month. | no engine · overlaps Relentless | ready |
 | Duel Legend | legendary | — | `on_duel_completed` | Reach number one on a dueling leaderboard. | no engine | ready |
 | Deadlock | epic | — | `on_duel_completed` | Battle to a true draw that survives sudden death. | LIVE | ready |
-| Dueling Master ⬆ | legendary | 100/150/200/250/500/1000 | `on_duel_completed` | Complete 100 to 1,000 duels. | no engine | pending |
-| Underdog ⬆ | rare | 1/5/10/25 | `on_duel_completed` | Win a duel as the lower-rated duelist. | no engine · rating-at-duel-time | pending |
-| Clutch | epic | — | `on_duel_completed` | Win a duel in sudden death. | no engine · sudden-death flag | pending |
-| Flawless Victory | epic | — | `on_duel_completed` | Win a duel with every community vote. | no engine · 100% vote share | pending |
-| Photo Finish ⬆ | uncommon | — | `on_duel_completed` | Win a duel by a single vote. | no engine · 1-vote margin (hidden) | pending |
-| Redemption | rare | — | `on_duel_completed` | Beat an opponent who has beaten you before. | no engine · duel history | pending |
+| Dueling Master ⬆ | legendary | 100/150/200/250/500/1000 | `on_duel_completed` | Complete 100 to 1,000 duels. | no engine | ready |
+| Underdog ⬆ | rare | 1/5/10/25 | `on_duel_completed` | Win a duel as the lower-rated duelist. | no engine · rating-at-duel-time | ready |
+| Clutch | epic | — | `on_duel_completed` | Win a duel in sudden death. | no engine · sudden-death flag | ready |
+| Flawless Victory | epic | — | `on_duel_completed` | Win a duel with every community vote. | no engine · 100% vote share | ready |
+| Photo Finish ⬆ | uncommon | — | `on_duel_completed` | Win a duel by a single vote. | no engine · 1-vote margin (hidden) | ready |
+| Redemption | rare | — | `on_duel_completed` | Beat an opponent who has beaten you before. | no engine · duel history | ready |
 
 ## Voting
 
@@ -155,22 +155,22 @@
 | Sharp Eye ⬆ | rare | 10/25/50/100/250 | `on_duel_completed` | Pick the winning side in >=70% of your votes — new level at 10/25/50/100/250. | single-shot only — needs tier logic | ready |
 | Kingmaker ⬆ | rare | 5/10/25/50/100 | `on_duel_completed` | Cast the final vote for a duel's winner — new level at 5/10/25/50/100. | redefined — needs engine | ready |
 | Honorable Voter (was Fair Witness) | uncommon | — | `on_duel_completed` | Pick the duel winner more than 85% of the time. Drop below and you lose it. | REVOCABLE — needs delete/deactivate | ready |
-| Oracle ⬆ | rare | 1/5/10/25 | `on_duel_completed` | Vote for an underdog who goes on to win. | no engine · voted lower-rated winner | pending |
-| Superfan ⬆ | uncommon | 10/25/50/100/250 | `on_duel_vote_cast` | Watch duels start to finish. | needs watch-time persisted | pending |
+| Oracle ⬆ | rare | 1/5/10/25 | `on_duel_completed` | Vote for an underdog who goes on to win. | no engine · voted lower-rated winner | ready |
+| Superfan ⬆ | uncommon | 10/25/50/100/250 | `on_duel_vote_cast` | Watch duels start to finish. | needs watch-time persisted | ready |
 
 ## Community & Charter
 
 | name | rarity | levels | trigger | how earned | engine / build | art |
 |---|---|---|---|---|---|---|
 | Teammate | common | — | `on_result_finalized` | Compete in the same round as a schoolmate. | no engine | ready |
-| Globetrotter | rare | — | `on_result_finalized` | Compete alongside students from many different schools. | no engine | pending |
+| Globetrotter | rare | — | `on_result_finalized` | Compete alongside students from many different schools. | no engine | ready |
 | Anniversary | uncommon | — | `on_scheduled` | Reach one year since you joined. | no engine | ready |
-| Trendsetter | rare | — | `on_badge_award` | Be the first at your school to earn a rare or higher badge. | no engine · META hook on any award | pending |
+| Trendsetter | rare | — | `on_badge_award` | Be the first at your school to earn a rare or higher badge. | no engine · META hook on any award | ready |
 | Perfect Score | legendary | — | `on_result_finalized` | Score above 96 in every judging criterion. | no engine | ready |
 | Zen ⬆ | epic | — | `on_result_finalized` | Score above 95 overall in a single performance. | no engine (hidden) | ready |
-| Buzzer Beater ⬆ | uncommon | — | `on_entry_submitted` | Submit an entry in the final minute before a deadline. | no engine · <60s to deadline (hidden) | pending |
+| Buzzer Beater ⬆ | uncommon | — | `on_entry_submitted` | Submit an entry in the final minute before a deadline. | no engine · <60s to deadline (hidden) | ready |
 | Charter Member | legendary | — | `on_onboarding_complete` | Compete in the very first season. | no engine | ready |
-| Trailblazer | legendary | — | `on_onboarding_complete` | Be one of the first 100 competitors ever to join. | no engine | pending |
+| Trailblazer | legendary | — | `on_onboarding_complete` | Be one of the first 100 competitors ever to join. | no engine | ready |
 
 ---
 
