@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, type MedalType } from "@nmao/design-tokens";
 import { Medal } from "../components/Medal";
 import { myCompetitors } from "../lib/competitors";
-import { standings, voterBoard, tournamentBoard, schoolBoard, bracketOptions, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow, type SchoolRow, type BracketOption } from "../lib/leaderboard";
+import { standings, voterBoard, tournamentBoard, schoolBoard, bracketOptions, eventOptions, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow, type SchoolRow, type BracketOption } from "../lib/leaderboard";
 
 type Board = "tournament" | "duelists" | "voters" | "schools";
 const DIVS: { key: Division; label: string; hue: string }[] = [
@@ -46,6 +46,8 @@ export default function Leaderboard() {
   const [division, setDivision] = useState<Division>("all");
   const [bracket, setBracket] = useState<string>("all");
   const [brackets, setBrackets] = useState<BracketOption[]>([]);
+  const [event, setEvent] = useState<string>("all");
+  const [events, setEvents] = useState<string[]>([]);
   const [sort, setSort] = useState<SortKey>("rating");
   const [tsort, setTsort] = useState<TSortKey>("points");
   const [tscope, setTscope] = useState<TScope>("season");
@@ -58,10 +60,11 @@ export default function Leaderboard() {
 
   useEffect(() => { myCompetitors().then((c) => setMe(c[0]?.id ?? null)); }, []);
   useEffect(() => { bracketOptions().then(setBrackets); }, []);
+  useEffect(() => { eventOptions().then(setEvents); }, []);
   useEffect(() => { if (me && board === "duelists") { setDuel(null); standings(me, scope, division, bracket).then(setDuel); } }, [me, scope, division, bracket, board]);
-  useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division, tscope, bracket).then(setTour); } }, [me, division, tscope, bracket, board]);
+  useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division, tscope, bracket, event).then(setTour); } }, [me, division, tscope, bracket, event, board]);
   useEffect(() => { if (me && board === "voters") { setVote(null); voterBoard(me).then(setVote); } }, [me, board]);
-  useEffect(() => { if (board === "schools") { setSchools(null); schoolBoard(tscope, bracket).then(setSchools); } }, [tscope, bracket, board]);
+  useEffect(() => { if (board === "schools") { setSchools(null); schoolBoard(tscope, bracket, event).then(setSchools); } }, [tscope, bracket, event, board]);
 
   const sortDef = SORTS.find((s) => s.key === sort)!;
   const rows = duel ? [...duel].sort((a, b) => sortDef.get(b) - sortDef.get(a)) : null;
@@ -86,13 +89,14 @@ export default function Leaderboard() {
             </View>
             <DivisionRow division={division} setDivision={setDivision} />
             <BracketRow brackets={brackets} bracket={bracket} setBracket={setBracket} />
+            <EventDropdown events={events} event={event} setEvent={setEvent} />
             <Row2Label t="Sort" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               {TSORTS.map((s) => <Chip key={s.key} label={s.label} active={tsort === s.key} color={hues.gold.base} filled spectrum onPress={() => setTsort(s.key)} />)}
             </ScrollView>
             {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : (() => {
               // Movement basis is the all-time, all-filters snapshot, so only surface arrows on that canonical view.
-              const showMove = tscope === "all" && division === "all" && bracket === "all" && tsort === "points";
+              const showMove = tscope === "all" && division === "all" && bracket === "all" && event === "all" && tsort === "points";
               return trows.map((r, i) => {
                 const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
                 return <TourRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={tsortDef.unit} sub={tsortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelT(r)} />;
@@ -125,6 +129,7 @@ export default function Leaderboard() {
               <Chip label="All-time" active={tscope === "all"} color={hues.gold.hi} spectrum onPress={() => setTscope("all")} />
             </View>
             <BracketRow brackets={brackets} bracket={bracket} setBracket={setBracket} />
+            <EventDropdown events={events} event={event} setEvent={setEvent} />
             {schools == null ? <Loading /> : schools.length === 0 ? <Empty note="No school standings yet — medals feed the dojo board." /> : schools.map((s, i) => <SchoolRowView key={s.schoolId} rank={i + 1} row={s} />)}
           </>
         ) : (
@@ -166,6 +171,38 @@ function BracketRow({ brackets, bracket, setBracket }: { brackets: BracketOption
         {brackets.map((b) => <Chip key={b.code} label={b.label} active={bracket === b.code} color={hues.sapphire.base} filled spectrum onPress={() => setBracket(b.code)} />)}
       </ScrollView>
     </>
+  );
+}
+// Event filter as a dropdown (options data-driven via event_options()).
+function EventDropdown({ events, event, setEvent }: { events: string[]; event: string; setEvent: (e: string) => void }) {
+  const [open, setOpen] = useState(false);
+  if (!events.length) return null;
+  const opts = [{ code: "all", label: "All events" }, ...events.map((e) => ({ code: e, label: e }))];
+  const current = opts.find((o) => o.code === event) ?? opts[0];
+  return (
+    <View style={{ marginBottom: 12 }}>
+      <Row2Label t="Event" />
+      <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.8}
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: neutrals.surface, borderWidth: 1, borderColor: event === "all" ? neutrals.border : hues.amethyst.base, borderRadius: 12, paddingVertical: 11, paddingHorizontal: 14 }}>
+        <Text style={{ color: event === "all" ? neutrals.text : hues.amethyst.hi, fontWeight: "700", fontSize: 13 }}>{current.label}</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 13 }}>▾</Text>
+      </TouchableOpacity>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", paddingHorizontal: 28 }}>
+          <View style={{ backgroundColor: "#161618", borderRadius: 18, borderWidth: 1, borderColor: "#2a2a2e", overflow: "hidden" }}>
+            {opts.map((o, i) => {
+              const active = event === o.code;
+              return (
+                <TouchableOpacity key={o.code} onPress={() => { setEvent(o.code); setOpen(false); }}
+                  style={{ paddingVertical: 15, paddingHorizontal: 18, borderTopWidth: i === 0 ? 0 : 1, borderColor: "#242428", backgroundColor: active ? "rgba(163,43,247,0.14)" : "transparent" }}>
+                  <Text style={{ color: active ? hues.amethyst.hi : neutrals.text, fontSize: 15, fontWeight: active ? "800" : "500" }}>{o.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </View>
   );
 }
 function SchoolRowView({ rank, row }: { rank: number; row: SchoolRow }) {

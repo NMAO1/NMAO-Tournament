@@ -25,8 +25,8 @@ export type TourRow = {
   gold: number; silver: number; bronze: number; participation: number; medals: number; points: number; events: number; you: boolean; prevRank: number | null;
 };
 export type TScope = "season" | "all";
-export async function tournamentBoard(competitorId: string, division: Division = "all", scope: TScope = "season", bracket: string = "all"): Promise<TourRow[]> {
-  const { data } = await supabase.rpc("tournament_leaderboard", { p_competitor_id: competitorId, p_division: division, p_scope: scope, p_bracket: bracket, p_limit: 50 });
+export async function tournamentBoard(competitorId: string, division: Division = "all", scope: TScope = "season", bracket: string = "all", event: string = "all"): Promise<TourRow[]> {
+  const { data } = await supabase.rpc("tournament_leaderboard", { p_competitor_id: competitorId, p_division: division, p_scope: scope, p_bracket: bracket, p_event: event, p_limit: 50 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((data ?? []) as any[]).map((r) => ({
     rank: r.rank, competitorId: r.competitor_id, name: r.name, school: r.school ?? null, belt: r.belt ?? null,
@@ -37,8 +37,8 @@ export async function tournamentBoard(competitorId: string, division: Division =
 }
 
 export type SchoolRow = { rank: number; schoolId: string; name: string; athletes: number; gold: number; silver: number; bronze: number; medals: number; points: number };
-export async function schoolBoard(scope: TScope = "season", bracket: string = "all"): Promise<SchoolRow[]> {
-  const { data } = await supabase.rpc("school_leaderboard", { p_scope: scope, p_bracket: bracket, p_limit: 50 });
+export async function schoolBoard(scope: TScope = "season", bracket: string = "all", event: string = "all"): Promise<SchoolRow[]> {
+  const { data } = await supabase.rpc("school_leaderboard", { p_scope: scope, p_bracket: bracket, p_event: event, p_limit: 50 });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((data ?? []) as any[]).map((r) => ({
     rank: r.rank, schoolId: r.school_id, name: r.name, athletes: r.athletes ?? 0,
@@ -51,6 +51,12 @@ export async function bracketOptions(): Promise<BracketOption[]> {
   const { data } = await supabase.rpc("age_bracket_options");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return ((data ?? []) as any[]).map((r) => ({ code: r.code, label: r.label }));
+}
+
+export async function eventOptions(): Promise<string[]> {
+  const { data } = await supabase.rpc("event_options");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return ((data ?? []) as any[]).map((r) => r.event as string);
 }
 
 export async function voterBoard(competitorId: string): Promise<VoterRow[]> {
