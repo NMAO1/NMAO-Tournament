@@ -62,6 +62,7 @@ export default function Profile() {
       <Row icon="🔔" label="Notifications" onPress={() => setSub("notifs")} />
       <Row icon="✦" label="Membership & Store" onPress={() => setSub("store")} />
       <Row icon="📖" label="Rules & Help" onPress={() => setSub("rules")} />
+      <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} />
       <Row icon="🏆" label="Tournament & entries" onPress={() => setSub("home")} />
 
       <TouchableOpacity onPress={() => supabase.auth.signOut()} style={{ marginTop: 18, alignItems: "center" }}>
