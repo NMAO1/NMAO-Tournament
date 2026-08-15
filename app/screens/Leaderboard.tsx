@@ -4,9 +4,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, type MedalType } from "@nmao/design-tokens";
 import { Medal } from "../components/Medal";
 import { myCompetitors } from "../lib/competitors";
-import { standings, voterBoard, tournamentBoard, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow } from "../lib/leaderboard";
+import { standings, voterBoard, tournamentBoard, schoolBoard, bracketOptions, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow, type SchoolRow, type BracketOption } from "../lib/leaderboard";
 
-type Board = "duelists" | "tournament" | "voters";
+type Board = "tournament" | "duelists" | "voters" | "schools";
 const DIVS: { key: Division; label: string; hue: string }[] = [
   { key: "all", label: "All", hue: hues.gold.base },
   { key: "beginner", label: "Beginner", hue: hues.sapphire.base },
@@ -41,22 +41,27 @@ const TSORTS: { key: TSortKey; label: string; unit: string; get: (r: TourRow) =>
 
 export default function Leaderboard() {
   const [me, setMe] = useState<string | null>(null);
-  const [board, setBoard] = useState<Board>("duelists");
+  const [board, setBoard] = useState<Board>("tournament");
   const [scope, setScope] = useState<Scope>("global");
   const [division, setDivision] = useState<Division>("all");
+  const [bracket, setBracket] = useState<string>("all");
+  const [brackets, setBrackets] = useState<BracketOption[]>([]);
   const [sort, setSort] = useState<SortKey>("rating");
   const [tsort, setTsort] = useState<TSortKey>("points");
   const [tscope, setTscope] = useState<TScope>("season");
   const [duel, setDuel] = useState<LbRow[] | null>(null);
   const [tour, setTour] = useState<TourRow[] | null>(null);
   const [vote, setVote] = useState<VoterRow[] | null>(null);
+  const [schools, setSchools] = useState<SchoolRow[] | null>(null);
   const [selD, setSelD] = useState<LbRow | null>(null);
   const [selT, setSelT] = useState<TourRow | null>(null);
 
   useEffect(() => { myCompetitors().then((c) => setMe(c[0]?.id ?? null)); }, []);
-  useEffect(() => { if (me && board === "duelists") { setDuel(null); standings(me, scope, division).then(setDuel); } }, [me, scope, division, board]);
-  useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division, tscope).then(setTour); } }, [me, division, tscope, board]);
+  useEffect(() => { bracketOptions().then(setBrackets); }, []);
+  useEffect(() => { if (me && board === "duelists") { setDuel(null); standings(me, scope, division, bracket).then(setDuel); } }, [me, scope, division, bracket, board]);
+  useEffect(() => { if (me && board === "tournament") { setTour(null); tournamentBoard(me, division, tscope, bracket).then(setTour); } }, [me, division, tscope, bracket, board]);
   useEffect(() => { if (me && board === "voters") { setVote(null); voterBoard(me).then(setVote); } }, [me, board]);
+  useEffect(() => { if (board === "schools") { setSchools(null); schoolBoard(tscope, bracket).then(setSchools); } }, [tscope, bracket, board]);
 
   const sortDef = SORTS.find((s) => s.key === sort)!;
   const rows = duel ? [...duel].sort((a, b) => sortDef.get(b) - sortDef.get(a)) : null;
@@ -67,48 +72,60 @@ export default function Leaderboard() {
     <>
       <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         <View style={{ flexDirection: "row", backgroundColor: neutrals.surface, borderRadius: 10, padding: 3, marginBottom: 12 }}>
-          <Seg label="Duelists" active={board === "duelists"} onPress={() => setBoard("duelists")} />
           <Seg label="Tournament" active={board === "tournament"} onPress={() => setBoard("tournament")} />
+          <Seg label="Duelists" active={board === "duelists"} onPress={() => setBoard("duelists")} />
+          <Seg label="Schools" active={board === "schools"} onPress={() => setBoard("schools")} />
           <Seg label="Voters" active={board === "voters"} onPress={() => setBoard("voters")} />
         </View>
 
-        {board === "duelists" ? (
-          <>
-            <View style={{ flexDirection: "row", marginBottom: 10 }}>
-              {SCOPES.map((s) => <Chip key={s.key} label={s.label} active={scope === s.key} color={hues.gold.hi} spectrum onPress={() => setScope(s.key)} />)}
-            </View>
-            <DivisionRow division={division} setDivision={setDivision} />
-            <Row2Label t="Sort" />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-              {SORTS.map((s) => <Chip key={s.key} label={s.label} active={sort === s.key} color={hues.gold.base} filled spectrum onPress={() => setSort(s.key)} />)}
-            </ScrollView>
-            {rows == null ? <Loading /> : rows.length === 0 ? <Empty /> : (() => {
-              const showMove = scope === "global" && division === "all" && sort === "rating";
-              return rows.map((r, i) => {
-                const raw = sortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
-                return <LbRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={sortDef.unit} sub={sortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelD(r)} />;
-              });
-            })()}
-          </>
-        ) : board === "tournament" ? (
+        {board === "tournament" ? (
           <>
             <View style={{ flexDirection: "row", marginBottom: 10 }}>
               <Chip label="Season" active={tscope === "season"} color={hues.gold.hi} spectrum onPress={() => setTscope("season")} />
               <Chip label="All-time" active={tscope === "all"} color={hues.gold.hi} spectrum onPress={() => setTscope("all")} />
             </View>
             <DivisionRow division={division} setDivision={setDivision} />
+            <BracketRow brackets={brackets} bracket={bracket} setBracket={setBracket} />
             <Row2Label t="Sort" />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
               {TSORTS.map((s) => <Chip key={s.key} label={s.label} active={tsort === s.key} color={hues.gold.base} filled spectrum onPress={() => setTsort(s.key)} />)}
             </ScrollView>
             {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : (() => {
-              // Movement basis is the all-time snapshot, so only surface arrows on the all-time view.
-              const showMove = tscope === "all" && division === "all" && tsort === "points";
+              // Movement basis is the all-time, all-filters snapshot, so only surface arrows on that canonical view.
+              const showMove = tscope === "all" && division === "all" && bracket === "all" && tsort === "points";
               return trows.map((r, i) => {
                 const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
                 return <TourRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={tsortDef.unit} sub={tsortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelT(r)} />;
               });
             })()}
+          </>
+        ) : board === "duelists" ? (
+          <>
+            <View style={{ flexDirection: "row", marginBottom: 10 }}>
+              {SCOPES.map((s) => <Chip key={s.key} label={s.label} active={scope === s.key} color={hues.gold.hi} spectrum onPress={() => setScope(s.key)} />)}
+            </View>
+            <DivisionRow division={division} setDivision={setDivision} />
+            <BracketRow brackets={brackets} bracket={bracket} setBracket={setBracket} />
+            <Row2Label t="Sort" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+              {SORTS.map((s) => <Chip key={s.key} label={s.label} active={sort === s.key} color={hues.gold.base} filled spectrum onPress={() => setSort(s.key)} />)}
+            </ScrollView>
+            {rows == null ? <Loading /> : rows.length === 0 ? <Empty /> : (() => {
+              const showMove = scope === "global" && division === "all" && bracket === "all" && sort === "rating";
+              return rows.map((r, i) => {
+                const raw = sortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
+                return <LbRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={sortDef.unit} sub={sortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelD(r)} />;
+              });
+            })()}
+          </>
+        ) : board === "schools" ? (
+          <>
+            <View style={{ flexDirection: "row", marginBottom: 10 }}>
+              <Chip label="Season" active={tscope === "season"} color={hues.gold.hi} spectrum onPress={() => setTscope("season")} />
+              <Chip label="All-time" active={tscope === "all"} color={hues.gold.hi} spectrum onPress={() => setTscope("all")} />
+            </View>
+            <BracketRow brackets={brackets} bracket={bracket} setBracket={setBracket} />
+            {schools == null ? <Loading /> : schools.length === 0 ? <Empty note="No school standings yet — medals feed the dojo board." /> : schools.map((s, i) => <SchoolRowView key={s.schoolId} rank={i + 1} row={s} />)}
           </>
         ) : (
           vote == null ? <Loading /> : vote.length === 0 ? <Empty /> : vote.map((r) => <VoterRowView key={r.rank} r={r} />)
@@ -135,6 +152,39 @@ function DivisionRow({ division, setDivision }: { division: Division; setDivisio
         {DIVS.map((d) => <Chip key={d.key} label={d.label} active={division === d.key} color={d.hue} filled spectrum onPress={() => setDivision(d.key)} />)}
       </ScrollView>
     </>
+  );
+}
+// Data-driven age-bracket filter — options come from age_bracket_options() so
+// editing the age_brackets table is all it takes to adjust the brackets.
+function BracketRow({ brackets, bracket, setBracket }: { brackets: BracketOption[]; bracket: string; setBracket: (b: string) => void }) {
+  if (!brackets.length) return null;
+  return (
+    <>
+      <Row2Label t="Age" />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+        <Chip label="All Ages" active={bracket === "all"} color={hues.sapphire.base} filled spectrum onPress={() => setBracket("all")} />
+        {brackets.map((b) => <Chip key={b.code} label={b.label} active={bracket === b.code} color={hues.sapphire.base} filled spectrum onPress={() => setBracket(b.code)} />)}
+      </ScrollView>
+    </>
+  );
+}
+function SchoolRowView({ rank, row }: { rank: number; row: SchoolRow }) {
+  const top = rank <= 3;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, paddingHorizontal: 13, marginBottom: 9, borderRadius: 16, backgroundColor: neutrals.surface, borderWidth: 1, borderColor: neutrals.border }}>
+      <Text style={{ color: top ? hues.gold.hi : neutrals.muted2, fontWeight: "800", width: 26, textAlign: "center", fontVariant: ["tabular-nums"], fontSize: 15 }}>{rank}</Text>
+      <View style={{ width: 40, height: 40, borderRadius: 12, marginHorizontal: 10, alignItems: "center", justifyContent: "center", backgroundColor: "#15130f", borderWidth: 2, borderColor: top ? hues.gold.base : neutrals.border }}>
+        <Text style={{ fontSize: 18 }}>🏯</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text numberOfLines={1} style={{ color: neutrals.text, fontWeight: "700", fontSize: 14 }}>{row.name}{rank === 1 ? "  👑" : ""}</Text>
+        <Text numberOfLines={1} style={{ color: neutrals.muted2, fontSize: 11, marginTop: 1 }}>{row.athletes} athletes · {row.gold}🥇 {row.silver}🥈 {row.bronze}🥉</Text>
+      </View>
+      <View style={{ alignItems: "flex-end" }}>
+        <Text style={{ color: hues.gold.hi, fontWeight: "800", fontSize: 16, fontVariant: ["tabular-nums"] }}>{row.points}<Text style={{ color: neutrals.muted2, fontSize: 9, fontWeight: "700" }}> pts</Text></Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 10, marginTop: 1 }}>{row.medals} medals</Text>
+      </View>
+    </View>
   );
 }
 function Seg({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
