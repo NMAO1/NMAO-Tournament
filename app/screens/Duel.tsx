@@ -216,7 +216,12 @@ function QueueCard({ q, onEnter }: { q: QueueDuel; onEnter: () => void }) {
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
         <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "600", flex: 1 }} numberOfLines={1}>{q.challenger.name}</Text>
-        <Text style={{ color: neutrals.muted2, fontSize: 10, textTransform: "uppercase", marginHorizontal: 6 }}>{q.type}</Text>
+        <LinearGradient
+          colors={[hues.gold.hi, hues.gold.base]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ marginHorizontal: 8, paddingHorizontal: 11, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: hues.gold.hi, shadowColor: hues.gold.hi, shadowOpacity: 0.55, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }}
+        >
+          <Text style={{ color: "#1a1305", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" }} numberOfLines={1}>{q.type}</Text>
+        </LinearGradient>
         <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "600", flex: 1, textAlign: "right" }} numberOfLines={1}>{q.opponent.name}</Text>
       </View>
       <Text style={{ color: hues.gold.hi, fontSize: 11, textAlign: "center", marginTop: 8, fontWeight: "700" }}>Tap to enter the ring ›</Text>

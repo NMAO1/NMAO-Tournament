@@ -146,15 +146,12 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <VsBadge />
       </View>
 
-      {/* top HUD overlay */}
-      <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingTop: 38, paddingHorizontal: 16 }}>
+      {/* top HUD overlay — just the exit affordance; the round/event context
+          lives in the vote queue, not here (it overlapped the frame borders). */}
+      <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row", alignItems: "center", paddingTop: 38, paddingHorizontal: 16 }}>
         <TouchableOpacity onPress={() => onClose(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Text style={{ color: neutrals.text, fontSize: 12, letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 6 }}>‹  EXIT RING</Text>
         </TouchableOpacity>
-        <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "700", letterSpacing: 1.4, textTransform: "uppercase", textShadowColor: "#000", textShadowRadius: 8, textShadowOffset: { width: 0, height: 1 } }}>
-          S1 · Round VIII · {evName(face.type)}
-        </Text>
-        <View style={{ width: 64 }} />
       </View>
 
       {/* watch-to-vote meter overlay */}
