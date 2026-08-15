@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase } from "@nmao/design-tokens";
-import { Frame } from "../components/Frame";
 import { faceOff, castVote, playbackUrls, type FaceOff, type Choice, type Card } from "../lib/duel";
 
 // The Arena "ring" — the crown-jewel voting screen. Landscape (via guarded
@@ -175,11 +174,6 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   );
 }
 
-// The frame band's own hue — the vote CTA fills with the same custom border colour.
-function bandHue(rarity: "common" | "rare" | "epic" | "legendary") {
-  return rarity === "epic" ? hues.amethyst : rarity === "rare" ? hues.sapphire : hues.gold;
-}
-
 function Side({
   card, choice, rarity, active, unlocked, voted, player, hasVideo, onPlay, onVote,
 }: {
@@ -188,22 +182,24 @@ function Side({
   player: VideoPlayer; hasVideo: boolean; onPlay: () => void; onVote: () => void;
 }) {
   const dim = voted && voted !== choice;
-  const cta = bandHue(rarity);             // vote CTA = same custom border colour
-  const filled = unlocked || voted === choice;
+  const glow = rarityBase(rarity);
   const first = card.firstName;
+  const BAND = 64;                          // thick bottom band = the badge / vote area
   return (
     <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}>
-      {/* the frame fills the whole side, edge to edge. The vote CTA lives INSIDE
-          the frame's clipped area, so the border band wraps over/around it and
-          hides any seam — the border is literally in front of the button. */}
-      <Frame rarity={rarity} size="ring" fill style={{ flex: 1 }}>
-        <View style={{ flex: 1 }}>
+      {/* custom frame: thin top + sides, a THICK bottom band (BAND) that the side
+          borders squeeze into — the big customizable badge/sponsor area. */}
+      <View style={{ flex: 1, shadowColor: glow, shadowOpacity: 0.6, shadowRadius: 26, shadowOffset: { width: 0, height: 0 } }}>
+        <LinearGradient
+          colors={rarityStops(rarity)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ flex: 1, borderRadius: 26, paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
+        >
           <TouchableOpacity activeOpacity={0.95} onPress={onPlay} style={{ flex: 1 }}>
-            <View style={{ flex: 1, backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
+            <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
               {hasVideo ? (
                 <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
               ) : null}
-              {/* nameplate at the TOP so the bottom is free for the vote CTA */}
+              {/* nameplate at the top */}
               <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.72)", paddingVertical: 6, alignItems: "center" }}>
                 <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
                 {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
@@ -213,28 +209,17 @@ function Side({
               </View>
             </View>
           </TouchableOpacity>
-          {/* vote CTA — docked onto the bottom border. The badge border wraps its
-              top + sides and its OPEN bottom flows straight into the frame's bottom
-              band, so the customizable border runs continuously up to the button. */}
-          <View pointerEvents="box-none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, alignItems: "center" }}>
-            <TouchableOpacity activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted} style={{ opacity: unlocked || voted ? 1 : 0.55 }}>
-              <View
-                style={{
-                  backgroundColor: filled ? cta.base : "#100d07",
-                  borderTopWidth: 6, borderLeftWidth: 6, borderRightWidth: 6, borderColor: cta.base,
-                  borderTopLeftRadius: 12, borderTopRightRadius: 12,
-                  paddingTop: 12, paddingBottom: 12, paddingHorizontal: 32,
-                  shadowColor: cta.hi, shadowOpacity: filled ? 0.75 : 0.2, shadowRadius: 12, shadowOffset: { width: 0, height: 0 },
-                }}
-              >
-                <Text style={{ color: filled ? "#0c0a06" : cta.hi, fontWeight: "900", fontSize: 14, letterSpacing: 1, textTransform: "uppercase" }}>
-                  {voted === choice ? "✓ Voted" : `Vote ${first}`}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Frame>
+        </LinearGradient>
+      </View>
+      {/* vote CTA lives ON the thick bottom band (which IS the badge border) */}
+      <TouchableOpacity
+        activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted}
+        style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: BAND, alignItems: "center", justifyContent: "center", opacity: unlocked || voted ? 1 : 0.55 }}
+      >
+        <Text style={{ color: "#0c0a06", fontWeight: "900", fontSize: 16, letterSpacing: 1.5, textTransform: "uppercase" }}>
+          {voted === choice ? "✓ Voted" : `Vote ${first}`}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
