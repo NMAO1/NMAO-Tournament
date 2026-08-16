@@ -113,7 +113,7 @@ export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [hasComp, setHasComp] = useState<boolean | undefined>(undefined);
   const [authView, setAuthView] = useState<"login" | "signup">("login");
-  const [redeemToken, setRedeemToken] = useState<string | null>(null);
+  const [redeemToken, setRedeemToken] = useState<string | null>("2a44eacb010c4c9ebe051e56b4fb00c01ee8332d840961e81a892c7b9453f97d"); // TEMP TEST — revert to null
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));

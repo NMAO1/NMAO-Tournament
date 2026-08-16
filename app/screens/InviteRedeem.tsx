@@ -12,6 +12,12 @@ const CONSENTS = [
 ];
 const RANK_LABEL: Record<string, string> = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced", black_belt: "Black Belt" };
 const pad = (s: string) => (s.length === 1 ? "0" + s : s);
+// Timezone-safe DOB display — build from Y/M/D parts so a UTC "2014-07-07"
+// doesn't render as the prior day in a behind-UTC locale.
+function fmtDOB(iso: string): string {
+  const [Y, M, D] = iso.split("-").map(Number);
+  return new Date(Y, M - 1, D).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+}
 
 // Membership-bridge redeem — a guardian opens an invite deep-link and completes
 // the gated part: confirm the (school-provided) competitor, add themselves, pick
