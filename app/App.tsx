@@ -7,6 +7,8 @@ import { supabase } from "./lib/supabase";
 import { myCompetitors } from "./lib/competitors";
 import { unreadCount, subscribeNotifications, latestUnseenMonthly, type Notif } from "./lib/notifications";
 import Login from "./screens/Login";
+import Signup from "./screens/Signup";
+import Onboard from "./screens/Onboard";
 import Compete from "./screens/Compete";
 import Duel from "./screens/Duel";
 import Achievements from "./screens/Achievements";
@@ -100,25 +102,39 @@ function TabButton({ label, icon, hue, active, onPress }: { label: string; icon:
 
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [hasComp, setHasComp] = useState<boolean | undefined>(undefined);
+  const [authView, setAuthView] = useState<"login" | "signup">("login");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); if (!s) setAuthView("login"); });
     return () => sub.subscription.unsubscribe();
   }, []);
+
+  // A signed-in user with no competitor yet (fresh guardian) goes to onboarding.
+  useEffect(() => {
+    if (!session) { setHasComp(undefined); return; }
+    let alive = true;
+    setHasComp(undefined);
+    myCompetitors().then((cs) => { if (alive) setHasComp(cs.length > 0); });
+    return () => { alive = false; };
+  }, [session]);
+
+  const spinner = (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>
+  );
+
+  let body: React.ReactNode;
+  if (session === undefined) body = spinner;
+  else if (!session) body = authView === "signup" ? <Signup onBack={() => setAuthView("login")} /> : <Login onSignup={() => setAuthView("signup")} />;
+  else if (hasComp === undefined) body = spinner;
+  else if (!hasComp) body = <Onboard onDone={() => setHasComp(true)} />;
+  else body = <MainTabs />;
 
   return (
     <View style={{ flex: 1, backgroundColor: neutrals.bg }}>
       <StatusBar style="light" />
-      {session === undefined ? (
-        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color={neutrals.muted} />
-        </View>
-      ) : session ? (
-        <MainTabs />
-      ) : (
-        <Login />
-      )}
+      {body}
     </View>
   );
 }

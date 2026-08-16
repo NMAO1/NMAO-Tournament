@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, metalStops, spectrum as _spectrum, status } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
 
-export default function Login() {
+export default function Login({ onSignup }: { onSignup: () => void }) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,7 +47,10 @@ export default function Login() {
       </TouchableOpacity>
 
       <TouchableOpacity onPress={reset} style={{ marginTop: 14, alignItems: "center" }}>
-        <Text style={{ color: neutrals.muted, fontSize: 13 }}>First time, or forgot your password? Email me a link</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 13 }}>Forgot your password? Email me a link</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onSignup} style={{ marginTop: 16, alignItems: "center" }}>
+        <Text style={{ color: neutrals.muted, fontSize: 13 }}>New to NMAO? <Text style={{ color: neutrals.text, fontWeight: "700" }}>Create an account</Text></Text>
       </TouchableOpacity>
 
       {msg ? <Text style={{ color: msg.startsWith("Check") ? status.success : status.danger, textAlign: "center", marginTop: 16 }}>{msg}</Text> : null}
