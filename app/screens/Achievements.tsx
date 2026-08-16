@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Image } from "react-native";
 import { neutrals, hues, rarityBase, type MedalType } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
+import { SpectrumText } from "../components/SpectrumText";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
 import { myCompetitors } from "../lib/competitors";
@@ -149,8 +150,8 @@ export default function Achievements() {
 
 function Label({ t }: { t: string }) {
   return (
-    <View style={{ alignSelf: "flex-start", marginTop: 18, marginBottom: 12, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 9, backgroundColor: "rgba(230,185,63,0.1)", borderWidth: 1, borderColor: hues.gold.shadow }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: "800" }}>{t}</Text>
+    <View style={{ alignSelf: "flex-start", marginTop: 18, marginBottom: 12, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 9, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: neutrals.border }}>
+      <SpectrumText style={{ fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: "800" }}>{t}</SpectrumText>
     </View>
   );
 }

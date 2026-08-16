@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator,
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
+import { SpectrumText } from "../components/SpectrumText";
 import { Frame } from "../components/Frame";
 import { myCompetitors } from "../lib/competitors";
 import { uploadDuelVideo } from "../lib/upload";
@@ -211,15 +212,15 @@ function QueueCard({ q, onEnter }: { q: QueueDuel; onEnter: () => void }) {
     <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, backgroundColor: neutrals.surface, padding: 10, marginBottom: 10 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
         <Frame rarity={q.challenger.frameRarity} size="mini"><View style={{ width: 108, height: 61, backgroundColor: "#171207" }} /></Frame>
-        <View style={{ marginHorizontal: 8, width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#15130f", borderWidth: 1, borderColor: hues.gold.shadow }}>
-          <Text style={{ color: hues.gold.hi, fontWeight: "900", fontStyle: "italic", fontSize: 13 }}>VS</Text>
+        <View style={{ marginHorizontal: 8, width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#15130f", borderWidth: 1, borderColor: neutrals.border }}>
+          <SpectrumText style={{ fontWeight: "900", fontStyle: "italic", fontSize: 13 }}>VS</SpectrumText>
         </View>
         <Frame rarity={q.opponent.frameRarity} size="mini"><View style={{ width: 108, height: 61, backgroundColor: "#120c1f" }} /></Frame>
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
         <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "600", flex: 1 }} numberOfLines={1}>{q.challenger.name}</Text>
-        <View style={{ marginHorizontal: 8, paddingHorizontal: 11, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(230,185,63,0.12)", borderWidth: 1, borderColor: hues.gold.base }}>
-          <Text style={{ color: hues.gold.hi, fontSize: 10, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" }} numberOfLines={1}>{q.type}</Text>
+        <View style={{ marginHorizontal: 8, paddingHorizontal: 11, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: neutrals.border }}>
+          <SpectrumText style={{ fontSize: 10, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" }} numberOfLines={1}>{q.type}</SpectrumText>
         </View>
         <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "600", flex: 1, textAlign: "right" }} numberOfLines={1}>{q.opponent.name}</Text>
       </View>
