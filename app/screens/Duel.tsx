@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
-import { neutrals, hues, metalStops, spectrumStops } from "@nmao/design-tokens";
+import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { myCompetitors } from "../lib/competitors";
 import { uploadDuelVideo } from "../lib/upload";
@@ -187,18 +187,18 @@ function ActiveCard({ d, busy, onRespond, onUpload }: { d: ActiveDuel; busy: boo
           <TouchableOpacity onPress={() => onRespond(d, false)} disabled={busy} style={{ flex: 1, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: neutrals.border, alignItems: "center", marginRight: 8 }}>
             <Text style={{ color: neutrals.muted, fontWeight: "700", fontSize: 12 }}>Decline</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => onRespond(d, true)} disabled={busy} style={{ flex: 1 }}>
-            <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ paddingVertical: 10, borderRadius: 8, alignItems: "center" }}>
-              <Text style={{ color: "#141210", fontWeight: "800", fontSize: 12 }}>{busy ? "…" : "Accept"}</Text>
+          <TouchableOpacity onPress={() => onRespond(d, true)} disabled={busy} style={{ flex: 1, borderRadius: 10, overflow: "hidden" }}>
+            <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 11, alignItems: "center" }}>
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>{busy ? "…" : "Accept"}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
       ) : null}
 
       {d.status === "accepted" && !d.myVideoIn ? (
-        <TouchableOpacity onPress={() => onUpload(d)} disabled={busy} style={{ marginTop: 10 }}>
-          <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={{ paddingVertical: 10, borderRadius: 8, alignItems: "center" }}>
-            <Text style={{ color: "#141210", fontWeight: "800", fontSize: 12 }}>{busy ? "Uploading…" : "⬆ Upload your form"}</Text>
+        <TouchableOpacity onPress={() => onUpload(d)} disabled={busy} style={{ marginTop: 10, borderRadius: 10, overflow: "hidden" }}>
+          <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 11, alignItems: "center" }}>
+            <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>{busy ? "Uploading…" : "⬆ Upload your form"}</Text>
           </LinearGradient>
         </TouchableOpacity>
       ) : null}

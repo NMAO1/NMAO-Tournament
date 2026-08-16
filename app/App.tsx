@@ -88,10 +88,12 @@ function MainTabs() {
 
 function TabButton({ label, icon, hue, active, onPress }: { label: string; icon: string; hue: string; active: boolean; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flex: 1, alignItems: "center", paddingVertical: 4 }}>
-      <View style={{ height: 2, width: 20, borderRadius: 2, backgroundColor: active ? hue : "transparent", marginBottom: 5 }} />
-      <Text style={{ fontSize: 15, marginBottom: 1, opacity: active ? 1 : 0.5 }}>{icon}</Text>
-      <Text numberOfLines={1} style={{ color: active ? hue : neutrals.muted2, fontWeight: active ? "800" : "500", fontSize: 9.5, letterSpacing: 0.1 }}>{label}</Text>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flex: 1, alignItems: "center" }}>
+      {/* bento pill — the active tab sits in a rounded compartment in its hue */}
+      <View style={{ alignItems: "center", paddingHorizontal: 12, paddingTop: 6, paddingBottom: 5, borderRadius: 14, backgroundColor: active ? hue + "1F" : "transparent", borderWidth: 1, borderColor: active ? hue + "66" : "transparent" }}>
+        <Text style={{ fontSize: 16, marginBottom: 2, opacity: active ? 1 : 0.45 }}>{icon}</Text>
+        <Text numberOfLines={1} style={{ color: active ? hue : neutrals.muted2, fontWeight: active ? "800" : "500", fontSize: 9.5, letterSpacing: 0.1 }}>{label}</Text>
+      </View>
     </TouchableOpacity>
   );
 }
