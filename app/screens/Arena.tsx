@@ -329,9 +329,9 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
           <Fighter card={face.challenger} align="right" onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })} />
         </Animated.View>
         <Animated.View style={{ width: 88, alignItems: "center", transform: [{ scale: vs }] }}>
-          <View style={{ width: 78, height: 78, borderRadius: 39, backgroundColor: hues.gold.base, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: hues.gold.hi, shadowColor: hues.gold.hi, shadowOpacity: 0.9, shadowRadius: 24 }}>
-            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 26, fontStyle: "italic" }}>VS</Text>
-          </View>
+          <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width: 78, height: 78, borderRadius: 39, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#fff", shadowColor: hues.sapphire.hi, shadowOpacity: 0.9, shadowRadius: 24 }}>
+            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 26, fontStyle: "italic" }}>VS</Text>
+          </LinearGradient>
         </Animated.View>
         <Animated.View style={{ flex: 1, alignItems: "center", transform: [{ translateX: slideR }] }}>
           <Fighter card={face.opponent} align="left" onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })} />
