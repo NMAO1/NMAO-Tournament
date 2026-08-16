@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
-import { SpectrumText } from "../components/SpectrumText";
-import { Frame } from "../components/Frame";
 import { myCompetitors } from "../lib/competitors";
 import { uploadDuelVideo } from "../lib/upload";
 import {
@@ -211,21 +209,39 @@ function QueueCard({ q, onEnter }: { q: QueueDuel; onEnter: () => void }) {
   return (
     <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, backgroundColor: neutrals.surface, padding: 10, marginBottom: 10 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
-        <Frame rarity={q.challenger.frameRarity} size="mini"><View style={{ width: 108, height: 61, backgroundColor: "#171207" }} /></Frame>
-        <View style={{ marginHorizontal: 8, width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#15130f", borderWidth: 1, borderColor: neutrals.border }}>
-          <SpectrumText style={{ fontWeight: "900", fontStyle: "italic", fontSize: 13 }}>VS</SpectrumText>
-        </View>
-        <Frame rarity={q.opponent.frameRarity} size="mini"><View style={{ width: 108, height: 61, backgroundColor: "#120c1f" }} /></Frame>
+        <QueueThumb side={q.challenger} />
+        <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ marginHorizontal: 8, width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: "#fff", fontWeight: "900", fontStyle: "italic", fontSize: 14 }}>VS</Text>
+        </LinearGradient>
+        <QueueThumb side={q.opponent} />
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
         <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "600", flex: 1 }} numberOfLines={1}>{q.challenger.name}</Text>
-        <View style={{ marginHorizontal: 8, paddingHorizontal: 11, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: 1, borderColor: neutrals.border }}>
-          <SpectrumText style={{ fontSize: 10, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" }} numberOfLines={1}>{q.type}</SpectrumText>
-        </View>
+        <LinearGradient colors={[hues.gold.hi, hues.gold.base]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ marginHorizontal: 8, paddingHorizontal: 11, paddingVertical: 4, borderRadius: 999, borderWidth: 1, borderColor: hues.gold.hi, shadowColor: hues.gold.hi, shadowOpacity: 0.55, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }}>
+          <Text style={{ color: "#1a1305", fontSize: 10, fontWeight: "900", letterSpacing: 1.2, textTransform: "uppercase" }} numberOfLines={1}>{q.type}</Text>
+        </LinearGradient>
         <Text style={{ color: neutrals.text, fontSize: 11, fontWeight: "600", flex: 1, textAlign: "right" }} numberOfLines={1}>{q.opponent.name}</Text>
       </View>
       <Text style={{ color: hues.gold.hi, fontSize: 11, textAlign: "center", marginTop: 8, fontWeight: "700" }}>Tap to enter the ring ›</Text>
     </TouchableOpacity>
+  );
+}
+
+// Vote-queue thumbnail — the competitor's headshot (or initials) in a thick
+// spectrum-gradient border. Identifies who's fighting; the form video plays in
+// the ring.
+function QueueThumb({ side }: { side: QueueDuel["challenger"] }) {
+  const initials = side.name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase();
+  return (
+    <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 13, padding: 4 }}>
+      <View style={{ width: 104, height: 60, borderRadius: 9, overflow: "hidden", backgroundColor: "#15130f", alignItems: "center", justifyContent: "center" }}>
+        {side.photo ? (
+          <Image source={{ uri: side.photo }} style={{ width: 104, height: 60 }} resizeMode="cover" />
+        ) : (
+          <Text style={{ color: neutrals.muted, fontSize: 22, fontWeight: "900", letterSpacing: 1 }}>{initials}</Text>
+        )}
+      </View>
+    </LinearGradient>
   );
 }
 

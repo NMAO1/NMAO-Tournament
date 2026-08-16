@@ -26,7 +26,7 @@ export async function weekStatus(competitorId: string): Promise<WeekStatus> {
 
 // ---- vote queue (duel_vote_queue: frames + search) ----
 export type QueueSide = {
-  id: string; name: string; school: string | null; video: string | null;
+  id: string; name: string; school: string | null; video: string | null; photo: string | null;
   frameCode: string | null; frameRarity: Rarity; frameName: string | null; frameDesc: string | null;
 };
 export type QueueDuel = {
@@ -42,12 +42,12 @@ export async function voteQueue(competitorId: string, search = "", limit = 20): 
   return (data as any[]).map((d) => ({
     duelId: d.duel_id, type: d.duel_type, closesVoteAt: d.closes_vote_at, voteCount: Number(d.vote_count ?? 0),
     challenger: {
-      id: d.challenger_id, name: d.challenger_name, school: d.challenger_school, video: d.challenger_video,
+      id: d.challenger_id, name: d.challenger_name, school: d.challenger_school, video: d.challenger_video, photo: d.challenger_photo ?? null,
       frameCode: d.challenger_frame_code, frameRarity: asRarity(d.challenger_frame_rarity),
       frameName: d.challenger_frame_name, frameDesc: d.challenger_frame_desc,
     },
     opponent: {
-      id: d.opponent_id, name: d.opponent_name, school: d.opponent_school, video: d.opponent_video,
+      id: d.opponent_id, name: d.opponent_name, school: d.opponent_school, video: d.opponent_video, photo: d.opponent_photo ?? null,
       frameCode: d.opponent_frame_code, frameRarity: asRarity(d.opponent_frame_rarity),
       frameName: d.opponent_frame_name, frameDesc: d.opponent_frame_desc,
     },

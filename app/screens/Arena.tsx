@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimen
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
-import { neutrals, hues, rarityStops, rarityBase } from "@nmao/design-tokens";
+import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
 import { faceOff, castVote, playbackUrls, type FaceOff, type Choice, type Card } from "../lib/duel";
 
@@ -340,8 +340,8 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
 
       <View style={{ alignItems: "center", paddingBottom: 12 }}>
         <TouchableOpacity onPress={onEnter} activeOpacity={0.85} style={{ borderRadius: 10, overflow: "hidden", minWidth: 184 }}>
-          <LinearGradient colors={rarityStops("legendary")} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 9, alignItems: "center" }}>
-            <Text style={{ color: "#1a1305", fontWeight: "900", fontSize: 12, letterSpacing: 0.5 }}>ENTER THE ARENA  →</Text>
+          <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 9, alignItems: "center" }}>
+            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 12, letterSpacing: 0.5 }}>ENTER THE ARENA  →</Text>
           </LinearGradient>
         </TouchableOpacity>
         <Text style={{ color: neutrals.muted2, fontSize: 9, marginTop: 6, letterSpacing: 1 }}>Auto-enters in {count}s</Text>
