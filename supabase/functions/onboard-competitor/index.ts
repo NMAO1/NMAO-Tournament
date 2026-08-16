@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     } else {
       const { data: ins, error: gErr } = await svc.from("guardians").insert({
         first_name: (g.first_name || "").trim(), last_name: (g.last_name || "").trim(),
-        email, email_norm: norm(email), phone: (g.phone || "").trim() || null, auth_user_id: uid,
+        email, phone: (g.phone || "").trim() || null, auth_user_id: uid, // email_norm is generated
       }).select("id").single();
       if (gErr) return json({ ok: false, error: "Could not create guardian record." }, 500);
       guardianId = (ins as any).id;
@@ -100,7 +100,10 @@ Deno.serve(async (req) => {
     );
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || null;
     const consentRows = consentTypes.map((t) => ({ competitor_id: competitorId, guardian_id: guardianId, type: t, agreed_at: new Date().toISOString(), ip }));
-    if (consentRows.length) await svc.from("consents").insert(consentRows);
+    if (consentRows.length) {
+      const { error: consentErr } = await svc.from("consents").insert(consentRows);
+      if (consentErr) return json({ ok: false, error: "Could not record guardian consent." }, 500);
+    }
     await svc.from("season_enrollments").upsert(
       { competitor_id: competitorId, season_id: seasonId, status: "enrolled" },
       { onConflict: "competitor_id,season_id" },
