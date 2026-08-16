@@ -148,5 +148,9 @@ export default function Achievements() {
 }
 
 function Label({ t }: { t: string }) {
-  return <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: "800", marginTop: 16, marginBottom: 10 }}>{t}</Text>;
+  return (
+    <View style={{ alignSelf: "flex-start", marginTop: 18, marginBottom: 12, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 9, backgroundColor: "rgba(230,185,63,0.1)", borderWidth: 1, borderColor: hues.gold.shadow }}>
+      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 1.4, textTransform: "uppercase", fontWeight: "800" }}>{t}</Text>
+    </View>
+  );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
-import { neutrals, hues } from "@nmao/design-tokens";
+import { LinearGradient } from "expo-linear-gradient";
+import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { listJournal, addJournal, promptFor, type JournalEntry } from "../lib/journal";
 
 // The private growth journal — prompts + freeform, own-login only.
@@ -37,10 +38,10 @@ export default function Journal({ competitorId, initialPrompt, onClose }: { comp
         </View>
         <TextInput value={body} onChangeText={setBody} placeholder="Write here…" placeholderTextColor={neutrals.muted2} multiline
           style={{ color: neutrals.text, fontSize: 14, minHeight: 72, textAlignVertical: "top" }} />
-        <TouchableOpacity onPress={save} disabled={saving || !body.trim()} activeOpacity={0.85} style={{ marginTop: 8, opacity: body.trim() ? 1 : 0.5 }}>
-          <View style={{ backgroundColor: hues.gold.base, borderRadius: 10, paddingVertical: 10, alignItems: "center" }}>
-            <Text style={{ color: "#141210", fontWeight: "800" }}>{saving ? "Saving…" : "Save reflection"}</Text>
-          </View>
+        <TouchableOpacity onPress={save} disabled={saving || !body.trim()} activeOpacity={0.85} style={{ marginTop: 8, borderRadius: 10, overflow: "hidden", opacity: body.trim() ? 1 : 0.5 }}>
+          <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 11, alignItems: "center" }}>
+            <Text style={{ color: "#fff", fontWeight: "800" }}>{saving ? "Saving…" : "Save reflection"}</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
