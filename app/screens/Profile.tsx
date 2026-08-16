@@ -82,8 +82,11 @@ function Stat({ v, l }: { v: string; l: string }) {
 }
 function Row({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 15, paddingHorizontal: 14, marginBottom: 8, borderRadius: 12, backgroundColor: neutrals.surface, borderWidth: 1, borderColor: neutrals.border }}>
-      <Text style={{ fontSize: 16, marginRight: 12 }}>{icon}</Text>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, paddingHorizontal: 11, marginBottom: 9, borderRadius: 16, backgroundColor: neutrals.surface, borderWidth: 1, borderColor: neutrals.border }}>
+      {/* bento icon chip */}
+      <View style={{ width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center", backgroundColor: "#15130f", borderWidth: 1, borderColor: neutrals.border, marginRight: 12 }}>
+        <Text style={{ fontSize: 17 }}>{icon}</Text>
+      </View>
       <Text style={{ color: neutrals.text, fontSize: 14, fontWeight: "600", flex: 1 }}>{label}</Text>
       <Text style={{ color: neutrals.muted2, fontSize: 18 }}>›</Text>
     </TouchableOpacity>
