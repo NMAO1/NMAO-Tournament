@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, Modal } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, Modal, Linking } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import type { Session } from "@supabase/supabase-js";
 import { neutrals, hues } from "@nmao/design-tokens";
@@ -9,6 +9,7 @@ import { unreadCount, subscribeNotifications, latestUnseenMonthly, type Notif } 
 import Login from "./screens/Login";
 import Signup from "./screens/Signup";
 import Onboard from "./screens/Onboard";
+import InviteRedeem from "./screens/InviteRedeem";
 import Compete from "./screens/Compete";
 import Duel from "./screens/Duel";
 import Achievements from "./screens/Achievements";
@@ -100,15 +101,32 @@ function TabButton({ label, icon, hue, active, onPress }: { label: string; icon:
   );
 }
 
+// Pull a bridge invite token out of a deep-link, e.g.
+// nmao-compete://invite?t=… or https://compete.nmao.us/invite?t=…
+function parseInviteToken(url: string | null): string | null {
+  if (!url || !/invite/i.test(url)) return null;
+  const m = url.match(/[?&]t=([^&#]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 export default function App() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [hasComp, setHasComp] = useState<boolean | undefined>(undefined);
   const [authView, setAuthView] = useState<"login" | "signup">("login");
+  const [redeemToken, setRedeemToken] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); if (!s) setAuthView("login"); });
     return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Invite deep-link (Membership bridge) — capture the token on cold launch and
+  // while running; it survives the guardian signing up before they redeem.
+  useEffect(() => {
+    Linking.getInitialURL().then((u) => { const t = parseInviteToken(u); if (t) setRedeemToken(t); });
+    const sub = Linking.addEventListener("url", ({ url }) => { const t = parseInviteToken(url); if (t) setRedeemToken(t); });
+    return () => sub.remove();
   }, []);
 
   // A signed-in user with no competitor yet (fresh guardian) goes to onboarding.
@@ -127,6 +145,10 @@ export default function App() {
   let body: React.ReactNode;
   if (session === undefined) body = spinner;
   else if (!session) body = authView === "signup" ? <Signup onBack={() => setAuthView("login")} /> : <Login onSignup={() => setAuthView("signup")} />;
+  // A pending invite redeems ahead of the normal gate — even for an existing
+  // guardian adding an invited competitor. Auth-first: if not signed in above,
+  // the token is held until they are, then this shows.
+  else if (redeemToken) body = <InviteRedeem token={redeemToken} onDone={() => { setRedeemToken(null); setHasComp(true); }} onCancel={() => setRedeemToken(null)} />;
   else if (hasComp === undefined) body = spinner;
   else if (!hasComp) body = <Onboard onDone={() => setHasComp(true)} />;
   else body = <MainTabs />;

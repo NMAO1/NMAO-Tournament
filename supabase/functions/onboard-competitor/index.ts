@@ -81,12 +81,27 @@ Deno.serve(async (req) => {
       guardianId = (ins as any).id;
     }
 
+    // ---- invite redeem (Membership bridge): when an invite_token is present,
+    // school + rank + external id come from the PENDING record. The school owns
+    // rank, so any guardian-supplied rank is ignored on this path. ----
+    const inviteToken = String(body.invite_token || "").trim();
+    let pendingId: string | null = null, extStudentId: string | null = null, inviteRank: string | null = null, inviteSchoolId: string | null = null;
+    if (inviteToken) {
+      const { data: pend } = await svc.from("bridge_pending_athletes").select("id, school_id, external_member_student_id, declared_rank, status, expires_at").eq("invite_token", inviteToken).maybeSingle();
+      if (!pend) return json({ ok: false, error: "This invite could not be found." }, 400);
+      if ((pend as any).status !== "pending") return json({ ok: false, error: "This invite has already been used." }, 400);
+      if ((pend as any).expires_at && new Date((pend as any).expires_at) < new Date()) return json({ ok: false, error: "This invite has expired." }, 400);
+      pendingId = (pend as any).id; extStudentId = (pend as any).external_member_student_id;
+      inviteRank = (pend as any).declared_rank; inviteSchoolId = (pend as any).school_id;
+    }
+
     // ---- competitor ----
     const { data: comp, error: cErr } = await svc.from("competitors").insert({
-      school_id: c.school_id || null,
+      school_id: inviteToken ? inviteSchoolId : (c.school_id || null),
       first_name: c.first_name.trim(), last_name: c.last_name.trim(),
       dob: c.dob, declared_style: (c.declared_style || "").trim() || null,
-      declared_rank: (c.declared_rank || "").trim() || null,
+      declared_rank: inviteToken ? inviteRank : ((c.declared_rank || "").trim() || null),
+      external_member_student_id: extStudentId,
       profile_photo_url: (c.profile_photo_url || "").trim() || null,
       status: "active",
     }).select("id").single();
@@ -108,6 +123,13 @@ Deno.serve(async (req) => {
       { competitor_id: competitorId, season_id: seasonId, status: "enrolled" },
       { onConflict: "competitor_id,season_id" },
     );
+
+    // ---- mark the invite redeemed (bridge) ----
+    if (inviteToken && pendingId) {
+      await svc.from("bridge_pending_athletes").update(
+        { status: "redeemed", competitor_id: competitorId, redeemed_at: new Date().toISOString() },
+      ).eq("id", pendingId);
+    }
 
     return json({ ok: true, competitor_id: competitorId, guardian_id: guardianId });
   } catch (e) {
