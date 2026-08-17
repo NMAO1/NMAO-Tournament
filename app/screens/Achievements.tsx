@@ -6,7 +6,7 @@ import { SpectrumText } from "../components/SpectrumText";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
 import { myCompetitors } from "../lib/competitors";
-import { loadVault, equipFrame, markBadgesSeen, emblemUrl, type Vault, type VaultBadge } from "../lib/vault";
+import { loadVault, equipFrame, emblemUrl, type Vault, type VaultBadge } from "../lib/vault";
 
 const RARITY_LABEL: Record<string, string> = { legendary: "Legendary", epic: "Epic", rare: "Rare", common: "Common" };
 
@@ -26,7 +26,7 @@ export default function Achievements() {
     (async () => {
       const id = (await myCompetitors())[0]?.id ?? null;
       setMe(id);
-      if (id) { setVault(await loadVault(id)); markBadgesSeen(id); }
+      if (id) setVault(await loadVault(id)); // reveal-only: the ceremony marks badges seen, not opening Honors
     })();
   }, []);
 
@@ -41,15 +41,19 @@ export default function Achievements() {
     return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
   }
 
-  // Dedupe tiered badges to a single cell at the highest earned tier.
+  // Reveal-only: a badge shows in the vault once it's been unveiled at a reveal
+  // (seen=true). Earned-but-unrevealed badges stay hidden — teased below, then the
+  // ceremony is genuinely the first time the competitor sees them.
   const earnedBadges = Object.values(
-    vault.badges.filter((b) => b.earned).reduce<Record<string, VaultBadge>>((acc, b) => {
+    vault.badges.filter((b) => b.earned && b.seen).reduce<Record<string, VaultBadge>>((acc, b) => {
       const cur = acc[b.code];
       if (!cur || Number(b.tier ?? 0) > Number(cur.tier ?? 0)) acc[b.code] = b;
       return acc;
     }, {})
   );
   const earned = earnedBadges.length;
+  // Distinct badges earned but not yet revealed (across tiers) — the teaser count.
+  const pendingReveal = new Set(vault.badges.filter((b) => b.earned && !b.seen).map((b) => b.code)).size;
   // Map the season's earned medals onto the 8 medallion rounds (R1–R8); rest are ghost slots.
   const medTiers: (Tier | null)[] = Array.from({ length: 8 }, (_, i) => (vault.medals[i] ? asTier(vault.medals[i].tier) : null));
   const filled = medTiers.filter(Boolean).length;
@@ -64,6 +68,13 @@ export default function Achievements() {
       </View>
 
       <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>{earned === 0 ? "Badges stay hidden until earned — compete to reveal them." : `${earned} badge${earned === 1 ? "" : "s"} earned. Tap one to wear its frame.`}</Text>
+
+      {pendingReveal > 0 ? (
+        <View style={{ marginTop: 10, padding: 14, borderRadius: 14, backgroundColor: "rgba(230,185,63,0.08)", borderWidth: 1, borderColor: hues.gold.shadow, flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Text style={{ fontSize: 22 }}>🎁</Text>
+          <Text style={{ color: hues.gold.hi, fontSize: 13.5, fontWeight: "700", flex: 1 }}>{pendingReveal} new honor{pendingReveal === 1 ? "" : "s"} awaiting your next reveal — unveiled at the ceremony.</Text>
+        </View>
+      ) : null}
 
       {vault.medals.length ? (
         <>
