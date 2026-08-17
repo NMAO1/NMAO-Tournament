@@ -62,6 +62,18 @@ Deno.serve(async (req) => {
       if (pi.metadata?.entry_id) {
         await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("id", pi.metadata.entry_id);
       }
+    } else if (event.type === "checkout.session.completed") {
+      // Hosted Checkout finished — link Stripe refs + activate the entitlement.
+      const s = event.data.object;
+      const entId = s.metadata?.entitlement_id;
+      if (entId) {
+        const patch: any = { updated_at: now() };
+        if (s.subscription) patch.stripe_subscription_id = s.subscription;
+        if (s.customer) patch.stripe_customer_id = s.customer;
+        if (s.payment_intent) patch.stripe_payment_intent_id = s.payment_intent;
+        await svc.from("entry_entitlements").update(patch).eq("id", entId);
+        if (s.mode === "subscription" || s.payment_status === "paid") await activateEntitlement(entId);
+      }
     } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       const sub = event.data.object;
       const next = subToEnt(sub.status);

@@ -7,6 +7,7 @@ import { myCompetitors } from "../lib/competitors";
 import { loadProfile, loadNotifPrefs, setNotifPref, type ProfileInfo } from "../lib/profile";
 import Journal from "./Journal";
 import Home from "./Home";
+import BuyEntry from "./BuyEntry";
 import FrameLab from "./FrameLab";
 
 type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "framelab";
@@ -34,7 +35,7 @@ export default function Profile() {
   if (sub === "dojo") return <Panel title="My Dojo" onBack={() => setSub(null)}>{info?.school ? <Text style={{ color: neutrals.text, fontSize: 16, fontWeight: "700" }}>{info.school.name}</Text> : <Text style={{ color: neutrals.muted2 }}>No school linked yet.</Text>}</Panel>;
   if (sub === "rules") return <Panel title="Rules & Help" onBack={() => setSub(null)}><RulesText /></Panel>;
   if (sub === "framelab") return <FrameLab onBack={() => setSub(null)} />;
-  if (sub === "store") return <Panel title="Membership & Store" onBack={() => setSub(null)}><Text style={{ color: neutrals.muted, lineHeight: 20 }}>The Duelist membership ($3.99) and season-pass frames arrive here soon.</Text></Panel>;
+  if (sub === "store" && me) return <BuyEntry competitorId={me} onClose={() => setSub(null)} onPaid={() => setSub(null)} />;
 
   if (!info) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
 
@@ -60,7 +61,7 @@ export default function Profile() {
       <Row icon="📓" label="Journal" onPress={() => setSub("journal")} />
       <Row icon="🥋" label="My Dojo" onPress={() => setSub("dojo")} />
       <Row icon="🔔" label="Notifications" onPress={() => setSub("notifs")} />
-      <Row icon="✦" label="Membership & Store" onPress={() => setSub("store")} />
+      <Row icon="✦" label="Tournament entry & plans" onPress={() => setSub("store")} />
       <Row icon="📖" label="Rules & Help" onPress={() => setSub("rules")} />
       <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} />
       <Row icon="🏆" label="Tournament & entries" onPress={() => setSub("home")} />

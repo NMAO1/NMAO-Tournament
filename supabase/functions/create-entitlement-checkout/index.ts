@@ -1,16 +1,16 @@
 // =====================================================================
-// EDGE FUNCTION: create-entitlement-checkout  (Competitor app — buy entry)
-// Buys the right to enter 1–2 events per round via one of three lanes, and
-// returns a Stripe client secret for the in-app PaymentSheet:
-//   alacarte → one-time PaymentIntent, scoped to the open round
-//   full     → one-time PaymentIntent, whole season
-//   monthly  → Customer + Subscription (default_incomplete) → first-invoice PI
-// GATED to the competitor / guardian. A webhook activates the entitlement +
-// marks any round entries paid. Prices come from pricing_tiers (Stripe IDs).
+// EDGE FUNCTION: create-entitlement-checkout  (Competitor app — BROWSER pay)
+// Buys the right to enter 1–2 events per round via one of three lanes and
+// returns a Stripe-HOSTED Checkout URL. The app opens it in the device browser
+// — keeping the purchase OFF Apple's in-app-purchase rails (no 30% cut).
+//   alacarte → mode=payment, scoped to the open round
+//   full     → mode=payment, whole season
+//   monthly  → mode=subscription (recurring)
+// GATED to the competitor / guardian. The webhook activates the entitlement +
+// marks any staged round entries paid. Prices come from pricing_tiers.
 //
-// AUTH: Verify JWT = ON. Requires STRIPE_SECRET_KEY.
-// POST { competitor_id, lane, event_slots, events?[] } ->
-//   { ok, clientSecret, entitlement_id, amount, lane, customerId?, ephemeralKey? }
+// AUTH: Verify JWT = ON. Requires STRIPE_SECRET_KEY, SITE_URL.
+// POST { competitor_id, lane, event_slots, events?[] } -> { ok, url, entitlement_id, amount, lane }
 // Deploy (editor-safe): name = create-entitlement-checkout, Verify JWT ON.
 // =====================================================================
 // deno-lint-ignore-file no-explicit-any
@@ -20,9 +20,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SITE = (Deno.env.get("SITE_URL") || "https://example.com").replace(/\/$/, "");
 const ACCEPTING = ["open", "collecting"];
 const SCHEME_TIERS = ["beginner", "intermediate", "advanced"];
-const STRIPE_API_VERSION = "2024-06-20";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) return json({ ok: false, error: "Stripe not configured." }, 500);
-  const stripe = new Stripe(stripeKey, { httpClient: Stripe.createFetchHttpClient(), apiVersion: STRIPE_API_VERSION });
+  const stripe = new Stripe(stripeKey, { httpClient: Stripe.createFetchHttpClient() });
 
   const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!bearer) return json({ ok: false, error: "Sign in required." }, 401);
@@ -77,11 +77,11 @@ Deno.serve(async (req) => {
 
     // Price for this (lane, slots).
     const { data: tier } = await svc.from("pricing_tiers").select("*").eq("lane", lane).eq("event_slots", eventSlots).eq("active", true).maybeSingle();
-    if (!tier) return json({ ok: false, error: "That plan isn't available." }, 400);
-    if (lane === "monthly" && !(tier as any).stripe_price_id) return json({ ok: false, error: "Subscription price not set up yet." }, 500);
+    if (!tier || !(tier as any).stripe_price_id) return json({ ok: false, error: "That plan isn't set up yet." }, 400);
     const amount = Number((tier as any).unit_amount_cents);
+    const priceId = (tier as any).stripe_price_id;
 
-    // Competitor + season + open round context.
+    // Season + open round context.
     const { data: comp } = await svc.from("competitors").select("dob, declared_rank, season_id").eq("id", competitorId).single();
     if (!comp) return json({ ok: false, error: "Competitor not found." }, 404);
     let seasonId: string | null = (comp as any).season_id ?? null;
@@ -93,12 +93,12 @@ Deno.serve(async (req) => {
       const { data: activeSeason } = await svc.from("seasons").select("id").eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
       seasonId = activeSeason ? (activeSeason as any).id : null;
     }
-    const { data: open } = await svc.from("rounds").select("id, round_no, state").in("state", ACCEPTING).order("opens_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: open } = await svc.from("rounds").select("id, seq, state").in("state", ACCEPTING).order("opens_at", { ascending: false }).limit(1).maybeSingle();
     const roundId = open ? (open as any).id : null;
-    const roundNo = open ? Number((open as any).round_no ?? 1) : null;
+    const roundNo = open ? Number((open as any).seq ?? 1) : null;
     if (lane === "alacarte" && !roundId) return json({ ok: false, error: "No round is open for entries right now." }, 409);
 
-    // Create the entitlement (incomplete until the webhook confirms payment).
+    // Entitlement (incomplete until the webhook confirms payment).
     const { data: ent, error: entErr } = await svc.from("entry_entitlements").insert({
       competitor_id: competitorId, season_id: seasonId, lane, event_slots: eventSlots,
       round_id: lane === "alacarte" ? roundId : null,
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     if (entErr || !ent) { console.error("entitlement insert:", entErr); return json({ ok: false, error: "Could not start checkout." }, 500); }
     const entitlementId = (ent as any).id;
 
-    // If specific events were chosen and a round is open, stage the (unpaid) entries now.
+    // Stage the round's chosen (unpaid) entries now, if a round is open.
     if (events.length && roundId) {
       const rankRaw = (comp as any).declared_rank as string | null;
       const rank = rankRaw ? (SCHEME_TIERS.includes(rankRaw) ? rankRaw : rankRaw === "black_belt" ? "advanced" : rankRaw) : null;
@@ -129,38 +129,25 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Hosted Checkout — browser, not in-app. Metadata carries entitlement_id so the
+    // webhook can activate it (payment_intent for one-time, subscription for monthly).
     const meta = { entitlement_id: entitlementId, competitor_id: competitorId, lane };
-    let clientSecret: string | null = null;
-    let customerId: string | undefined;
-    let ephemeralKey: string | undefined;
+    const common = {
+      metadata: meta,
+      success_url: `${SITE}/pay/return?status=paid`,
+      cancel_url: `${SITE}/pay/return?status=canceled`,
+    } as const;
+    const session = lane === "monthly"
+      ? await stripe.checkout.sessions.create({
+          mode: "subscription", line_items: [{ price: priceId, quantity: 1 }],
+          subscription_data: { metadata: meta }, customer_email: email, ...common,
+        })
+      : await stripe.checkout.sessions.create({
+          mode: "payment", line_items: [{ price: priceId, quantity: 1 }],
+          payment_intent_data: { metadata: meta }, customer_email: email, ...common,
+        });
 
-    if (lane === "monthly") {
-      const customer = await stripe.customers.create({ email, metadata: { competitor_id: competitorId } });
-      customerId = customer.id;
-      const ek = await stripe.ephemeralKeys.create({ customer: customer.id }, { apiVersion: STRIPE_API_VERSION });
-      ephemeralKey = ek.secret;
-      const sub = await stripe.subscriptions.create({
-        customer: customer.id,
-        items: [{ price: (tier as any).stripe_price_id }],
-        payment_behavior: "default_incomplete",
-        payment_settings: { save_default_payment_method: "on_subscription" },
-        expand: ["latest_invoice.payment_intent"],
-        metadata: meta,
-      });
-      const pi = (sub.latest_invoice as any)?.payment_intent;
-      if (!pi?.client_secret) return json({ ok: false, error: "Could not start subscription." }, 500);
-      await stripe.paymentIntents.update(pi.id, { metadata: meta });
-      clientSecret = pi.client_secret;
-      await svc.from("entry_entitlements").update({ stripe_customer_id: customer.id, stripe_subscription_id: sub.id, stripe_payment_intent_id: pi.id, updated_at: new Date().toISOString() }).eq("id", entitlementId);
-    } else {
-      const pi = await stripe.paymentIntents.create({
-        amount, currency: "usd", automatic_payment_methods: { enabled: true }, metadata: meta,
-      });
-      clientSecret = pi.client_secret;
-      await svc.from("entry_entitlements").update({ stripe_payment_intent_id: pi.id, updated_at: new Date().toISOString() }).eq("id", entitlementId);
-    }
-
-    return json({ ok: true, clientSecret, entitlement_id: entitlementId, amount, lane, customerId, ephemeralKey });
+    return json({ ok: true, url: session.url, entitlement_id: entitlementId, amount, lane });
   } catch (e: any) {
     console.error("create-entitlement-checkout error:", e?.message || e);
     return json({ ok: false, error: e?.message || "server_error" }, 500);
