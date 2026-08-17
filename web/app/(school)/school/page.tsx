@@ -8,6 +8,8 @@ import InHouse from "./InHouse";
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
 type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null };
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null };
+// Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
+type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
 type Settings = {
   competitor_id: string; allowed_events: string[] | null; dueling_enabled: boolean;
   competition_class: string | null; geo_exclude_miles: number | null; merch_enabled: boolean;
@@ -52,6 +54,7 @@ export default function SchoolPortal() {
   const [err, setErr] = useState("");
   const [school, setSchool] = useState<School | null>(null);
   const [roster, setRoster] = useState<Athlete[]>([]);
+  const [pending, setPending] = useState<Pending[]>([]);
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [medals, setMedals] = useState<Record<string, number>>({});
   const [settings, setSettings] = useState<Record<string, Settings>>({});
@@ -95,6 +98,11 @@ export default function SchoolPortal() {
       .select("id, first_name, last_name, dob, declared_rank").eq("school_id", (sch as School).id).order("last_name");
     const list = (comps ?? []) as Athlete[];
     setRoster(list);
+
+    // Bridge-invited students (from the membership roster) still awaiting redeem.
+    supabase.from("bridge_pending_athletes").select("id, first_name, last_name, belt_name, declared_rank, dob, status")
+      .eq("school_id", (sch as School).id).eq("status", "pending").order("last_name")
+      .then(({ data }) => setPending((data ?? []) as Pending[]));
     if (list.length && !selStudent) setSelStudent(list[0].id);
     setEntryForm((f) => (f.competitor ? f : { ...f, competitor: list[0]?.id ?? "" }));
 
@@ -197,6 +205,13 @@ export default function SchoolPortal() {
     const { error } = await supabase.from("competitors").update({ declared_rank: rank }).eq("id", id);
     if (error) { setErr(error.message); load(); }
   }
+  // Assign a rank to a bridge-invited (pending) athlete — school owns rank, so this
+  // is set before the guardian redeems; RLS restricts it to this school's records.
+  async function setPendingRank(id: string, rank: string) {
+    setPending((p) => p.map((a) => (a.id === id ? { ...a, declared_rank: rank || null } : a)));
+    const { error } = await supabase.from("bridge_pending_athletes").update({ declared_rank: rank || null }).eq("id", id);
+    if (error) { setErr(error.message); load(); }
+  }
   function currentSettings(id: string): Settings {
     return settings[id] ?? { competitor_id: id, allowed_events: null, dueling_enabled: false, competition_class: null, geo_exclude_miles: null, merch_enabled: false };
   }
@@ -247,6 +262,7 @@ export default function SchoolPortal() {
   const projectedCents = paidCount * perPaidCents;
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
   const nameOf = (id: string) => { const a = roster.find((r) => r.id === id); return a ? `${a.first_name} ${a.last_name}` : "Athlete"; };
+  const pendingNeedRank = pending.filter((p) => !p.declared_rank).length;
 
   return (
     <main style={{ minHeight: "100vh", background: neutrals.bg, color: neutrals.text, fontFamily: "Inter, system-ui, sans-serif", display: "flex" }}>
@@ -262,6 +278,9 @@ export default function SchoolPortal() {
             style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", padding: "9px 10px", borderRadius: 9, marginBottom: 2, border: "none", cursor: "pointer", fontSize: 13,
               background: section === n.key ? "#17161a" : "transparent", color: section === n.key ? neutrals.text : neutrals.muted }}>
             <span style={{ fontSize: 15 }}>{n.icon}</span>{n.label}
+            {n.key === "roster" && pendingNeedRank > 0 && (
+              <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 800, color: "#141210", background: hues.gold.hi, borderRadius: 99, padding: "1px 7px" }}>{pendingNeedRank}</span>
+            )}
           </button>
         ))}
         <button onClick={async () => { await supabase.auth.signOut(); router.replace("/school/login"); }}
@@ -278,6 +297,32 @@ export default function SchoolPortal() {
 
             {section === "roster" && (
               <>
+                {pending.length > 0 && (
+                  <div style={{ ...card, padding: 16, marginBottom: 22, borderColor: hues.amethyst.base }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.amethyst.hi }}>⏳ Invited from your membership</div>
+                      <Hint on={hintsOn} align="right">These students were provisioned from your NMAO membership roster. Assign each a competitive <b>rank</b> — then their guardian finishes registration (consent + payment) from the invite link. Rank is yours to set; guardians can&apos;t change it.</Hint>
+                    </div>
+                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 12 }}>
+                      {pendingNeedRank > 0
+                        ? `${pendingNeedRank} of ${pending.length} still need a rank before their guardian redeems.`
+                        : `All ${pending.length} have a rank set — ready for guardians to redeem.`}
+                    </div>
+                    {pending.map((a) => (
+                      <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: `1px solid ${neutrals.surface2}` }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>{a.first_name} {a.last_name}</div>
+                          <div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{a.dob ? `Age ${ageOf(a.dob)} · ` : ""}{a.belt_name ? `Belt on file: ${a.belt_name}` : "No belt on file"}</div>
+                        </div>
+                        <select value={a.declared_rank ?? ""} onChange={(e) => setPendingRank(a.id, e.target.value)} title="Set this athlete's competitive rank"
+                          style={{ ...inp, background: a.declared_rank ? neutrals.surface2 : "rgba(230,185,63,0.12)", borderColor: a.declared_rank ? neutrals.border : hues.gold.shadow }}>
+                          <option value="">— set rank —</option>
+                          {RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div style={{ ...card, padding: 16, marginBottom: 22 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Add athlete</div>
