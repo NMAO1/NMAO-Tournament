@@ -332,12 +332,14 @@ function render(){
     </div>
     <div class="card"><div class="hd"><h2>Divisions &amp; pods</h2><span class="sub">${S.divisions.length}</span></div><div class="list">${divRows}</div></div>
     <div class="card"><div class="hd"><h2>Activity log</h2><span class="sub">audit</span></div><div class="list log">${auditRows}</div>
-      <div style="padding:0 14px 14px;display:flex;gap:8px">
-        <select class="sel" id="rbTo" style="flex:1"><option value="">Roll back to…</option><option value="distribute">distribute</option><option value="resolve">resolve</option><option value="assign_judges">assign judges</option><option value="divide">divide</option></select>
-        <button class="btn danger" id="rbBtn">Roll back</button>
+      <div style="padding:0 14px 14px;display:flex;gap:8px;flex-wrap:wrap">
+        <select class="sel" id="rbTo" style="flex:1"${st==='finalized'?' disabled title="Reopen first — a finalized round is locked"':''}><option value="">Roll back to…</option><option value="distribute">distribute</option><option value="resolve">resolve</option><option value="assign_judges">assign judges</option><option value="divide">divide</option></select>
+        <button class="btn danger" id="rbBtn"${st==='finalized'?' disabled':''}>Roll back</button>
+        ${st==='finalized' ? '<button class="btn" id="reopenBtn" style="width:100%;border-color:#E9C15A;color:#E9C15A">↺ Reopen round — un-finalize</button>' : ''}
       </div>
     </div>`;
   $('rbBtn').onclick = () => { const to = $('rbTo').value; if (to) rollback(to); };
+  if ($('reopenBtn')) $('reopenBtn').onclick = reopen;
 }
 
 // ---------- actions (round-controller) ----------
@@ -374,6 +376,12 @@ async function rollback(to){
   toast('Rolling back to ' + to + '…');
   try { await callController({ roundId: ROUND, step:'rollback', to }); toast('Rolled back to ' + to, 'ok'); await loadRound(ROUND); }
   catch(e){ toast('Rollback: ' + e.message, 'err'); }
+}
+async function reopen(){
+  if (!confirm('Reopen this finalized round? It returns to "distributed" so you can re-distribute or roll back. Use only to correct a premature finalize — it unlocks the scheme.')) return;
+  toast('Reopening…');
+  try { await callController({ roundId: ROUND, step:'reopen' }); toast('Round reopened → distributed', 'ok'); await loadRound(ROUND); }
+  catch(e){ toast('Reopen: ' + e.message, 'err'); }
 }
 
 // ---------- stage drill-downs (View buttons) ----------

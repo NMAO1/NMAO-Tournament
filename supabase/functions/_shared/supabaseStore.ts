@@ -135,6 +135,32 @@ export async function finalizeRound(
   return { step: 'finalize', ran: true, flags: [], detail: { state: 'finalized' } };
 }
 
+// REOPEN: finalized -> distributed. Reverses finalize so an operator who locked a
+// round early can correct it (re-distribute, or roll back). Unlocks the scheme and
+// clears locked_at. Idempotent: a non-finalized round no-ops. Rollback still refuses
+// a finalized round, so reopen is the deliberate, audited way back.
+export async function reopenRound(
+  db: SupabaseClient,
+  roundId: string,
+  actorId?: string | null,
+): Promise<{ step: string; ran: boolean; flags: string[]; detail: unknown }> {
+  const { data: round, error } = await db
+    .from('rounds').select('state, scheme_id').eq('id', roundId).single();
+  if (error || !round) throw new Error('Round not found.');
+  const state = (round as any).state;
+  if (state !== 'finalized') {
+    return { step: 'reopen', ran: false, flags: [], detail: { state, note: 'not finalized' } };
+  }
+  await db.from('division_schemes').update({ locked: false }).eq('id', (round as any).scheme_id);
+  const now = new Date().toISOString();
+  await db.from('rounds').update({ state: 'distributed', locked_at: null, updated_at: now }).eq('id', roundId);
+  await db.from('engine_audit').insert({
+    round_id: roundId, actor_id: actorId ?? null, action: 'reopen',
+    before: { state: 'finalized' }, after: { state: 'distributed' },
+  });
+  return { step: 'reopen', ran: true, flags: [], detail: { state: 'distributed' } };
+}
+
 // ROLLBACK: clear the output of `to` and every later step, then reset the round
 // so `to` can be re-run. Reverts ratings using each rating_history row's
 // rating_before (safe only for the latest rated round — guarded below).
@@ -473,6 +499,10 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore & Divi
         rating_after: r.ratingAfter,
       }));
       await db.from('results').upsert(payload, { onConflict: 'entry_id' });
+      // Advance pod.state so resolved pods leave the claimable pool (available-pods
+      // / fill-unclaimed filter on state != 'resolved') and give a real per-pod signal.
+      const podIds = [...new Set(rows.map((r) => r.podId).filter(Boolean))];
+      if (podIds.length) await db.from('pods').update({ state: 'resolved' }).in('id', podIds);
     },
     async saveRatingUpdates(roundId, rows: RatingWrite[]) {
       if (rows.length === 0) return;
@@ -575,6 +605,11 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore & Divi
       // only fills results.saying_id where null; non-repeating per competitor).
       await db.rpc('assign_reveal_sayings', { p_round_id: roundId });
       await db.from('rounds').update({ state: 'distributed' }).eq('id', roundId);
+      // Fire badge awards now that medals exist, so honors appear with the results
+      // instead of lagging up to 10 min for the cron. Best-effort: never fail a
+      // distribute over badges (the cron is the backstop).
+      try { await db.rpc('recompute_badges_after_round', { p_round: roundId }); }
+      catch (e) { console.error('badge recompute after distribute failed (cron will retry)', String(e)); }
     },
   };
 }
