@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
+import JudgeOnboarding from "../JudgeOnboarding";
 
 type Entry = { event: string; age_bracket: string; declared_rank: string; status: string; video_url: string | null };
 type Assignment = {
@@ -23,6 +24,7 @@ export default function JudgeQueue() {
   const [rows, setRows] = useState<Assignment[]>([]);
   const [pool, setPool] = useState<PoolPod[]>([]);
   const judgeId = useRef<string | null>(null);
+  const [judgeStatus, setJudgeStatus] = useState<string | null>(null);
 
   const efHeaders = useCallback(async () => {
     const { data: sess } = await supabase.auth.getSession();
@@ -40,6 +42,7 @@ export default function JudgeQueue() {
         .eq("auth_user_id", sess.session.user.id).maybeSingle();
       if (!judge) { setErr("This account isn't registered as a judge."); setLoading(false); return; }
       judgeId.current = (judge as { id: string }).id;
+      setJudgeStatus((judge as { status: string }).status);
     }
     const { data, error } = await supabase
       .from("judge_assignments")
@@ -88,6 +91,12 @@ export default function JudgeQueue() {
     const j = await res.json().catch(() => ({}));
     if (!res.ok || !j.ok) { alert(j.error || "Could not recuse."); return; }
     load(); loadPool();
+  }
+
+  // A judge who hasn't finished onboarding (not yet active) sees the checklist,
+  // not the queue. Grandfathered/active judges go straight to judging.
+  if (judgeStatus && judgeStatus !== "active") {
+    return <JudgeOnboarding onActive={() => { setJudgeStatus("active"); load(); loadPool(); }} />;
   }
 
   const todo = rows.filter((r) => r.state === "assigned" || r.state === "reopened");
