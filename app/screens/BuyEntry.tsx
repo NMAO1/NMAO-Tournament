@@ -13,7 +13,7 @@ const EVENTS = [
   { code: "open_weapons", name: "Open Weapons" },
 ];
 const LANES: { key: Lane; name: string; blurb: string; unit: string }[] = [
-  { key: "alacarte", name: "À la carte", blurb: "Pay for this round only.", unit: "/round" },
+  { key: "alacarte", name: "Pay per round", blurb: "Pay for this round only.", unit: "/round" },
   { key: "monthly", name: "Monthly", blurb: "Auto-renews each tournament month. Cancel anytime.", unit: "/mo" },
   { key: "full", name: "Season pass", blurb: "One payment, all 9 tournaments — the best value.", unit: "season" },
 ];

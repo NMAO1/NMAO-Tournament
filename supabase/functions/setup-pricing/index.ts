@@ -19,7 +19,7 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
-const LANE_NAME: Record<string, string> = { alacarte: "À la carte", monthly: "Monthly", full: "Season Pass" };
+const LANE_NAME: Record<string, string> = { alacarte: "Pay per round", monthly: "Monthly", full: "Season Pass" };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
