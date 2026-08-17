@@ -1,4 +1,4 @@
-# NMAO Tournament
+# NMAO Tournament 
 
 The competition engine of the NMAO suite — a monthly, video-based martial arts tournament. Competitors submit an event video each round; an automated engine sorts them into fair divisions and skill-based pods, routes videos to judges, scores them, updates ratings and standings, and ships collectible medals. A season runs 9 qualifying rounds → semi-finals → grand finale.
 
