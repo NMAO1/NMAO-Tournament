@@ -40,14 +40,46 @@ Deno.serve(async (req) => {
     return new Response(`Bad signature: ${e?.message || ""}`, { status: 400 });
   }
 
+  const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
+  const now = () => new Date().toISOString();
+  // Map a Stripe subscription.status onto an entitlement status (null = leave as-is).
+  const subToEnt = (s: string): string | null =>
+    s === "active" || s === "trialing" ? "active"
+    : s === "past_due" || s === "unpaid" ? "past_due"
+    : s === "canceled" || s === "incomplete_expired" ? "canceled" : null;
+  // Activate an entitlement + mark any round entries it staged as paid.
+  async function activateEntitlement(entitlementId: string) {
+    await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("id", entitlementId).neq("status", "canceled");
+    await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("entitlement_id", entitlementId).neq("payment_status", "paid");
+  }
+
   try {
     if (event.type === "payment_intent.succeeded") {
       const pi = event.data.object;
-      const entryId = pi.metadata?.entry_id;
-      if (entryId) {
-        const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
-        await svc.from("entries").update({ payment_status: "paid", paid_at: new Date().toISOString() }).eq("id", entryId);
+      // New model: entitlement-scoped payment (à la carte / full / monthly first invoice).
+      if (pi.metadata?.entitlement_id) await activateEntitlement(pi.metadata.entitlement_id);
+      // Legacy: single-entry PI.
+      if (pi.metadata?.entry_id) {
+        await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("id", pi.metadata.entry_id);
       }
+    } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
+      const sub = event.data.object;
+      const next = subToEnt(sub.status);
+      if (next) {
+        const patch: any = { status: next, updated_at: now() };
+        if (next === "canceled") patch.canceled_at = now();
+        await svc.from("entry_entitlements").update(patch).eq("stripe_subscription_id", sub.id);
+      }
+    } else if (event.type === "customer.subscription.deleted") {
+      const sub = event.data.object;
+      await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("stripe_subscription_id", sub.id);
+    } else if (event.type === "invoice.payment_succeeded") {
+      // Recurring monthly renewal — keep the entitlement active.
+      const inv = event.data.object;
+      if (inv.subscription) await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).neq("status", "canceled");
+    } else if (event.type === "invoice.payment_failed") {
+      const inv = event.data.object;
+      if (inv.subscription) await svc.from("entry_entitlements").update({ status: "past_due", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
     }
   } catch (e: any) {
     console.error("webhook handler error:", e?.message || e);
