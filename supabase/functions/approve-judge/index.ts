@@ -52,6 +52,24 @@ Deno.serve(async (req) => {
 
     const { data: judge } = await svc.from("judges").select("id, email, status, auth_user_id").eq("id", judgeId).maybeSingle();
     if (!judge) return json({ ok: false, error: "Judge not found." }, 404);
+
+    // Decline an application — no account, no invite.
+    if (String(b.action || "") === "reject") {
+      await svc.from("judges").update({ status: "rejected" }).eq("id", judgeId);
+      return json({ ok: true, judge_status: "rejected" });
+    }
+
+    // Mark the background check cleared (staff/interim, until a screening provider
+    // is wired). Activates the judge if everything else is already satisfied.
+    if (String(b.action || "") === "clear_bg") {
+      await svc.from("judges").update({ background_check_status: "cleared" }).eq("id", judgeId);
+      const { data: j } = await svc.from("judges").select("status, background_check_status, ic_agreement_accepted_at, creed_accepted_at, payouts_enabled").eq("id", judgeId).single();
+      const jj = j as any;
+      const ready = jj && jj.status !== "rejected" && jj.background_check_status === "cleared" && !!jj.ic_agreement_accepted_at && !!jj.creed_accepted_at && !!jj.payouts_enabled;
+      if (ready && jj.status !== "active") { await svc.from("judges").update({ status: "active" }).eq("id", judgeId); return json({ ok: true, judge_status: "active" }); }
+      return json({ ok: true, judge_status: jj?.status ?? "unknown" });
+    }
+
     const email = (judge as any).email as string;
     if (!email) return json({ ok: false, error: "This judge has no email on file." }, 400);
 
