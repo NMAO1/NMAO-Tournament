@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 // Landing page Stripe Checkout returns to after a championship entry payment.
@@ -6,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 // re-checks the entry's payment status (the webhook is the source of truth).
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://nmao.us/app";
 
-export default function PayReturn() {
+function PayReturnInner() {
   const canceled = useSearchParams().get("status") === "canceled";
   const wrap: React.CSSProperties = { minHeight: "100vh", background: "#0b0b0d", color: "#ececec", display: "flex", justifyContent: "center", alignItems: "center", padding: 20, fontFamily: "var(--font-geist-sans), system-ui, sans-serif" };
   const cardS: React.CSSProperties = { width: "100%", maxWidth: 400, background: "#161619", border: "1px solid #26262b", borderRadius: 18, padding: 32, textAlign: "center" };
@@ -26,5 +27,15 @@ export default function PayReturn() {
         )}
       </div>
     </div>
+  );
+}
+
+// useSearchParams() must sit inside a Suspense boundary or the production build
+// fails prerendering this page (Next.js CSR-bailout rule).
+export default function PayReturn() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#0b0b0d" }} />}>
+      <PayReturnInner />
+    </Suspense>
   );
 }
