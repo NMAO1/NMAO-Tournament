@@ -82,6 +82,28 @@ Deno.serve(async (req: Request) => {
 
   const store = createSupabaseStore();
 
+  // --- Guardrails (spec §4): stop operator foot-guns before a step runs.
+  // The engine does coarse multi-state steps, so we enforce the meaningful
+  // gates at the step boundaries rather than one-state-at-a-time.
+  const guardSvc = () => createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
+  try {
+    if (step === 'divide' || step === 'all') {
+      const { count } = await guardSvc().from('entries').select('id', { count: 'exact', head: true }).eq('round_id', roundId).eq('status', 'valid');
+      if (!count) return json({ error: 'Cannot divide a round with zero valid entries — close the round first (an entry needs a video to be valid).' }, 409);
+    }
+    if (step === 'distribute') {
+      // Distribute would silently skip pods whose judges haven't scored, handing
+      // out no medals for them. Block until every assigned seat is submitted.
+      const { count } = await guardSvc().from('judge_assignments')
+        .select('id, entries!inner(round_id)', { count: 'exact', head: true })
+        .eq('entries.round_id', roundId).neq('state', 'submitted');
+      if (count && count > 0) return json({ error: `Cannot distribute: ${count} judge seat(s) haven't submitted a score yet. Finish judging first (use "Fill unclaimed" or recuse to clear stuck seats).` }, 409);
+    }
+  } catch (e) {
+    console.error('round-controller guard error', { roundId, step, e: String(e) });
+    return json({ error: 'Guard check failed — try again.' }, 500);
+  }
+
   try {
     let outcome;
     switch (step) {
