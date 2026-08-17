@@ -81,14 +81,12 @@ Deno.serve(async (req) => {
     const amount = Number((tier as any).unit_amount_cents);
     const priceId = (tier as any).stripe_price_id;
 
-    // Season + open round context.
-    const { data: comp } = await svc.from("competitors").select("dob, declared_rank, season_id").eq("id", competitorId).single();
+    // Season + open round context. (Season lives in season_enrollments, not on competitors.)
+    const { data: comp } = await svc.from("competitors").select("dob, declared_rank").eq("id", competitorId).single();
     if (!comp) return json({ ok: false, error: "Competitor not found." }, 404);
-    let seasonId: string | null = (comp as any).season_id ?? null;
-    if (!seasonId) {
-      const { data: se } = await svc.from("season_enrollments").select("season_id").eq("competitor_id", competitorId).order("enrolled_at", { ascending: false }).limit(1).maybeSingle();
-      seasonId = se ? (se as any).season_id : null;
-    }
+    let seasonId: string | null = null;
+    const { data: se } = await svc.from("season_enrollments").select("season_id").eq("competitor_id", competitorId).order("enrolled_at", { ascending: false }).limit(1).maybeSingle();
+    seasonId = se ? (se as any).season_id : null;
     if (!seasonId) {
       const { data: activeSeason } = await svc.from("seasons").select("id").eq("status", "active").order("created_at", { ascending: false }).limit(1).maybeSingle();
       seasonId = activeSeason ? (activeSeason as any).id : null;
