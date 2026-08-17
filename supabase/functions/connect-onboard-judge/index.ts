@@ -74,7 +74,9 @@ Deno.serve(async (req) => {
 
     if (action === "status") {
       const a = await stripe.accounts.retrieve(acct!);
-      const enabled = !!a.charges_enabled && !!a.payouts_enabled && !!a.details_submitted;
+      // Judges are transfers-only recipients (no card_payments), so charges_enabled
+      // is never true — readiness is payouts_enabled + details_submitted only.
+      const enabled = !!a.payouts_enabled && !!a.details_submitted;
       await svc.from("judges").update({ payouts_enabled: enabled }).eq("id", judgeId);
       const jstatus = await refreshJudgeStatus(svc, judgeId);
       return json({ ok: true, payouts_enabled: enabled, details_submitted: !!a.details_submitted, judge_status: jstatus });
