@@ -109,10 +109,16 @@ export default function JudgeQueue() {
           <div style={{ height: 3, width: 96, borderRadius: 99, background: spectrum, marginBottom: 8 }} />
           <h1 style={{ fontFamily: "Georgia, serif", fontSize: 22, margin: 0 }}>Judging Queue</h1>
         </div>
-        <button onClick={async () => { await supabase.auth.signOut(); router.replace("/login"); }}
-          style={{ background: "none", border: `1px solid ${neutrals.border}`, color: neutrals.muted, borderRadius: 9, padding: "8px 12px", cursor: "pointer", fontSize: 13 }}>
-          Sign out
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={() => router.push("/judge/earnings")}
+            style={{ background: "none", border: `1px solid ${neutrals.border}`, color: neutrals.text, borderRadius: 9, padding: "8px 12px", cursor: "pointer", fontSize: 13 }}>
+            💵 Earnings
+          </button>
+          <button onClick={async () => { await supabase.auth.signOut(); router.replace("/login"); }}
+            style={{ background: "none", border: `1px solid ${neutrals.border}`, color: neutrals.muted, borderRadius: 9, padding: "8px 12px", cursor: "pointer", fontSize: 13 }}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       <div style={{ maxWidth: 620, margin: "0 auto", padding: "22px 16px" }}>
