@@ -336,10 +336,12 @@ function render(){
         <select class="sel" id="rbTo" style="flex:1"${st==='finalized'?' disabled title="Reopen first — a finalized round is locked"':''}><option value="">Roll back to…</option><option value="distribute">distribute</option><option value="resolve">resolve</option><option value="assign_judges">assign judges</option><option value="divide">divide</option></select>
         <button class="btn danger" id="rbBtn"${st==='finalized'?' disabled':''}>Roll back</button>
         ${st==='finalized' ? '<button class="btn" id="reopenBtn" style="width:100%;border-color:#E9C15A;color:#E9C15A">↺ Reopen round — un-finalize</button>' : ''}
+        ${(st==='finalized'||st==='distributed') ? '<button class="btn" id="payBtn" style="width:100%;border-color:#3f7a52;color:#7ED0A0">💵 Pay judges for this round</button>' : ''}
       </div>
     </div>`;
   $('rbBtn').onclick = () => { const to = $('rbTo').value; if (to) rollback(to); };
   if ($('reopenBtn')) $('reopenBtn').onclick = reopen;
+  if ($('payBtn')) $('payBtn').onclick = payJudges;
 }
 
 // ---------- actions (round-controller) ----------
@@ -382,6 +384,21 @@ async function reopen(){
   toast('Reopening…');
   try { await callController({ roundId: ROUND, step:'reopen' }); toast('Round reopened → distributed', 'ok'); await loadRound(ROUND); }
   catch(e){ toast('Reopen: ' + e.message, 'err'); }
+}
+async function payJudges(){
+  if (!confirm('Pay judges for this round? This records each judge\'s earnings ($/video) and sends payouts to judges who have connected their bank. Judges without payouts stay pending and get paid on a later run. Safe to re-run — settled payments are never double-paid.')) return;
+  toast('Paying judges…');
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const token = session?.access_token || ANON;
+    const r = await fetch(SUPABASE_URL + '/functions/v1/pay-judges', {
+      method:'POST', headers:{ 'Content-Type':'application/json', apikey: ANON, Authorization:'Bearer '+token }, body: JSON.stringify({ round_id: ROUND }) });
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok || d.ok===false) throw new Error(d.error || `Failed (${r.status})`);
+    const tot = ((d.total_round_cents||0)/100).toFixed(2);
+    toast(`Judges: ${d.paid||0} paid · ${d.pending||0} pending · $${tot} total`, 'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast('Pay judges: ' + e.message, 'err'); }
 }
 
 // ---------- stage drill-downs (View buttons) ----------
