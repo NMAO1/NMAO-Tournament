@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
-import { faceOff, castVote, playbackUrls, type FaceOff, type Choice, type Card } from "../lib/duel";
+import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor } from "../lib/duel";
 
 // A worn frame/crest (equipped badge) — what the crest popover reveals.
 type Crest = NonNullable<Card["frame"]>;
@@ -29,7 +29,9 @@ const evName = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toU
 
 export default function Arena({ duelId, voterId, onClose }: { duelId: string; voterId: string; onClose: (voted?: boolean) => void }) {
   const [face, setFace] = useState<FaceOff | null>(null);
-  const [phase, setPhase] = useState<"tale" | "ring">("tale");
+  // tale → (sponsor, if one is available) → ring
+  const [phase, setPhase] = useState<"tale" | "sponsor" | "ring">("tale");
+  const [sponsor, setSponsor] = useState<Sponsor | null>(null);
   const [count, setCount] = useState(10);
   const [urls, setUrls] = useState<Urls>({ challenger: null, opponent: null });
   const [watched, setWatched] = useState(0);
@@ -68,14 +70,19 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   }, []);
 
   useEffect(() => { faceOff(duelId).then(setFace); }, [duelId]);
+  // prefetch a sponsor for the interstitial that plays between the tale + the ring
+  useEffect(() => { duelSponsor().then(setSponsor); }, [duelId]);
+
+  // leaving the tale → show the sponsor break if one is loaded, else the ring
+  const afterTale = () => setPhase(sponsor ? "sponsor" : "ring");
 
   // "Tale of the Path" opening — a ~10s fight-card face-off before the ring.
   useEffect(() => {
     if (!face || phase !== "tale") return;
-    if (count <= 0) { setPhase("ring"); return; }
+    if (count <= 0) { afterTale(); return; }
     const t = setTimeout(() => setCount((c) => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [face, phase, count]);
+  }, [face, phase, count, sponsor]);
 
   // accumulate watch time while the forms roll — both play at once, so the gate
   // fills whenever a real video is rolling (or, if neither side has a signed URL
@@ -130,7 +137,12 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   }
 
   if (phase === "tale") {
-    return <TaleOfThePath face={face} count={count} onEnter={() => setPhase("ring")} onExit={() => onClose(false)} />;
+    return <TaleOfThePath face={face} count={count} onEnter={afterTale} onExit={() => onClose(false)} />;
+  }
+
+  // sponsor interstitial — a short sponsor clip between the tale and the vote
+  if (phase === "sponsor" && sponsor) {
+    return <SponsorBreak sponsor={sponsor} onDone={() => setPhase("ring")} onExit={() => onClose(false)} />;
   }
 
   return (
@@ -198,6 +210,59 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
 
       {/* tap a competitor's worn crest → what the badge is + how it's earned */}
       <CrestPopup crest={crest} onClose={() => setCrest(null)} />
+    </View>
+  );
+}
+
+// A short sponsor clip shown between the Tale of the Path and the vote ring.
+// Plays once; Skip unlocks after `minSeconds`, and it auto-advances to the ring
+// when the clip ends. Counts one impression on show. Optional tap-through link.
+function SponsorBreak({ sponsor, onDone, onExit }: { sponsor: Sponsor; onDone: () => void; onExit: () => void }) {
+  const [remaining, setRemaining] = useState(Math.max(0, sponsor.minSeconds));
+  const player = useVideoPlayer(sponsor.videoUrl, (p) => { p.loop = false; p.muted = false; p.play(); });
+
+  useEffect(() => { sponsorImpression(sponsor.id); }, [sponsor.id]);   // count the view
+  useEffect(() => {                                                    // Skip unlocks after minSeconds
+    const t = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {                                                    // auto-advance when the clip ends
+    const sub = player.addListener("playToEnd", () => onDone());
+    return () => sub.remove();
+  }, [player, onDone]);
+
+  const canSkip = remaining <= 0;
+  return (
+    <View style={{ flex: 1, backgroundColor: "#000" }}>
+      <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="contain" nativeControls={false} />
+
+      {/* SPONSORED tag + exit */}
+      <View pointerEvents="none" style={{ position: "absolute", top: 40, left: 16, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+        <Text style={{ color: neutrals.muted, fontSize: 10, fontWeight: "800", letterSpacing: 2 }}>SPONSORED</Text>
+      </View>
+      <TouchableOpacity onPress={onExit} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ position: "absolute", top: 40, right: 16 }}>
+        <Text style={{ color: neutrals.text, fontSize: 12, letterSpacing: 1, textShadowColor: "#000", textShadowRadius: 6 }}>EXIT  ›</Text>
+      </TouchableOpacity>
+
+      {/* sponsor name + tagline + optional tap-through (bottom-left) */}
+      <View style={{ position: "absolute", left: 18, bottom: 20, maxWidth: "62%" }}>
+        <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", textShadowColor: "#000", textShadowRadius: 6 }} numberOfLines={1}>{sponsor.name}</Text>
+        {sponsor.tagline ? <Text style={{ color: neutrals.muted, fontSize: 13, marginTop: 2, textShadowColor: "#000", textShadowRadius: 6 }} numberOfLines={2}>{sponsor.tagline}</Text> : null}
+        {sponsor.clickUrl ? (
+          <TouchableOpacity onPress={() => { const u = sponsor.clickUrl; if (u) Linking.openURL(u).catch(() => {}); }}
+            style={{ marginTop: 10, alignSelf: "flex-start", borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", borderRadius: 9, paddingHorizontal: 14, paddingVertical: 8 }}>
+            <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Learn more  ↗</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      {/* Skip (bottom-right) — locked until minSeconds elapse */}
+      <TouchableOpacity disabled={!canSkip} onPress={onDone}
+        style={{ position: "absolute", right: 18, bottom: 22, backgroundColor: canSkip ? "rgba(233,193,90,0.95)" : "rgba(0,0,0,0.55)", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 }}>
+        <Text style={{ color: canSkip ? "#141210" : "#fff", fontWeight: "800", fontSize: 13 }}>
+          {canSkip ? "Skip ad  ›" : `Skip in ${remaining}s`}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }

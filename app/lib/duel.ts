@@ -150,6 +150,22 @@ export async function duelReveal(duelId: string): Promise<Reveal | null> {
   };
 }
 
+// ---- sponsor ad (duel_sponsor) — one weighted-random active sponsor, or null.
+// A short sponsor clip plays as an interstitial between the Tale of the Path and
+// the vote ring. Returns null when there's nothing to show (so the ad is skipped).
+export type Sponsor = { id: string; name: string; tagline: string | null; videoUrl: string; clickUrl: string | null; minSeconds: number };
+export async function duelSponsor(): Promise<Sponsor | null> {
+  const { data, error } = await supabase.rpc("duel_sponsor");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const row = (Array.isArray(data) ? data[0] : data) as any;
+  if (error || !row || !row.video_url) return null;
+  return { id: row.id, name: row.name, tagline: row.tagline ?? null, videoUrl: row.video_url, clickUrl: row.click_url ?? null, minSeconds: Number(row.min_seconds ?? 3) };
+}
+// Count a view (fire-and-forget — never blocks the ad from showing).
+export async function sponsorImpression(id: string): Promise<void> {
+  try { await supabase.rpc("duel_sponsor_impression", { p_id: id }); } catch { /* best-effort */ }
+}
+
 // ---- signed playback URLs for the ring (get-playback-url EF, duel branch) ----
 export async function playbackUrls(duelId: string): Promise<{ challenger: string | null; opponent: string | null }> {
   try {

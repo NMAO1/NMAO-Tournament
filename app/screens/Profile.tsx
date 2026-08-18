@@ -143,6 +143,19 @@ const RULES: { title: string; items: RuleItem[] }[] = [
     ],
   },
   {
+    title: "Ratings & ranking",
+    items: [
+      { text: "You carry two separate scores — a Dueling rating and a Tournament skill rating. They never mix." },
+      { label: "Dueling rating", text: "An Elo-style number that starts at 1200. Each duel the community vote picks a winner: the winner's rating rises and the loser's falls by the same amount." },
+      { label: "How much it swings", text: "Beating a higher-rated opponent earns more; beating a lower-rated one earns less — up to 32 points a duel. Draws, deadlocks and forfeits don't move your rating." },
+      { label: "Matchmaking", text: "Opponents are drawn at random from competitors near your rating, in your rank and age bracket — so every duel is a fair test." },
+      { label: "Dueling leaderboard", text: "Ranks everyone by rating, then by wins; win streaks are tracked on their own." },
+      { label: "Tournament skill rating", text: "A 0–100 number that starts at 50. Each round, judges score your form on the six-criterion rubric and your rating moves up or down against the competitors you're measured with." },
+      { label: "Placings", text: "Medals and placings come from the judges' scores within your division; your skill rating is the season-long thread that carries between rounds." },
+      { text: "Every rating change is recorded, so your progress is always auditable." },
+    ],
+  },
+  {
     title: "Tournament categories",
     items: [
       { label: "Open Traditional Forms", text: "Unaltered forms from hard and soft styles — Karate, Kenpo/Kempo, Taekwondo, Tang Soo Do, Shotokan, Wushu and their derivatives. Presented without alteration. No inversions or flips." },
