@@ -1,0 +1,41 @@
+name: Sync Mission Control → Pages
+
+# Mission Control's source lives here (mission-control/), but mc.nmao.us is served
+# by the separate public Pages repo NMAO1/NMAO-Mission-Control. This mirrors the
+# HTML into that repo whenever mission-control/ changes on main, so edits go live
+# without a manual copy. CNAME / .nojekyll / README in the Pages repo are preserved.
+on:
+  push:
+    branches: [main]
+    paths: ["mission-control/**"]
+  workflow_dispatch: {}          # allow a manual run (e.g. the first sync)
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout NMAO-Tournament
+        uses: actions/checkout@v4
+
+      - name: Mirror mission-control/ to the Pages repo
+        env:
+          TOKEN: ${{ secrets.MC_SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TOKEN}" ]; then
+            echo "::error::MC_SYNC_TOKEN secret is not set. Add a fine-grained PAT with Contents:write on NMAO-Mission-Control."
+            exit 1
+          fi
+          git clone --depth 1 "https://x-access-token:${TOKEN}@github.com/NMAO1/NMAO-Mission-Control.git" pages
+          cp mission-control/*.html pages/
+          cd pages
+          git config user.name "nmao-mc-sync[bot]"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No mission-control changes to sync."
+          else
+            git commit -m "sync mission-control from NMAO-Tournament @ ${GITHUB_SHA::7}"
+            git push
+            echo "Synced mission-control HTML to NMAO-Mission-Control."
+          fi
