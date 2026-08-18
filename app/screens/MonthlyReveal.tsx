@@ -7,6 +7,7 @@ import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
 import { Frame } from "../components/Frame";
 import { markMonthlySeen } from "../lib/notifications";
+import { useSeasonLabel } from "../lib/season";
 
 // The monthly badge + tournament-medal reveal — the collectibles ceremony.
 // Stepped: NMAO coin + regal title → medals → badges → season summary → journal.
@@ -49,7 +50,7 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
         {kind === "medals" ? <Medals medals={medals} /> : null}
         {kind === "badges" ? <Badges badges={badges} /> : null}
         {kind === "summary" ? <Summary backers={num(payload, "backers")} rating={num(payload, "rating")} gain={num(payload, "rating_gain")} schools={num(payload, "schools_faced")} /> : null}
-        {kind === "close" ? <Close /> : null}
+        {kind === "close" ? <Close onDone={done} /> : null}
       </ScrollView>
       <View style={{ flexDirection: "row", justifyContent: "center", paddingBottom: 34 }}>
         {step > 0 ? <Ghost label="‹ Back" onPress={() => setStep((s) => s - 1)} /> : <View style={{ width: 104 }} />}
@@ -61,11 +62,12 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
 }
 
 function Open({ message }: { message: string | null }) {
+  const season = useSeasonLabel();
   return (
     <View style={{ alignItems: "center" }}>
       <Text style={{ color: hues.gold.hi, fontSize: 22, fontWeight: "700", textAlign: "center", lineHeight: 27 }}>National Martial Arts Organization</Text>
       <Text style={{ color: hues.gold.base, fontSize: 13, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 6 }}>Tournament of Champions</Text>
-      <Text style={{ color: hues.gold.hi, fontSize: 17, fontStyle: "italic", marginTop: 8, marginBottom: 20 }}>Season 1 · Round VIII</Text>
+      {season ? <Text style={{ color: hues.gold.hi, fontSize: 17, fontStyle: "italic", marginTop: 8, marginBottom: 20 }}>{season}</Text> : <View style={{ height: 20 }} />}
       <Coin size={104} />
       <Text style={{ color: hues.gold.hi, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 22, maxWidth: 280, lineHeight: 20 }}>&ldquo;{message ?? "A month worth framing. Here’s what you earned."}&rdquo;</Text>
     </View>
@@ -151,13 +153,13 @@ function Stat({ v, l }: { v: string; l: string }) {
   );
 }
 
-function Close() {
+function Close({ onDone }: { onDone: () => void }) {
   return (
     <View style={{ alignItems: "center", alignSelf: "stretch" }}>
       <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Carry it forward</Text>
       <Text style={{ color: hues.gold.hi, fontSize: 16, fontStyle: "italic", textAlign: "center", maxWidth: 280, lineHeight: 22 }}>&ldquo;Sharper than last month. Bring it to the tournament.&rdquo;</Text>
       <View style={{ marginTop: 24, alignSelf: "stretch", paddingHorizontal: 12 }}>
-        <Gold full label="Reflect in your journal →" onPress={() => { /* journal opens in a later pass */ }} />
+        <Gold full label="Onward →" onPress={onDone} />
       </View>
     </View>
   );

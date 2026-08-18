@@ -6,6 +6,12 @@ import { neutrals, spectrum, hues, status as st } from "@nmao/design-tokens";
 type Checklist = { bg_consent: boolean; bg_cleared: boolean; ic_agreement: boolean; creed: boolean; payouts: boolean };
 type DocKind = "bg" | "ic" | "creed";
 
+// Gate: the legal copy below is still PLACEHOLDER pending counsel review. Until it
+// is finalized, judges must not be presented these as binding e-signatures — so
+// acceptance is shown as an explicit, non-binding DRAFT acknowledgment. Flip to
+// true only once the FCRA disclosure, IC agreement, and Creed are counsel-approved.
+const LEGAL_FINAL = false;
+
 // Placeholder legal copy — replaced by counsel-approved language. Acceptance is
 // recorded server-side (accept-judge-terms) with a timestamp regardless of copy.
 const DOCS: Record<DocKind, { title: string; body: string[]; accept: string; field: "bg_consent" | "ic" | "creed" }> = {
@@ -123,10 +129,16 @@ export default function JudgeOnboarding({ onActive }: { onActive: () => void }) 
         <div style={{ position: "fixed", inset: 0, background: "rgba(6,6,8,0.82)", zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setDoc(null)}>
           <div onClick={(e) => e.stopPropagation()} style={{ width: "100%", maxWidth: 520, maxHeight: "82vh", overflowY: "auto", background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 16, padding: 24 }}>
             <h2 style={{ fontFamily: "Georgia, serif", fontSize: 20, margin: "0 0 12px" }}>{DOCS[doc].title}</h2>
+            {!LEGAL_FINAL && (
+              <div style={{ background: "rgba(233,193,90,0.12)", border: `1px solid ${hues.gold.shadow}`, borderRadius: 10, padding: "10px 12px", margin: "0 0 14px" }}>
+                <div style={{ color: hues.gold.hi, fontSize: 12, fontWeight: 800, letterSpacing: 0.5 }}>⚠ DRAFT — NOT A BINDING AGREEMENT</div>
+                <div style={{ color: neutrals.muted, fontSize: 12, lineHeight: 1.5, marginTop: 4 }}>This is preview language pending final legal review. Acknowledging it here is not a signature — you&apos;ll be asked to formally accept the finalized agreement before your first assignment.</div>
+              </div>
+            )}
             {DOCS[doc].body.map((p, i) => <p key={i} style={{ color: p.startsWith("[") ? hues.gold.hi : neutrals.muted, fontSize: 13.5, lineHeight: 1.65, margin: "0 0 10px", fontStyle: p.startsWith("[") ? "italic" : "normal" }}>{p}</p>)}
             <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
               <button onClick={() => setDoc(null)} style={{ flex: 1, background: "transparent", border: `1px solid ${neutrals.border}`, color: neutrals.text, borderRadius: 10, padding: "11px", cursor: "pointer", fontWeight: 600 }}>Cancel</button>
-              <button onClick={() => accept(doc)} disabled={!!busy} style={{ flex: 2, border: "none", cursor: "pointer", fontWeight: 800, color: "#141210", borderRadius: 10, padding: "11px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: busy ? 0.6 : 1 }}>{busy ? "Saving…" : DOCS[doc].accept}</button>
+              <button onClick={() => accept(doc)} disabled={!!busy} style={{ flex: 2, border: "none", cursor: "pointer", fontWeight: 800, color: "#141210", borderRadius: 10, padding: "11px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: busy ? 0.6 : 1 }}>{busy ? "Saving…" : LEGAL_FINAL ? DOCS[doc].accept : "Acknowledge draft & continue"}</button>
             </div>
           </div>
         </div>

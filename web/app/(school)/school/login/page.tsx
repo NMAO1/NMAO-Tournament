@@ -21,7 +21,7 @@ export default function SchoolLogin() {
   }
   async function reset() {
     if (!email.trim()) return setMsg("Enter your email first.");
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: location.origin + "/school" });
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: location.origin + "/school/set-password" });
     setMsg(error ? error.message : "Check your email for a link to set a new password.");
   }
 

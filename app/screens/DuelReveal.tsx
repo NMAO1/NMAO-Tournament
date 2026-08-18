@@ -4,6 +4,7 @@ import * as Haptics from "expo-haptics";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { duelReveal, type Reveal, type Card, type DuelType } from "../lib/duel";
+import { useSeasonLabel } from "../lib/season";
 
 type Outcome = "win" | "deadlock" | "loss" | "spectator";
 
@@ -37,7 +38,7 @@ export default function DuelReveal({ duelId, myId, onClose }: { duelId: string; 
     <FaceOff key="f" a={rev.challenger} b={rev.opponent} type={rev.type} />,
     <Result key="r" outcome={outcome} me={me} them={them} />,
     <Tally key="t" mine={myVotes} theirs={theirVotes} backers={myBackers} meName={me.firstName} themName={them.firstName} spectator={outcome === "spectator"} />,
-    <Onward key="o" outcome={outcome} />,
+    <Onward key="o" outcome={outcome} onDone={onClose} />,
   ];
 
   return (
@@ -73,9 +74,10 @@ function VideoThumb({ card }: { card: Card }) {
 }
 
 function FaceOff({ a, b, type }: { a: Card; b: Card; type: DuelType }) {
+  const season = useSeasonLabel();
   return (
     <View style={{ alignItems: "center" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>S1 · Round VIII · {type}</Text>
+      <Text style={{ color: hues.gold.hi, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>{season ? `${season} · ${type}` : type}</Text>
       <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
         <VideoThumb card={a} />
         <Text style={{ color: hues.gold.hi, fontWeight: "900", fontStyle: "italic", fontSize: 34, marginTop: 22, marginHorizontal: 4 }}>VS</Text>
@@ -138,7 +140,7 @@ function Tally({ mine, theirs, backers, meName, themName, spectator }: { mine: n
   );
 }
 
-function Onward({ outcome }: { outcome: Outcome }) {
+function Onward({ outcome, onDone }: { outcome: Outcome; onDone: () => void }) {
   const cta = { win: "Enter again — keep your streak alive 🔥", deadlock: "Run it back", loss: "Improve your submission & compete again!", spectator: "Back to the arena" }[outcome];
   const line = { win: "Momentum. The arena felt that one.", deadlock: "That one’s unfinished.", loss: "With every effort, we learn and grow.", spectator: "Well judged." }[outcome];
   return (
@@ -147,7 +149,7 @@ function Onward({ outcome }: { outcome: Outcome }) {
       <Text style={{ color: hues.gold.hi, fontSize: 15, fontStyle: "italic", textAlign: "center", maxWidth: 280 }}>&ldquo;{line}&rdquo;</Text>
       <Text style={{ color: hues.amethyst.hi, fontSize: 12, textAlign: "center", marginTop: 14, maxWidth: 280 }}>✦ Your badges &amp; medals await the monthly reveal.</Text>
       <View style={{ marginTop: 22, alignSelf: "stretch" }}>
-        <Gold label={cta} full onPress={() => { /* re-entry navigates to Duel tab in a later pass */ }} />
+        <Gold label={cta} full onPress={onDone} />
       </View>
     </View>
   );

@@ -10,6 +10,7 @@ import {
   type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent,
 } from "../lib/duel";
 import Arena from "./Arena";
+import { useSeasonLabel } from "../lib/season";
 
 const EXPORT_PRESET = ImagePicker.VideoExportPreset.H264_1920x1080;
 const prettyErr = (e?: string) => (e ? e.replace(/^.*?:\s*/, "") : "Please try again.");
@@ -17,6 +18,7 @@ const prettyErr = (e?: string) => (e ? e.replace(/^.*?:\s*/, "") : "Please try a
 // The Duel hub — two sections: COMPETE (challenge + your active duels) and the
 // VOTE QUEUE. Tapping a queue card rotates into the Arena ring.
 export default function Duel() {
+  const season = useSeasonLabel();
   const [me, setMe] = useState<string | null>(null);
   const [week, setWeek] = useState<WeekStatus | null>(null);
   const [active, setActive] = useState<ActiveDuel[]>([]);
@@ -108,7 +110,7 @@ export default function Duel() {
         </View>
       ) : null}
 
-      <SectionLabel left="Your duels" right="S1 · Round VIII" />
+      <SectionLabel left="Your duels" right={season} />
       <TouchableOpacity onPress={openChallenge} activeOpacity={0.85} disabled={week?.remaining === 0}>
         <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ borderRadius: 12, paddingVertical: 14, alignItems: "center", opacity: week?.remaining === 0 ? 0.5 : 1, marginBottom: 4 }}>
           <Text style={{ color: "#fff", fontWeight: "800", letterSpacing: 0.5 }}>⚔  Challenge</Text>

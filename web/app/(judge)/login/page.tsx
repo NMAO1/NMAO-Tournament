@@ -23,7 +23,7 @@ export default function JudgeLogin() {
   async function reset() {
     if (!email.trim()) return setMsg("Enter your email first.");
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: location.origin + "/judge",
+      redirectTo: location.origin + "/judge/set-password",
     });
     setMsg(error ? error.message : "Check your email for a link to set a new password.");
   }

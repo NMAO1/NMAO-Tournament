@@ -8,6 +8,22 @@ type Form = {
 };
 const EMPTY: Form = { first_name: "", last_name: "", email: "", phone: "", dob: "", address: "", styles: "", years_experience: "", rank: "", notable_mentions: "", affiliation: "", references: "" };
 
+const input: React.CSSProperties = { width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${neutrals.border}`, background: "#0e0e11", color: neutrals.text, fontSize: 15, marginBottom: 4 };
+const lbl: React.CSSProperties = { fontSize: 12, color: neutrals.muted, marginBottom: 4, display: "block", marginTop: 12 };
+type SetFn = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+
+// Field is hoisted to MODULE scope on purpose. Defined inside JudgeApply it was a
+// new component identity on every render, so React remounted the <input> and the
+// field lost focus after each keystroke — making the form impossible to fill.
+function Field({ label, k, type = "text", ph, half, f, set }: { label: string; k: keyof Form; type?: string; ph?: string; half?: boolean; f: Form; set: SetFn }) {
+  return (
+    <div style={{ flex: half ? 1 : undefined, width: half ? undefined : "100%" }}>
+      <label style={lbl}>{label}</label>
+      <input style={input} type={type} placeholder={ph} value={f[k]} onChange={set(k)} />
+    </div>
+  );
+}
+
 export default function JudgeApply() {
   const [f, setF] = useState<Form>(EMPTY);
   const [cEli, setCEli] = useState(false);
@@ -42,15 +58,6 @@ export default function JudgeApply() {
     } catch { setBusy(false); setErr("Network error — please try again."); }
   }
 
-  const input: React.CSSProperties = { width: "100%", padding: 12, borderRadius: 10, border: `1px solid ${neutrals.border}`, background: "#0e0e11", color: neutrals.text, fontSize: 15, marginBottom: 4 };
-  const lbl: React.CSSProperties = { fontSize: 12, color: neutrals.muted, marginBottom: 4, display: "block", marginTop: 12 };
-  const Field = ({ label, k, type = "text", ph, half }: { label: string; k: keyof Form; type?: string; ph?: string; half?: boolean }) => (
-    <div style={{ flex: half ? 1 : undefined, width: half ? undefined : "100%" }}>
-      <label style={lbl}>{label}</label>
-      <input style={input} type={type} placeholder={ph} value={f[k]} onChange={set(k)} />
-    </div>
-  );
-
   if (done) {
     return (
       <Shell>
@@ -78,22 +85,22 @@ export default function JudgeApply() {
       </p>
 
       <Section title="About you" />
-      <div style={{ display: "flex", gap: 10 }}><Field label="First name" k="first_name" half /><Field label="Last name" k="last_name" half /></div>
-      <div style={{ display: "flex", gap: 10 }}><Field label="Email" k="email" type="email" half /><Field label="Phone" k="phone" type="tel" half /></div>
+      <div style={{ display: "flex", gap: 10 }}><Field f={f} set={set} label="First name" k="first_name" half /><Field f={f} set={set} label="Last name" k="last_name" half /></div>
+      <div style={{ display: "flex", gap: 10 }}><Field f={f} set={set} label="Email" k="email" type="email" half /><Field f={f} set={set} label="Phone" k="phone" type="tel" half /></div>
       <div style={{ display: "flex", gap: 10 }}>
         <div style={{ flex: 1 }}><label style={lbl}>Date of birth (must be 18+)</label><input style={input} type="date" value={f.dob} onChange={set("dob")} /></div>
-        <Field label="Mailing address" k="address" ph="City, State" half />
+        <Field f={f} set={set} label="Mailing address" k="address" ph="City, State" half />
       </div>
 
       <Section title="Martial-arts background" />
       <div style={{ display: "flex", gap: 10 }}>
-        <Field label="Years of experience" k="years_experience" type="number" ph="e.g. 12" half />
-        <Field label="Rank / certifications" k="rank" ph="e.g. 3rd Dan, certified referee" half />
+        <Field f={f} set={set} label="Years of experience" k="years_experience" type="number" ph="e.g. 12" half />
+        <Field f={f} set={set} label="Rank / certifications" k="rank" ph="e.g. 3rd Dan, certified referee" half />
       </div>
-      <Field label="Styles you can judge (comma-separated)" k="styles" ph="Karate, Taekwondo, Kung Fu" />
+      <Field f={f} set={set} label="Styles you can judge (comma-separated)" k="styles" ph="Karate, Taekwondo, Kung Fu" />
       <label style={lbl}>Notable achievements / titles (optional)</label>
       <textarea style={{ ...input, minHeight: 60, resize: "vertical", fontFamily: "inherit" }} value={f.notable_mentions} onChange={set("notable_mentions")} />
-      <Field label="Current school / affiliation (for conflict-of-interest checks)" k="affiliation" ph="Your dojo or 'independent'" />
+      <Field f={f} set={set} label="Current school / affiliation (for conflict-of-interest checks)" k="affiliation" ph="Your dojo or 'independent'" />
       <label style={lbl}>References (optional)</label>
       <textarea style={{ ...input, minHeight: 50, resize: "vertical", fontFamily: "inherit" }} value={f.references} onChange={set("references")} placeholder="Name + how to reach them" />
 

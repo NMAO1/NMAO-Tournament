@@ -7,6 +7,7 @@ import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
 import { myCompetitors } from "../lib/competitors";
 import { loadVault, equipFrame, emblemUrl, type Vault, type VaultBadge } from "../lib/vault";
+import { useSeasonLabel } from "../lib/season";
 
 const RARITY_LABEL: Record<string, string> = { legendary: "Legendary", epic: "Epic", rare: "Rare", common: "Common" };
 
@@ -18,6 +19,7 @@ const SEASON = { hi: "#66A9FF", b: "#1F7BFF", sh: "#0B3FD6" };
 // The badge vault + medal case. Earned badges glow by rarity; tap one to wear its
 // frame in the Arena. Locked badges are greyed goals.
 export default function Achievements() {
+  const season = useSeasonLabel();
   const [me, setMe] = useState<string | null>(null);
   const [vault, setVault] = useState<Vault | null>(null);
   const [selBadge, setSelBadge] = useState<VaultBadge | null>(null);
@@ -64,7 +66,7 @@ export default function Achievements() {
       <Label t="Your Season Medallion" />
       <View style={{ alignItems: "center", marginBottom: 10 }}>
         <Medallion tiers={medTiers} season={SEASON} size={280} />
-        <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.3, marginTop: 4 }}>{filled} / 8 rounds · Season 1 · Sapphire</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.3, marginTop: 4 }}>{filled} / 8 rounds{season ? ` · ${season}` : ""}</Text>
       </View>
 
       <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>{earned === 0 ? "Badges stay hidden until earned — compete to reveal them." : `${earned} badge${earned === 1 ? "" : "s"} earned. Tap one to wear its frame.`}</Text>

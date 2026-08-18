@@ -183,6 +183,7 @@ export default function SchoolPortal() {
     if (!school) return;
     const lines = importText.split("\n").map((l) => l.trim()).filter(Boolean);
     const rows: { school_id: string; first_name: string; last_name: string; dob: string; declared_rank: string; status: string }[] = [];
+    const skipped: string[] = [];
     for (const line of lines) {
       const parts = line.split(",").map((p) => p.trim());
       let first = "", last = "", dob = "", rank = "beginner";
@@ -191,14 +192,17 @@ export default function SchoolPortal() {
         if (parts[3] && RANKS.includes(parts[3].toLowerCase())) rank = parts[3].toLowerCase();
       } else { const sp = line.split(/\s+/); first = sp[0] || ""; last = sp.slice(1).join(" "); }
       if (!first || !last) continue;
-      rows.push({ school_id: school.id, first_name: first, last_name: last, dob: dob || "2000-01-01", declared_rank: rank, status: "active" });
+      // Require a real birthdate — a fake default silently corrupts age brackets,
+      // division matching, and dueling eligibility for every dateless import.
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) { skipped.push(`${first} ${last}`.trim()); continue; }
+      rows.push({ school_id: school.id, first_name: first, last_name: last, dob, declared_rank: rank, status: "active" });
     }
-    if (!rows.length) { setErr("No valid rows. Use one per line: First, Last, YYYY-MM-DD, rank"); return; }
+    if (!rows.length) { setErr(skipped.length ? `Every athlete needs a birthdate (YYYY-MM-DD). Missing for: ${skipped.join(", ")}` : "No valid rows. Use one per line: First, Last, YYYY-MM-DD, rank"); return; }
     setSaving(true); setErr("");
     const { error } = await supabase.from("competitors").insert(rows);
     setSaving(false);
     if (error) { setErr(error.message); return; }
-    setImportText(""); setImportOpen(false); setSavedMsg(`Imported ${rows.length} competitor${rows.length === 1 ? "" : "s"}.`); load();
+    setImportText(""); setImportOpen(false); setSavedMsg(`Imported ${rows.length} competitor${rows.length === 1 ? "" : "s"}.${skipped.length ? ` Skipped ${skipped.length} with no birthdate: ${skipped.join(", ")}.` : ""}`); load();
   }
   async function setRank(id: string, rank: string) {
     setRoster((r) => r.map((a) => (a.id === id ? { ...a, declared_rank: rank } : a)));
@@ -547,9 +551,9 @@ export default function SchoolPortal() {
                       <div style={{ fontWeight: 600 }}>{noVideoCount} athlete{noVideoCount > 1 ? "s" : ""} registered but haven&apos;t uploaded a video</div>
                       <div style={{ color: neutrals.muted, fontSize: 12, marginTop: 2 }}>A nudge helps them finish before the round closes.</div>
                     </div>
-                    <button onClick={() => setSavedMsg("Reminders will send automatically once notifications ship.")}
-                      style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "9px 18px", whiteSpace: "nowrap", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})` }}>
-                      Remind {noVideoCount}
+                    <button disabled title="Automatic reminders ship soon — nothing to do here yet."
+                      style={{ border: `1px solid ${neutrals.border}`, cursor: "not-allowed", fontWeight: 700, color: neutrals.muted, borderRadius: 10, padding: "9px 18px", whiteSpace: "nowrap", background: "transparent", opacity: 0.75 }}>
+                      Reminders soon
                     </button>
                   </div>
                 ) : paidCount > 0 ? (

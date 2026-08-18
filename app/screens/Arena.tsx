@@ -6,6 +6,7 @@ import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
 import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor } from "../lib/duel";
+import { useSeasonLabel } from "../lib/season";
 
 // A worn frame/crest (equipped badge) — what the crest popover reveals.
 type Crest = NonNullable<Card["frame"]>;
@@ -383,6 +384,7 @@ function closesIn(face: FaceOff): string {
 // Landscape cinematic: the two panels slide in from opposite edges while a large
 // VS pops (spring overshoot) in the centre.
 function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count: number; onEnter: () => void; onExit: () => void }) {
+  const season = useSeasonLabel();
   const w = Dimensions.get("window").width;
   const [crest, setCrest] = useState<CrestAnchor | null>(null);
   const slideL = useRef(new Animated.Value(-w)).current;
@@ -407,7 +409,7 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
         </TouchableOpacity>
         <View style={{ alignItems: "center" }}>
           <Text style={{ color: hues.gold.hi, fontSize: 13, letterSpacing: 4, fontWeight: "800" }}>⚔  TALE OF THE PATH</Text>
-          <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>{evName(face.type)} · S1 · Round VIII</Text>
+          <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>{season ? `${evName(face.type)} · ${season}` : evName(face.type)}</Text>
         </View>
         <TouchableOpacity onPress={onEnter}><Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 1 }}>Skip ›</Text></TouchableOpacity>
       </View>
