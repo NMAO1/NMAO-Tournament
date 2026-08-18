@@ -16,9 +16,11 @@ const RARITY_LABEL: Record<string, string> = { legendary: "Legendary", epic: "Ep
 // The Arena "ring" — the crown-jewel voting screen. Landscape (via guarded
 // expo-screen-orientation; falls back to portrait if not installed). Two forms
 // side by side in their collectible frames; watch to unlock the vote; the tally
-// stays hidden. Real playback via expo-video (signed URLs from get-playback-url);
-// the watch-to-vote gate accrues only while a real video is actually playing.
-// If a side has no signed URL yet, it falls back to a tap-to-accrue poster.
+// stays hidden. Real playback via expo-video (signed URLs from get-playback-url).
+// BOTH forms play SIMULTANEOUSLY for a true side-by-side comparison (mirrors the
+// judges' 2-angle scoring carousel); they start muted to avoid clashing audio,
+// and tapping a side brings its audio forward while muting the other. The
+// watch-to-vote gate fills while the forms roll (poster fallback if no URL yet).
 
 const WATCH_GOAL = 15;
 type Urls = { challenger: string | null; opponent: string | null };
@@ -38,12 +40,23 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   const [crest, setCrest] = useState<CrestAnchor | null>(null);
   const flash = useRef(new Animated.Value(0)).current;
 
-  // one player per side; source is swapped in once the signed URLs arrive
-  const chPlayer = useVideoPlayer(null, (p) => { p.loop = false; p.muted = false; });
-  const opPlayer = useVideoPlayer(null, (p) => { p.loop = false; p.muted = false; });
+  // one player per side; both roll SIMULTANEOUSLY so the two forms can be
+  // compared side by side (mirrors the judges' 2-angle scoring carousel). Muted
+  // by default to avoid two clashing audio tracks — tapping a side brings its
+  // audio forward (`active` = the side currently unmuted; null = both muted).
+  const chPlayer = useVideoPlayer(null, (p) => { p.loop = true; p.muted = true; });
+  const opPlayer = useVideoPlayer(null, (p) => { p.loop = true; p.muted = true; });
   useEffect(() => { if (urls.challenger) chPlayer.replace(urls.challenger); }, [urls.challenger, chPlayer]);
   useEffect(() => { if (urls.opponent) opPlayer.replace(urls.opponent); }, [urls.opponent, opPlayer]);
   useEffect(() => { playbackUrls(duelId).then(setUrls); }, [duelId]);
+
+  // once we're in the ring, autoplay BOTH forms together the moment each signed
+  // URL is present — no tap needed; they play in parallel for the comparison.
+  useEffect(() => {
+    if (phase !== "ring") return;
+    if (urls.challenger) chPlayer.play();
+    if (urls.opponent) opPlayer.play();
+  }, [phase, urls, chPlayer, opPlayer]);
 
   // landscape while the ring is mounted (guarded — no crash if lib absent)
   useEffect(() => {
@@ -64,28 +77,28 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
     return () => clearTimeout(t);
   }, [face, phase, count]);
 
-  // accumulate watch time — only while a real video is actually playing (a
-  // poster side, with no signed URL, accrues on tap so it stays votable).
+  // accumulate watch time while the forms roll — both play at once, so the gate
+  // fills whenever a real video is rolling (or, if neither side has a signed URL
+  // yet, it accrues off the posters so the duel stays votable).
   useEffect(() => {
-    if (!active) return;
-    const player = active === "challenger" ? chPlayer : opPlayer;
-    const hasVideo = active === "challenger" ? !!urls.challenger : !!urls.opponent;
+    if (phase !== "ring") return;
     const t = setInterval(() => {
-      if (!hasVideo || player.playing) setWatched((w) => Math.min(WATCH_GOAL, w + 0.1));
+      const anyPlaying = chPlayer.playing || opPlayer.playing;
+      const noVideo = !urls.challenger && !urls.opponent;
+      if (anyPlaying || noVideo) setWatched((w) => Math.min(WATCH_GOAL, w + 0.1));
     }, 100);
     return () => clearInterval(t);
-  }, [active, urls, chPlayer, opPlayer]);
+  }, [phase, urls, chPlayer, opPlayer]);
 
-  // tap a side to play it (and pause the other); tap again to pause
-  function togglePlay(side: Choice) {
-    const player = side === "challenger" ? chPlayer : opPlayer;
-    const other = side === "challenger" ? opPlayer : chPlayer;
-    const hasVideo = side === "challenger" ? !!urls.challenger : !!urls.opponent;
+  // both forms are already rolling; tapping a side brings its AUDIO forward and
+  // mutes the other (tap the focused side again → both mute). Playback never stops.
+  function focusAudio(side: Choice) {
+    const isCh = side === "challenger";
     if (active === side) {
-      if (hasVideo) player.pause();
+      chPlayer.muted = true; opPlayer.muted = true;
       setActive(null);
     } else {
-      if (hasVideo) { other.pause(); player.play(); }
+      chPlayer.muted = !isCh; opPlayer.muted = isCh;
       setActive(side);
     }
   }
@@ -130,14 +143,14 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           card={face.challenger} choice="challenger" rarity={face.challenger.frame?.rarity ?? "legendary"}
           active={active === "challenger"} unlocked={unlocked} voted={voted}
           player={chPlayer} hasVideo={!!urls.challenger}
-          onPlay={() => togglePlay("challenger")} onVote={() => vote("challenger")}
+          onAudio={() => focusAudio("challenger")} onVote={() => vote("challenger")}
           onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
           active={active === "opponent"} unlocked={unlocked} voted={voted}
           player={opPlayer} hasVideo={!!urls.opponent}
-          onPlay={() => togglePlay("opponent")} onVote={() => vote("opponent")}
+          onAudio={() => focusAudio("opponent")} onVote={() => vote("opponent")}
           onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
         />
       </View>
@@ -164,6 +177,11 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>{Math.floor(watched)}s / {WATCH_GOAL}s</Text>
       </View>
 
+      {/* both-play hint */}
+      <View pointerEvents="none" style={{ position: "absolute", top: 84, left: 0, right: 0, alignItems: "center" }}>
+        <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>Both forms play together · tap one to hear its audio</Text>
+      </View>
+
       {/* hidden-tally note overlay (bottom centre, between the two vote CTAs) */}
       <View pointerEvents="none" style={{ position: "absolute", bottom: 8, left: 0, right: 0, alignItems: "center" }}>
         <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>
@@ -185,11 +203,11 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
 }
 
 function Side({
-  card, choice, rarity, active, unlocked, voted, player, hasVideo, onPlay, onVote, onCrest,
+  card, choice, rarity, active, unlocked, voted, player, hasVideo, onAudio, onVote, onCrest,
 }: {
   card: Card; choice: Choice; rarity: "common" | "rare" | "epic" | "legendary";
   active: boolean; unlocked: boolean; voted: Choice | null;
-  player: VideoPlayer; hasVideo: boolean; onPlay: () => void; onVote: () => void; onCrest: () => void;
+  player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void;
 }) {
   const dim = voted && voted !== choice;
   const glow = rarityBase(rarity);
@@ -204,7 +222,7 @@ function Side({
           colors={rarityStops(rarity)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={{ flex: 1, borderRadius: 26, paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
         >
-          <TouchableOpacity activeOpacity={0.95} onPress={onPlay} style={{ flex: 1 }}>
+          <TouchableOpacity activeOpacity={0.95} onPress={onAudio} style={{ flex: 1 }}>
             <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
               {hasVideo ? (
                 <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
@@ -214,9 +232,14 @@ function Side({
                 <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
                 {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
               </View>
-              <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(0,0,0,0.42)", alignItems: "center", justifyContent: "center", opacity: hasVideo && active ? 0.18 : 1 }}>
-                <Text style={{ color: "#fff", fontSize: 20 }}>{active ? "❚❚" : "▶"}</Text>
-              </View>
+              {/* both forms roll at once; this chip shows/toggles which side's audio
+                  is live (tap to hear this side; the other side mutes). */}
+              {hasVideo ? (
+                <View style={{ position: "absolute", right: 10, bottom: 10, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: active ? "rgba(233,193,90,0.94)" : "rgba(0,0,0,0.5)" }}>
+                  <Text style={{ fontSize: 13 }}>{active ? "🔊" : "🔇"}</Text>
+                  <Text style={{ color: active ? "#141210" : "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.4 }}>{active ? "AUDIO" : "TAP TO HEAR"}</Text>
+                </View>
+              ) : null}
             </View>
           </TouchableOpacity>
         </LinearGradient>
