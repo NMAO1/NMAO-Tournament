@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator,
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
-import { myCompetitors } from "../lib/competitors";
+import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { uploadDuelVideo } from "../lib/upload";
 import {
   weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo,
@@ -36,15 +36,14 @@ export default function Duel() {
     setWeek(w); setActive(a); setQueue(q);
   }, []);
 
+  const { activeId } = useActiveCompetitor();
   useEffect(() => {
+    setMe(activeId);
     (async () => {
-      const comps = await myCompetitors();
-      const id = comps[0]?.id ?? null;
-      setMe(id);
-      if (id) await load(id);
+      if (activeId) await load(activeId);
       setLoading(false);
     })();
-  }, [load]);
+  }, [activeId, load]);
 
   async function refresh() { if (!me) return; setRefreshing(true); await load(me); setRefreshing(false); }
   async function runSearch(text: string) { setSearch(text); if (me) setQueue(await voteQueue(me, text.trim())); }

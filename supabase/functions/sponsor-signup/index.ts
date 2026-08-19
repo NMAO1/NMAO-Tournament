@@ -30,12 +30,17 @@ Deno.serve(async (req) => {
 
   try {
     const b = await req.json().catch(() => ({}));
+    const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
+
+    // per-IP rate limit FIRST (public endpoint) — throttle spam regardless of payload.
+    const ip = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
+    const { data: rateOk } = await svc.rpc("rate_ok", { p_bucket: "sponsor_signup", p_key: ip, p_max: 5, p_window_secs: 600 });
+    if (rateOk === false) return json({ ok: false, error: "Too many signups from this network — please try again in a few minutes." }, 429);
+
     if (!b.company_name?.trim()) return json({ ok: false, error: "Company name is required." }, 400);
     if (!b.contact_email?.trim()) return json({ ok: false, error: "A contact email is required." }, 400);
     if (!b.tier_id) return json({ ok: false, error: "Choose a plan." }, 400);
     if (!b.accepted_guidelines) return json({ ok: false, error: "Please accept the content guidelines." }, 400);
-
-    const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
 
     const { data: tier } = await svc.from("sponsor_tiers").select("id, stripe_price_id, name, monthly_price_cents").eq("id", b.tier_id).maybeSingle();
     if (!tier || (!tier.stripe_price_id && !(Number(tier.monthly_price_cents) > 0))) return json({ ok: false, error: "That plan isn't priced yet." }, 400);

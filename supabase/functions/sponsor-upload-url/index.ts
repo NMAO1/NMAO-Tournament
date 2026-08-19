@@ -22,11 +22,15 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
   try {
     const { kind, ext } = await req.json().catch(() => ({}));
+    const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
+    // per-IP rate limit FIRST (public endpoint) — cap volume regardless of payload.
+    const ip = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
+    const { data: rateOk } = await svc.rpc("rate_ok", { p_bucket: "sponsor_upload", p_key: ip, p_max: 40, p_window_secs: 600 });
+    if (rateOk === false) return json({ ok: false, error: "Too many uploads — please try again shortly." }, 429);
     if (!["video", "logo", "product"].includes(String(kind))) return json({ ok: false, error: "bad kind" }, 400);
     const bucket = kind === "video" ? "sponsor-videos" : "sponsor-assets";
     const clean = String(ext || "bin").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "bin";
     const path = `signup/${crypto.randomUUID()}.${clean}`;
-    const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
     const { data, error } = await svc.storage.from(bucket).createSignedUploadUrl(path);
     if (error) return json({ ok: false, error: error.message }, 500);
     const publicUrl = svc.storage.from(bucket).getPublicUrl(path).data.publicUrl;

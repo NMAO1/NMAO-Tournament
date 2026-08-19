@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { supabase } from "./lib/supabase";
 import { myCompetitors } from "./lib/competitors";
+import { useActiveCompetitor } from "./lib/activeCompetitor";
 import { unreadCount, subscribeNotifications, latestUnseenMonthly, type Notif } from "./lib/notifications";
 import Login from "./screens/Login";
 import Signup from "./screens/Signup";
@@ -35,7 +36,9 @@ const TABS: { key: Tab; label: string; title: string; icon: string; hue: string;
 
 function MainTabs() {
   const [tab, setTab] = useState<Tab>("duel");
-  const [myId, setMyId] = useState<string | null>(null);
+  // shared active ward — so a guardian with >1 competitor sees the same child everywhere
+  const { comps, activeId, setActive } = useActiveCompetitor();
+  const myId = activeId;
   const [unread, setUnread] = useState(0);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [reveal, setReveal] = useState<ActiveReveal | null>(null);
@@ -43,8 +46,6 @@ function MainTabs() {
 
   useEffect(() => {
     (async () => {
-      const comps = await myCompetitors();
-      setMyId(comps[0]?.id ?? null);
       setUnread(await unreadCount());
       const m = await latestUnseenMonthly();
       if (m) setReveal({ kind: "monthly", period: m.period, payload: m.payload }); // auto-detect on launch (§8b)
@@ -64,6 +65,21 @@ function MainTabs() {
   return (
     <View style={{ flex: 1 }}>
       {!active.ownHeader ? <Header title={active.title} unread={unread} onBell={() => setAlertsOpen(true)} /> : null}
+
+      {/* ward picker — a guardian with more than one competitor switches child here
+          (Compete has its own picker; it drives the same shared selection). */}
+      {comps.length > 1 && tab !== "compete" ? (
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 14, paddingBottom: 8, backgroundColor: neutrals.bg }}>
+          {comps.map((c) => {
+            const on = c.id === activeId;
+            return (
+              <TouchableOpacity key={c.id} onPress={() => setActive(c.id)} style={{ paddingHorizontal: 13, paddingVertical: 6, borderRadius: 99, backgroundColor: on ? hues.gold.base : "transparent", borderWidth: 1, borderColor: on ? hues.gold.base : neutrals.border }}>
+                <Text style={{ color: on ? "#141210" : neutrals.muted, fontWeight: "700", fontSize: 12 }}>{c.first_name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
 
       <View style={{ flex: 1 }}>
         {tab === "compete" ? <Compete /> : null}

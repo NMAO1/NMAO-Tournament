@@ -5,7 +5,7 @@ import { Frame } from "../components/Frame";
 import { SpectrumText } from "../components/SpectrumText";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
-import { myCompetitors } from "../lib/competitors";
+import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { loadVault, equipFrame, emblemUrl, type Vault, type VaultBadge } from "../lib/vault";
 import { useSeasonLabel } from "../lib/season";
 
@@ -24,13 +24,11 @@ export default function Achievements() {
   const [vault, setVault] = useState<Vault | null>(null);
   const [selBadge, setSelBadge] = useState<VaultBadge | null>(null);
 
+  const { activeId } = useActiveCompetitor();
   useEffect(() => {
-    (async () => {
-      const id = (await myCompetitors())[0]?.id ?? null;
-      setMe(id);
-      if (id) setVault(await loadVault(id)); // reveal-only: the ceremony marks badges seen, not opening Honors
-    })();
-  }, []);
+    setMe(activeId);
+    if (activeId) loadVault(activeId).then(setVault); // reveal-only: the ceremony marks badges seen, not opening Honors
+  }, [activeId]);
 
   async function equip(b: VaultBadge) {
     if (!me || !b.earned) return;

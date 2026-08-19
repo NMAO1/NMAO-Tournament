@@ -7,6 +7,7 @@ import { neutrals, hues, metalStops, spectrumStops, status } from "@nmao/design-
 import { supabase } from "../lib/supabase";
 import { uploadEntryVideo, PickedVideo } from "../lib/upload";
 import { myCompetitors } from "../lib/competitors";
+import { getActiveCompetitorId, setActiveCompetitorId } from "../lib/activeCompetitor";
 import * as WebBrowser from "expo-web-browser";
 
 // Export competition videos at 1080p H.264 (flip to H264_1280x720 for smaller
@@ -49,6 +50,7 @@ export default function Compete() {
       const rows = await myCompetitors();
       setComps(rows);
       if (rows.length === 1) setCompetitorId(rows[0].id);
+      else if (getActiveCompetitorId()) setCompetitorId(getActiveCompetitorId()); // pre-select the child you're viewing
       loadPending(rows.map((r) => r.id));
     })();
   }, []);
@@ -212,7 +214,7 @@ export default function Compete() {
         <Section label="Competitor">
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {comps.map((c) => (
-              <Chip key={c.id} active={competitorId === c.id} onPress={() => setCompetitorId(c.id)} label={`${c.first_name} ${c.last_name}`} />
+              <Chip key={c.id} active={competitorId === c.id} onPress={() => { setCompetitorId(c.id); setActiveCompetitorId(c.id); }} label={`${c.first_name} ${c.last_name}`} />
             ))}
           </View>
         </Section>

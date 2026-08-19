@@ -37,6 +37,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   const [sponsor, setSponsor] = useState<Sponsor | null>(null);
   const [count, setCount] = useState(10);
   const [urls, setUrls] = useState<Urls>({ challenger: null, opponent: null });
+  const [urlsLoaded, setUrlsLoaded] = useState(false);
   const [watched, setWatched] = useState(0);
   const [active, setActive] = useState<Choice | null>(null);
   const [voting, setVoting] = useState(false);
@@ -53,7 +54,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   const opPlayer = useVideoPlayer(null, (p) => { p.loop = true; p.muted = true; });
   useEffect(() => { if (urls.challenger) chPlayer.replace(urls.challenger); }, [urls.challenger, chPlayer]);
   useEffect(() => { if (urls.opponent) opPlayer.replace(urls.opponent); }, [urls.opponent, opPlayer]);
-  useEffect(() => { playbackUrls(duelId).then(setUrls); }, [duelId]);
+  useEffect(() => { playbackUrls(duelId).then((u) => { setUrls(u); setUrlsLoaded(true); }); }, [duelId]);
 
   // once we're in the ring, autoplay BOTH forms together the moment each signed
   // URL is present — no tap needed; they play in parallel for the comparison.
@@ -88,18 +89,20 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
     return () => clearTimeout(t);
   }, [face, phase, count, sponsor]);
 
-  // accumulate watch time while the forms roll — both play at once, so the gate
-  // fills whenever a real video is rolling (or, if neither side has a signed URL
-  // yet, it accrues off the posters so the duel stays votable).
+  // accumulate watch time only while a REAL video is actually rolling — never
+  // blind-accrue when both sides are missing a signed URL, or a voter could
+  // unlock the vote on a duel they can't see. If neither side has video, the
+  // gate never fills and voting stays locked (see the "unavailable" notice).
   useEffect(() => {
     if (phase !== "ring") return;
     const t = setInterval(() => {
-      const anyPlaying = chPlayer.playing || opPlayer.playing;
-      const noVideo = !urls.challenger && !urls.opponent;
-      if (anyPlaying || noVideo) setWatched((w) => Math.min(WATCH_GOAL, w + 0.1));
+      if (chPlayer.playing || opPlayer.playing) setWatched((w) => Math.min(WATCH_GOAL, w + 0.1));
     }, 100);
     return () => clearInterval(t);
-  }, [phase, urls, chPlayer, opPlayer]);
+  }, [phase, chPlayer, opPlayer]);
+
+  // both signed URLs failed to load → nothing to watch; voting must stay disabled.
+  const noVideos = urlsLoaded && !urls.challenger && !urls.opponent;
 
   // both forms are already rolling; tapping a side brings its AUDIO forward and
   // mutes the other (tap the focused side again → both mute). Playback never stops.
@@ -114,7 +117,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
     }
   }
 
-  const unlocked = watched >= WATCH_GOAL;
+  const unlocked = watched >= WATCH_GOAL && !noVideos;
 
   async function vote(choice: Choice) {
     if (!unlocked || voting || voted) return;
@@ -193,9 +196,11 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>{Math.floor(watched)}s / {WATCH_GOAL}s</Text>
       </View>
 
-      {/* both-play hint */}
+      {/* both-play hint — or, if playback failed for both sides, an unavailable notice */}
       <View pointerEvents="none" style={{ position: "absolute", top: 84, left: 0, right: 0, alignItems: "center" }}>
-        <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>Both forms play together · tap one to hear its audio</Text>
+        {noVideos
+          ? <Text style={{ color: hues.ruby.hi, fontSize: 11, fontWeight: "700", textShadowColor: "#000", textShadowRadius: 6 }}>Videos unavailable — voting is disabled for this duel</Text>
+          : <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>Both forms play together · tap one to hear its audio</Text>}
       </View>
 
       {/* hidden-tally note overlay (bottom centre, between the two vote CTAs) */}

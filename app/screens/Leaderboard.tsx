@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal } fr
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, type MedalType } from "@nmao/design-tokens";
 import { Medal } from "../components/Medal";
-import { myCompetitors } from "../lib/competitors";
+import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { standings, voterBoard, tournamentBoard, schoolBoard, bracketOptions, eventOptions, rankOptions, type Scope, type Division, type TScope, type LbRow, type VoterRow, type TourRow, type SchoolRow, type BracketOption } from "../lib/leaderboard";
 
 type Board = "tournament" | "duelists" | "voters" | "schools";
@@ -56,7 +56,8 @@ export default function Leaderboard() {
   const [selD, setSelD] = useState<LbRow | null>(null);
   const [selT, setSelT] = useState<TourRow | null>(null);
 
-  useEffect(() => { myCompetitors().then((c) => setMe(c[0]?.id ?? null)); }, []);
+  const { activeId } = useActiveCompetitor();
+  useEffect(() => { setMe(activeId); }, [activeId]);
   useEffect(() => { bracketOptions().then(setBrackets); }, []);
   useEffect(() => { eventOptions().then(setEvents); }, []);
   useEffect(() => { rankOptions().then((rs) => setDivs([{ key: "all", label: "All", hue: hues.gold.base }, ...rs.map((r, i) => ({ key: r.code, label: r.label, hue: DIV_HUES[i % DIV_HUES.length] }))])); }, []);

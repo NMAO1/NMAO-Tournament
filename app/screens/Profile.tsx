@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Swi
 import { neutrals, hues } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { supabase } from "../lib/supabase";
-import { myCompetitors } from "../lib/competitors";
+import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { loadProfile, loadNotifPrefs, setNotifPref, type ProfileInfo } from "../lib/profile";
 import Journal from "./Journal";
 import Home from "./Home";
@@ -30,7 +30,8 @@ export default function Profile() {
   const [info, setInfo] = useState<ProfileInfo | null>(null);
   const [sub, setSub] = useState<Sub>(null);
 
-  useEffect(() => { (async () => { const id = (await myCompetitors())[0]?.id ?? null; setMe(id); if (id) setInfo(await loadProfile(id)); })(); }, []);
+  const { activeId } = useActiveCompetitor();
+  useEffect(() => { setMe(activeId); if (activeId) loadProfile(activeId).then(setInfo); }, [activeId]);
 
   if (sub === "journal" && me) return <Journal competitorId={me} onClose={() => setSub(null)} />;
   if (sub === "home") return <Home onCompete={() => setSub(null)} />;
