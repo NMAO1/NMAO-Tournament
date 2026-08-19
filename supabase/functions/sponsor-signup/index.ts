@@ -37,8 +37,12 @@ Deno.serve(async (req) => {
 
     const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
 
-    const { data: tier } = await svc.from("sponsor_tiers").select("id, stripe_price_id, name").eq("id", b.tier_id).maybeSingle();
-    if (!tier?.stripe_price_id) return json({ ok: false, error: "That plan isn't available for checkout yet." }, 400);
+    const { data: tier } = await svc.from("sponsor_tiers").select("id, stripe_price_id, name, monthly_price_cents").eq("id", b.tier_id).maybeSingle();
+    if (!tier || (!tier.stripe_price_id && !(Number(tier.monthly_price_cents) > 0))) return json({ ok: false, error: "That plan isn't priced yet." }, 400);
+    // Inline dynamic price (from the MC dollar amount) unless a fixed Stripe price id is set.
+    const lineItem: any = tier.stripe_price_id
+      ? { price: tier.stripe_price_id, quantity: 1 }
+      : { quantity: 1, price_data: { currency: "usd", unit_amount: Number(tier.monthly_price_cents), recurring: { interval: "month" }, product_data: { name: `NMAO ${tier.name} Sponsorship` } } };
 
     // pending sponsor
     const { data: sp, error: se } = await svc.from("sponsors").insert({
@@ -70,7 +74,7 @@ Deno.serve(async (req) => {
     const meta = { kind: "sponsor", sponsor_id: sponsorId, tier_id: String(b.tier_id) };
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
-      line_items: [{ price: tier.stripe_price_id, quantity: 1 }],
+      line_items: [lineItem],
       customer_email: b.contact_email,
       subscription_data: { metadata: meta },
       metadata: meta,
