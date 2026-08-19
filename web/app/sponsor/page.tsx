@@ -78,6 +78,7 @@ export default function SponsorSignup() {
   const price = (c: number) => c > 0 ? `$${(c / 100).toFixed(0)}/mo` : "—";
   const input: React.CSSProperties = { width: "100%", padding: 11, borderRadius: 10, border: `1px solid ${neutrals.border}`, background: "#0e0e11", color: neutrals.text, fontSize: 15, marginBottom: 4 };
   const lbl: React.CSSProperties = { fontSize: 12, color: neutrals.muted, margin: "12px 0 4px", display: "block" };
+  const fileBox: React.CSSProperties = { width: "100%", color: neutrals.muted, fontSize: 13, border: `1px dashed ${neutrals.border}`, borderRadius: 10, padding: "12px", background: "#0e0e11", marginTop: 2, cursor: "pointer" };
 
   return (
     <main style={{ minHeight: "100vh", background: neutrals.bg, color: neutrals.text, fontFamily: "Inter, system-ui, sans-serif", padding: "40px 20px" }}>
@@ -100,10 +101,10 @@ export default function SponsorSignup() {
           <div style={{ flex: 1 }}><label style={lbl}>Website</label><input style={input} value={f.website} onChange={set("website")} placeholder="https://" /></div>
         </div>
         <label style={lbl}>Logo {logoUrl ? "✓ uploaded" : ""}</label>
-        <input type="file" accept="image/*" onChange={pickLogo} disabled={busy === "logo"} style={{ color: neutrals.muted, fontSize: 13 }} />
+        <input type="file" accept="image/*" onChange={pickLogo} disabled={busy === "logo"} style={fileBox} />
 
         <Section title="Your ad (optional — 10–15s video)" />
-        <input type="file" accept="video/*" onChange={pickVideo} disabled={busy === "video"} style={{ color: neutrals.muted, fontSize: 13 }} />
+        <input type="file" accept="video/*" onChange={pickVideo} disabled={busy === "video"} style={fileBox} />
         {videoUrl ? <p style={{ color: st.success, fontSize: 12, marginTop: 6 }}>✓ Video uploaded</p> : null}
         <label style={lbl}>“Learn more” link</label>
         <input style={input} value={f.ad_click_url} onChange={set("ad_click_url")} placeholder="https://sponsor.com/nmao (defaults to your website)" />
@@ -116,7 +117,7 @@ export default function SponsorSignup() {
               <div style={{ flex: 1 }}><label style={lbl}>Price</label><input style={input} value={p.price_display} onChange={(e) => setProducts((ps) => ps.map((x, ix) => ix === i ? { ...x, price_display: e.target.value } : x))} placeholder="$29.99" /></div>
             </div>
             <label style={lbl}>Product URL</label><input style={input} value={p.product_url} onChange={(e) => setProducts((ps) => ps.map((x, ix) => ix === i ? { ...x, product_url: e.target.value } : x))} placeholder="https://" />
-            <label style={lbl}>Image {p.image_url ? "✓" : ""}</label><input type="file" accept="image/*" onChange={(e) => pickProductImg(i, e)} disabled={busy === `p${i}`} style={{ color: neutrals.muted, fontSize: 13 }} />
+            <label style={lbl}>Image {p.image_url ? "✓" : ""}</label><input type="file" accept="image/*" onChange={(e) => pickProductImg(i, e)} disabled={busy === `p${i}`} style={fileBox} />
           </div>
         ))}
         <button onClick={() => setProducts((ps) => [...ps, { name: "", price_display: "", product_url: "", image_url: null }])} style={{ background: "none", border: `1px dashed ${neutrals.border}`, color: neutrals.muted, borderRadius: 10, padding: "8px 14px", cursor: "pointer", fontSize: 13 }}>+ Add a product</button>

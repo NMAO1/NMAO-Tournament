@@ -129,6 +129,15 @@
           <tbody id="tiersBody"></tbody></table>
       </div>
 
+      <div class="card">
+        <div class="hd"><h2><span class="rail"></span>Offerings catalog</h2>
+          <button class="btn gold sm" data-act="addOfferingToggle">+ Add offering</button></div>
+        <div style="padding:0 18px;color:var(--muted);font-size:12px">Your à-la-carte menu — edit prices &amp; thumbnails here (no code needed). "Live" means the offering's in-app surface is built and it can be sold.</div>
+        <div id="addOfferingForm" class="frm hide"></div>
+        <table><thead><tr><th>Offering</th><th style="width:100px">Thumb</th><th style="width:96px">Category</th><th style="width:110px">Price</th><th style="width:96px">Billing</th><th style="width:60px">Live</th><th style="width:150px"></th></tr></thead>
+          <tbody id="catalogBody"></tbody></table>
+      </div>
+
       <div class="foot-note">Staff-gated. Ads &amp; products go live only after a sponsor is <b>active</b>. Tournament suite — separate product from the membership platform.</div>
     </div>
 
@@ -191,17 +200,17 @@ async function afterLogin(){
 }
 
 /* ---------- state + load ---------- */
-let TIERS=[], cur=null, awardsOpen=null;
+let TIERS=[], CATALOG=[], cur=null, awardsOpen=null;
 function tierName(id){ const t=TIERS.find(x=>x.id===id); return t?t.name:'—'; }
 function tierOptions(sel){ return `<option value="">— tier —</option>`+TIERS.map(t=>`<option value="${t.id}" ${t.id===sel?'selected':''}>${esc(t.name)}</option>`).join(''); }
 const n = v => Number(v||0).toLocaleString();
 
 async function load(){
   try{
-    const [sponsors, tiers, analytics, house] = await Promise.all([
-      rpc('admin_list_sponsors'), rpc('admin_list_tiers'), rpc('admin_sponsor_analytics'), rpc('admin_house_ads') ]);
-    TIERS = tiers||[];
-    renderSponsors(sponsors||[]); renderAnalytics(analytics||[]); renderHouse(house||[]); renderHouseForm(); renderTiers();
+    const [sponsors, tiers, analytics, house, catalog] = await Promise.all([
+      rpc('admin_list_sponsors'), rpc('admin_list_tiers'), rpc('admin_sponsor_analytics'), rpc('admin_house_ads'), rpc('admin_list_offerings') ]);
+    TIERS = tiers||[]; CATALOG = catalog||[];
+    renderSponsors(sponsors||[]); renderAnalytics(analytics||[]); renderHouse(house||[]); renderHouseForm(); renderTiers(); renderCatalog();
   }catch(e){ toast(e.message||'Could not load.','err'); }
 }
 
@@ -252,6 +261,31 @@ function renderTiers(){
     <td><input id="tp_sid_${t.id}" value="${esc(t.stripe_price_id||'')}" placeholder="price_..." style="width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:6px 8px;font-size:12px;font-family:ui-monospace,monospace"/></td>
     <td class="rowbtns"><button class="btn gold sm" data-act="saveTier" data-id="${t.id}">Save</button></td>
   </tr>`).join('');
+}
+function renderCatalog(){
+  const b=$('catalogBody'); if(!b) return;
+  b.innerHTML = (CATALOG||[]).map(o=>`<tr>
+    <td class="name"><b>${esc(o.name)}</b><small>${esc(o.code)}</small></td>
+    <td>${o.thumbnail_url?`<img src="${esc(o.thumbnail_url)}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;vertical-align:middle"/>`:''}<input type="file" accept="image/*" id="of_thumb_${o.code}" style="display:block;font-size:9px;width:92px;margin-top:2px;color:var(--muted2)"/></td>
+    <td class="muted" style="font-size:12px">${esc(o.category)}</td>
+    <td><input class="rate" id="of_price_${o.code}" type="number" min="0" value="${o.default_price_cents?(o.default_price_cents/100):''}" placeholder="0"/></td>
+    <td><select id="of_billing_${o.code}" style="background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:5px 7px;font-size:12px">
+      <option value="monthly" ${o.billing==='monthly'?'selected':''}>monthly</option>
+      <option value="once" ${o.billing==='once'?'selected':''}>one-time</option></select></td>
+    <td>${o.live?'<span class="pill active">live</span>':'<span class="pill lapsed">off</span>'}</td>
+    <td class="rowbtns">
+      <button class="btn sm" data-act="toggleOfferingLive" data-code="${esc(o.code)}" data-on="${o.live?1:0}">${o.live?'Hide':'Go live'}</button>
+      <button class="btn gold sm" data-act="saveOffering" data-code="${esc(o.code)}">Save</button>
+    </td></tr>`).join('');
+}
+function renderAddOfferingForm(){
+  $('addOfferingForm').innerHTML = `
+    <div><label>Name</label><input id="no_name" placeholder="Sideline banner"/></div>
+    <div><label>Category</label><select id="no_cat"><option>placement</option><option>commerce</option><option>competition</option><option>audience</option><option>reporting</option></select></div>
+    <div><label>Monthly price (USD)</label><input id="no_price" type="number" placeholder="49"/></div>
+    <div><label>Billing</label><select id="no_billing"><option value="monthly">monthly</option><option value="once">one-time</option></select></div>
+    <div class="full"><label>Description</label><input id="no_desc" placeholder="Short description"/></div>
+    <div class="actions-row"><button class="btn sm" data-act="addOfferingToggle">Cancel</button><button class="btn gold sm" data-act="saveNewOffering">Create offering</button></div>`;
 }
 function renderHouseForm(){
   $('houseForm').innerHTML = `
@@ -320,6 +354,24 @@ function renderDetail(s, ads, products, ents, frame, titles, events, prizes, awa
         <td>${o.has?'<span class="pill active">on</span>':'<span class="pill lapsed">off</span>'}</td>
         <td class="rowbtns"><button class="btn sm" data-act="toggleEnt" data-code="${esc(o.code)}" data-on="${o.has?1:0}">${o.has?'Remove':'Add'}</button></td>
       </tr>`).join('')}</tbody></table>
+    </div>
+
+    <div class="subcard">
+      <div class="hd"><h3>◆ Build an order &nbsp;<span class="muted2">à-la-carte + bundle → payment link</span></h3></div>
+      <div style="padding:12px 16px">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Bundle (optional)</div>
+        <select id="ord_tier" class="cartchange" style="width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px;font-size:13px">
+          <option value="">— no bundle —</option>${(TIERS||[]).map(t=>`<option value="${t.id}">${esc(t.name)} — $${(t.monthly_price_cents/100)}/mo</option>`).join('')}</select>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 5px">À-la-carte offerings</div>
+        ${(CATALOG||[]).filter(o=>o.default_price_cents>0 && o.billing==='monthly').map(o=>`<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #1c1c20;cursor:pointer">
+          <span style="font-size:13px"><input type="checkbox" class="cartitem cartchange" data-code="${esc(o.code)}" data-cents="${o.default_price_cents}" style="margin-right:8px;vertical-align:middle"/>${esc(o.name)}${o.live?'':' <span class="muted2" style="font-size:10px">(surface not built yet)</span>'}</span>
+          <span class="muted" style="font-size:13px">$${(o.default_price_cents/100)}/mo</span></label>`).join('')}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px">
+          <span style="font-weight:700;font-size:15px">Total: <span id="ord_total">$0</span>/mo</span>
+          <button class="btn gold sm" data-act="generateOrder">Generate payment link</button>
+        </div>
+        <div id="ord_link" style="margin-top:10px"></div>
+      </div>
     </div>
 
     <div class="subcard">
@@ -542,9 +594,42 @@ document.addEventListener('click', async (e)=>{
 
     if(act==='saveTier'){ const id=btn.dataset.id; const dollars=$('tp_price_'+id).value; const sid=$('tp_sid_'+id).value.trim();
       await rpc('admin_set_tier_pricing',{ p_tier:id, p_price_cents: dollars!=='' ? Math.round(Number(dollars)*100) : null, p_stripe_price_id: sid }); toast('Tier saved.','ok'); return load(); }
+
+    if(act==='addOfferingToggle'){ const f=$('addOfferingForm'); if(f.classList.contains('hide')){ renderAddOfferingForm(); f.classList.remove('hide'); } else { f.classList.add('hide'); f.innerHTML=''; } return; }
+    if(act==='saveOffering'){ const code=btn.dataset.code; const dv=$('of_price_'+code).value;
+      const p={ code, default_price_cents: dv!=='' ? Math.round(Number(dv)*100) : 0, billing: $('of_billing_'+code).value };
+      const tu=await uploadFile('sponsor-assets',$('of_thumb_'+code),'offering-thumbs'); if(tu) p.thumbnail_url=tu;
+      await rpc('admin_upsert_offering',{ p }); toast('Offering saved.','ok'); return load(); }
+    if(act==='toggleOfferingLive'){ await rpc('admin_upsert_offering',{ p:{ code:btn.dataset.code, live: btn.dataset.on!=='1' } }); return load(); }
+    if(act==='saveNewOffering'){ if(!val('no_name')){ toast('Name required.','err'); btn.disabled=false; return; }
+      await rpc('admin_upsert_offering',{ p:{ name:val('no_name'), category:$('no_cat').value, default_price_cents: val('no_price')?Math.round(Number(val('no_price'))*100):0, billing:$('no_billing').value, description:val('no_desc'), live:false } });
+      toast('Offering created.','ok'); return load(); }
+
+    if(act==='generateOrder'){
+      const tierSel=$('ord_tier'); const tier_id = tierSel && tierSel.value ? tierSel.value : null;
+      const codes=[...document.querySelectorAll('.cartitem:checked')].map(c=>c.dataset.code);
+      if(!tier_id && !codes.length){ toast('Pick a bundle or at least one item.','err'); btn.disabled=false; return; }
+      const { data:{ session } } = await sb.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/sponsor-checkout`, { method:'POST', headers:{ 'Content-Type':'application/json', apikey:ANON, Authorization:`Bearer ${session?.access_token}` }, body: JSON.stringify({ sponsor_id:cur, tier_id, offering_codes:codes, origin: location.origin }) });
+      const j = await res.json().catch(()=>({}));
+      if(!j.ok){ toast(j.error||'Could not create checkout.','err'); btn.disabled=false; return; }
+      const box=$('ord_link'); box.innerHTML = `<div class="link">${esc(j.url)}</div><div style="text-align:right;margin-top:6px"><button class="btn sm" id="ordCopy">Copy link</button> <a class="btn sm" href="${esc(j.url)}" target="_blank" rel="noopener">Open</a></div>`;
+      box.querySelector('#ordCopy').onclick=()=>{ navigator.clipboard.writeText(j.url); toast('Payment link copied — send it to the sponsor.','ok'); };
+      toast('Payment link ready.','ok'); btn.disabled=false; return;
+    }
   }catch(err){ toast(err.message||'Action failed.','err'); }
   finally{ btn.disabled=false; }
 });
+
+// live order-total as the cart changes
+document.addEventListener('change', (e)=>{ if(e.target.closest && e.target.closest('.cartchange')) updateOrderTotal(); });
+function updateOrderTotal(){
+  const el=$('ord_total'); if(!el) return;
+  let cents=0;
+  const tierSel=$('ord_tier'); if(tierSel && tierSel.value){ const t=(TIERS||[]).find(x=>x.id===tierSel.value); if(t) cents+=t.monthly_price_cents; }
+  document.querySelectorAll('.cartitem:checked').forEach(c=> cents+=Number(c.dataset.cents||0));
+  el.textContent = '$'+(cents/100).toFixed(0);
+}
 
 (async()=>{ const { data:{ session } } = await sb.auth.getSession(); if(session) await afterLogin(); })();
 </script>

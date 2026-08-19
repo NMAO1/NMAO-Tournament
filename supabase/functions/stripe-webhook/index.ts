@@ -81,7 +81,10 @@ Deno.serve(async (req) => {
         if (s.subscription) sp.stripe_subscription_id = s.subscription;
         if (s.customer) sp.stripe_customer_id = s.customer;
         await svc.from("sponsors").update(sp).eq("id", s.metadata.sponsor_id);
-        await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id });
+        // grant what was actually purchased: a bundle tier and/or à-la-carte offerings
+        if (s.metadata.tier_id) await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id });
+        if (s.metadata.offerings) await svc.rpc("grant_offering_entitlements", { p_sponsor: s.metadata.sponsor_id, p_codes: String(s.metadata.offerings).split(",").filter(Boolean) });
+        if (!s.metadata.tier_id && !s.metadata.offerings) await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id });
       }
     } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       const sub = event.data.object;
