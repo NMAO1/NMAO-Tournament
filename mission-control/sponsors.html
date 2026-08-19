@@ -251,10 +251,10 @@ function renderHouseForm(){
 async function showDetail(id){
   cur=id;
   try{
-    const [sponsors, ads, products, ents, frames] = await Promise.all([
-      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}), rpc('admin_sponsor_entitlements',{p_sponsor:id}), rpc('admin_sponsor_frame',{p_sponsor:id}) ]);
+    const [sponsors, ads, products, ents, frames, titles, events] = await Promise.all([
+      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}), rpc('admin_sponsor_entitlements',{p_sponsor:id}), rpc('admin_sponsor_frame',{p_sponsor:id}), rpc('admin_list_titles',{p_sponsor:id}), rpc('duel_events').catch(()=>[]) ]);
     const s=(sponsors||[]).find(x=>x.id===id); if(!s){ toast('Sponsor not found.','err'); return backToList(); }
-    renderDetail(s, ads||[], products||[], ents||[], (frames||[])[0]||null);
+    renderDetail(s, ads||[], products||[], ents||[], (frames||[])[0]||null, titles||[], events||[]);
     $('listView').classList.add('hide'); $('detailView').classList.remove('hide'); window.scrollTo(0,0);
   }catch(e){ toast(e.message||'Could not open sponsor.','err'); }
 }
@@ -268,7 +268,7 @@ function statusButtons(s){
   return b.join(' ');
 }
 
-function renderDetail(s, ads, products, ents, frame){
+function renderDetail(s, ads, products, ents, frame, titles, events){
   $('detailView').innerHTML = `
   <div class="card">
     <div class="hd"><h2><span class="rail"></span>${esc(s.company_name)} <span class="pill ${esc(s.status)}">${esc(s.status)}</span></h2>
@@ -362,6 +362,21 @@ function renderDetail(s, ads, products, ents, frame){
         <div class="actions-row"><button class="btn gold sm" data-act="saveFrame">${frame?'Update frame':'Create frame'}</button></div>
       </div>
     </div>
+
+    <div class="subcard">
+      <div class="hd"><h3>◆ Title sponsorship &nbsp;<span class="muted2">"presented by ${esc(s.company_name)}"</span></h3></div>
+      <table><thead><tr><th>Presenting</th><th style="width:70px">Active</th><th style="width:96px"></th></tr></thead>
+      <tbody>${(titles||[]).length?(titles||[]).map(t=>`<tr>
+        <td>${esc(t.label)}</td>
+        <td>${t.active?'<span class="pill active">on</span>':'<span class="pill lapsed">off</span>'}</td>
+        <td class="rowbtns"><button class="btn danger sm" data-act="removeTitle" data-scope="${esc(t.scope)}" data-key="${esc(t.scope_key)}">Remove</button></td>
+      </tr>`).join(''):`<tr><td colspan="3" class="empty">Not presenting anything yet.</td></tr>`}</tbody></table>
+      <div class="frm">
+        <div class="full"><button class="btn gold sm" data-act="presentSeason">Present the current season</button></div>
+        <div><label>…or an event</label><select id="title_event"><option value="">— pick an event —</option>${(events||[]).map(e=>`<option value="${esc(e.code)}">${esc(e.name)}</option>`).join('')}</select></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn sm" data-act="sponsorEvent">Present this event</button></div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -439,6 +454,11 @@ document.addEventListener('click', async (e)=>{
       const iu=await uploadFile('sponsor-assets',$('fr_img'),'frame-products'); if(iu) p.image_url=iu;
       await rpc('admin_upsert_sponsor_frame',{ p }); toast('Frame saved — competitors can now equip it.','ok'); return showDetail(cur);
     }
+
+    if(act==='presentSeason'){ await rpc('admin_set_title',{ p_sponsor:cur, p_scope:'season', p_key:'', p_active:true }); toast('Now presenting the current season.','ok'); return showDetail(cur); }
+    if(act==='sponsorEvent'){ const ev=val('title_event'); if(!ev){ toast('Pick an event first.','err'); btn.disabled=false; return; }
+      await rpc('admin_set_title',{ p_sponsor:cur, p_scope:'event', p_key:ev, p_active:true }); toast('Now presenting that event.','ok'); return showDetail(cur); }
+    if(act==='removeTitle'){ await rpc('admin_set_title',{ p_sponsor:cur, p_scope:btn.dataset.scope, p_key:btn.dataset.key, p_active:false }); toast('Removed.','ok'); return showDetail(cur); }
 
     if(act==='saveHouse'){
       const video=await uploadFile('sponsor-videos',$('h_video'),'house');

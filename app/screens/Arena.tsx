@@ -8,6 +8,7 @@ import { emblemUrl } from "../lib/badges";
 import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor, type FrameAnim } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
 import { sponsorClick, sponsorAdWatch } from "../lib/store";
+import { useTitleSponsor } from "../lib/title";
 
 // A worn frame/crest (equipped badge) — what the crest popover reveals.
 type Crest = NonNullable<Card["frame"]>;
@@ -427,6 +428,7 @@ function closesIn(face: FaceOff): string {
 // VS pops (spring overshoot) in the centre.
 function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count: number; onEnter: () => void; onExit: () => void }) {
   const season = useSeasonLabel();
+  const title = useTitleSponsor(face.type);
   const w = Dimensions.get("window").width;
   const [crest, setCrest] = useState<CrestAnchor | null>(null);
   const slideL = useRef(new Animated.Value(-w)).current;
@@ -452,6 +454,12 @@ function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count:
         <View style={{ alignItems: "center" }}>
           <Text style={{ color: hues.gold.hi, fontSize: 13, letterSpacing: 4, fontWeight: "800" }}>⚔  TALE OF THE PATH</Text>
           <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginTop: 2 }}>{season ? `${evName(face.type)} · ${season}` : evName(face.type)}</Text>
+          {title ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6, backgroundColor: "rgba(233,193,90,0.12)", borderWidth: 1, borderColor: "rgba(233,193,90,0.4)", paddingVertical: 3, paddingHorizontal: 10, borderRadius: 99 }}>
+              {title.logoUrl ? <Image source={{ uri: title.logoUrl }} style={{ width: 15, height: 15, borderRadius: 8 }} /> : null}
+              <Text style={{ color: hues.gold.hi, fontSize: 10, fontWeight: "800", letterSpacing: 0.6 }}>PRESENTED BY {title.name.toUpperCase()}</Text>
+            </View>
+          ) : null}
         </View>
         <TouchableOpacity onPress={onEnter}><Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 1 }}>Skip ›</Text></TouchableOpacity>
       </View>
