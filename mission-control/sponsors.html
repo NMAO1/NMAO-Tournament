@@ -251,10 +251,10 @@ function renderHouseForm(){
 async function showDetail(id){
   cur=id;
   try{
-    const [sponsors, ads, products, ents] = await Promise.all([
-      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}), rpc('admin_sponsor_entitlements',{p_sponsor:id}) ]);
+    const [sponsors, ads, products, ents, frames] = await Promise.all([
+      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}), rpc('admin_sponsor_entitlements',{p_sponsor:id}), rpc('admin_sponsor_frame',{p_sponsor:id}) ]);
     const s=(sponsors||[]).find(x=>x.id===id); if(!s){ toast('Sponsor not found.','err'); return backToList(); }
-    renderDetail(s, ads||[], products||[], ents||[]);
+    renderDetail(s, ads||[], products||[], ents||[], (frames||[])[0]||null);
     $('listView').classList.add('hide'); $('detailView').classList.remove('hide'); window.scrollTo(0,0);
   }catch(e){ toast(e.message||'Could not open sponsor.','err'); }
 }
@@ -268,7 +268,7 @@ function statusButtons(s){
   return b.join(' ');
 }
 
-function renderDetail(s, ads, products, ents){
+function renderDetail(s, ads, products, ents, frame){
   $('detailView').innerHTML = `
   <div class="card">
     <div class="hd"><h2><span class="rail"></span>${esc(s.company_name)} <span class="pill ${esc(s.status)}">${esc(s.status)}</span></h2>
@@ -346,6 +346,22 @@ function renderDetail(s, ads, products, ents){
         <div class="actions-row"><button class="btn gold sm" data-act="saveProduct">Add product</button></div>
       </div>
     </div>
+
+    <div class="subcard">
+      <div class="hd" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <h3>◆ Custom branded frame ${frame?'<span class="pill active">created</span>':'<span class="pill lapsed">none yet</span>'}</h3>
+        ${frame?`<span class="brandchip" style="background:${esc(frame.accent_color)};display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px"><span style="width:14px;height:14px;border-radius:50%;background:#0d0a06;display:inline-block"></span><small style="font-size:10px;font-weight:800;color:#141210">${esc(frame.accent_color)}</small></span>`:''}
+      </div>
+      <div class="frm">
+        <div><label>Accent color (hex)</label><input id="fr_accent" value="${frame?esc(frame.accent_color):'#E9C15A'}" placeholder="#E9C15A"/></div>
+        <div><label>"Presented by" label</label><input id="fr_label" value="${frame?esc(frame.label||''):''}" placeholder="${esc(s.company_name)}"/></div>
+        <div><label>Border animation</label><select id="fr_anim">${['none','pulse','shimmer','sheen'].map(a=>`<option value="${a}" ${frame&&frame.animation===a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div><label>Active</label><select id="fr_active"><option value="true" ${!frame||frame.active?'selected':''}>Yes</option><option value="false" ${frame&&!frame.active?'selected':''}>No</option></select></div>
+        <div><label>Logo image ${frame&&frame.logo_url?'(uploaded — choose to replace)':''}</label><input id="fr_logo" type="file" accept="image/*"/></div>
+        <div><label>Product image ${frame&&frame.image_url?'(uploaded — choose to replace)':''}</label><input id="fr_img" type="file" accept="image/*"/></div>
+        <div class="actions-row"><button class="btn gold sm" data-act="saveFrame">${frame?'Update frame':'Create frame'}</button></div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -416,6 +432,13 @@ document.addEventListener('click', async (e)=>{
       toast('Product added.','ok'); return showDetail(cur);
     }
     if(act==='toggleProduct'){ await rpc('admin_upsert_sponsor_product',{ p:{ id:btn.dataset.id, active: btn.dataset.on==='1' ? false : true } }); return showDetail(cur); }
+
+    if(act==='saveFrame'){
+      const p={ sponsor_id:cur, accent_color:val('fr_accent')||'#E9C15A', label:val('fr_label'), animation:val('fr_anim')||'none', active: val('fr_active')!=='false' };
+      const lu=await uploadFile('sponsor-assets',$('fr_logo'),'frame-logos'); if(lu) p.logo_url=lu;
+      const iu=await uploadFile('sponsor-assets',$('fr_img'),'frame-products'); if(iu) p.image_url=iu;
+      await rpc('admin_upsert_sponsor_frame',{ p }); toast('Frame saved — competitors can now equip it.','ok'); return showDetail(cur);
+    }
 
     if(act==='saveHouse'){
       const video=await uploadFile('sponsor-videos',$('h_video'),'house');

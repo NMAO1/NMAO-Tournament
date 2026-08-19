@@ -106,21 +106,29 @@ export async function myActiveDuels(competitorId: string): Promise<ActiveDuel[]>
 }
 
 // ---- face-off (duel_faceoff) — both Tale-of-the-Path cards, no tally ----
+// A sponsor's branded frame: colors + logo + label, plus an optional product
+// image and an animation style for the border (none | shimmer | pulse | sheen).
+export type FrameAnim = "none" | "shimmer" | "pulse" | "sheen";
+export type SponsorFrame = { id: string; name: string; logoUrl: string | null; accentColor: string; label: string; imageUrl: string | null; animation: FrameAnim };
+function asAnim(a: unknown): FrameAnim { return a === "shimmer" || a === "pulse" || a === "sheen" ? a : "none"; }
 export type Card = {
   competitorId: string; name: string; firstName: string; lastName: string;
   school: string | null; rank: string | null; ageBracket: string | null; photo: string | null;
   rating: number; duelWins: number; winStreak: number; bestStreak: number;
   frame: { code: string; name: string; rarity: Rarity; description: string | null } | null;
+  sponsorFrame: SponsorFrame | null;
 };
 export type FaceOff = { duelId: string; type: DuelType; status: string; challenger: Card; opponent: Card };
 function toCard(j: Record<string, unknown>): Card {
   const f = j.frame as Record<string, unknown> | null;
+  const sf = j.sponsor_frame as Record<string, unknown> | null;
   return {
     competitorId: String(j.competitor_id), name: String(j.name), firstName: String(j.first_name), lastName: String(j.last_name),
     school: (j.school as string) ?? null, rank: (j.rank as string) ?? null, ageBracket: (j.age_bracket as string) ?? null,
     photo: (j.photo as string) ?? null, rating: Number(j.rating ?? 1200), duelWins: Number(j.duel_wins ?? 0),
     winStreak: Number(j.win_streak ?? 0), bestStreak: Number(j.best_streak ?? 0),
     frame: f ? { code: String(f.code), name: String(f.name), rarity: asRarity(f.rarity as string), description: (f.description as string) ?? null } : null,
+    sponsorFrame: sf ? { id: String(sf.id), name: String(sf.name), logoUrl: (sf.logo_url as string) ?? null, accentColor: String(sf.accent_color ?? "#E9C15A"), label: String(sf.label ?? ""), imageUrl: (sf.image_url as string) ?? null, animation: asAnim(sf.animation) } : null,
   };
 }
 export async function faceOff(duelId: string): Promise<FaceOff | null> {

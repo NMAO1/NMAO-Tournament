@@ -5,7 +5,7 @@ import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
-import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor } from "../lib/duel";
+import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor, type FrameAnim } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
 import { sponsorClick, sponsorAdWatch } from "../lib/store";
 
@@ -269,6 +269,34 @@ function SponsorBreak({ sponsor, onDone, onExit }: { sponsor: Sponsor; onDone: (
   );
 }
 
+// An animated border for a sponsor frame: a breathing glow ("pulse") or a
+// diagonal gloss that sweeps across the band ("shimmer"/"sheen").
+function AnimatedBorder({ animation, color, radius = 26 }: { animation: FrameAnim; color: string; radius?: number }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (animation === "none") return;
+    const dur = animation === "pulse" ? 1100 : 1900;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: dur, useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0, duration: animation === "pulse" ? dur : 0, useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [animation, v]);
+  if (animation === "none") return null;
+  if (animation === "pulse") {
+    return <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: radius, borderWidth: 3, borderColor: color, opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.95] }) }]} />;
+  }
+  const tx = v.interpolate({ inputRange: [0, 1], outputRange: [-300, 300] });
+  return (
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { borderRadius: radius, overflow: "hidden" }]}>
+      <Animated.View style={{ position: "absolute", top: -60, bottom: -60, width: 70, transform: [{ translateX: tx }, { rotate: "18deg" }] }}>
+        <LinearGradient colors={["rgba(255,255,255,0)", "rgba(255,255,255,0.55)", "rgba(255,255,255,0)"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ flex: 1 }} />
+      </Animated.View>
+    </View>
+  );
+}
+
 function Side({
   card, choice, rarity, active, unlocked, voted, player, hasVideo, onAudio, onVote, onCrest,
 }: {
@@ -277,7 +305,8 @@ function Side({
   player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void;
 }) {
   const dim = voted && voted !== choice;
-  const glow = rarityBase(rarity);
+  const sf = card.sponsorFrame;             // a branded sponsor frame overrides the rarity band
+  const glow = sf ? sf.accentColor : rarityBase(rarity);
   const first = card.firstName;
   const BAND = 64;                          // thick bottom band = the badge / vote area
   return (
@@ -286,9 +315,10 @@ function Side({
           borders squeeze into — the big customizable badge/sponsor area. */}
       <View style={{ flex: 1, shadowColor: glow, shadowOpacity: 0.6, shadowRadius: 26, shadowOffset: { width: 0, height: 0 } }}>
         <LinearGradient
-          colors={rarityStops(rarity)} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          colors={(sf ? [sf.accentColor, sf.accentColor] : rarityStops(rarity)) as ReturnType<typeof rarityStops>} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={{ flex: 1, borderRadius: 26, paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
         >
+          {sf ? <AnimatedBorder animation={sf.animation} color={sf.accentColor} /> : null}
           <TouchableOpacity activeOpacity={0.95} onPress={onAudio} style={{ flex: 1 }}>
             <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
               {hasVideo ? (
@@ -305,6 +335,17 @@ function Side({
                 <View style={{ position: "absolute", right: 10, bottom: 10, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: active ? "rgba(233,193,90,0.94)" : "rgba(0,0,0,0.5)" }}>
                   <Text style={{ fontSize: 13 }}>{active ? "🔊" : "🔇"}</Text>
                   <Text style={{ color: active ? "#141210" : "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.4 }}>{active ? "AUDIO" : "TAP TO HEAR"}</Text>
+                </View>
+              ) : null}
+              {/* sponsor frame branding: featured product image (top-right) + a
+                  "presented by" ribbon (bottom-left, opposite the audio chip). */}
+              {sf?.imageUrl ? (
+                <Image source={{ uri: sf.imageUrl }} style={{ position: "absolute", top: 36, right: 8, width: 46, height: 46, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }} resizeMode="cover" />
+              ) : null}
+              {sf ? (
+                <View style={{ position: "absolute", left: 8, bottom: 10, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(6,5,4,0.62)", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 99, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", maxWidth: "78%" }}>
+                  {sf.logoUrl ? <Image source={{ uri: sf.logoUrl }} style={{ width: 16, height: 16, borderRadius: 8 }} /> : <Text style={{ fontSize: 10 }}>◆</Text>}
+                  <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 0.4 }} numberOfLines={1}>PRESENTED BY {sf.label.toUpperCase()}</Text>
                 </View>
               ) : null}
             </View>

@@ -10,8 +10,9 @@ import Home from "./Home";
 import BuyEntry from "./BuyEntry";
 import FrameLab from "./FrameLab";
 import Store from "./Store";
+import SponsorFrames from "./SponsorFrames";
 
-type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "framelab";
+type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "framelab";
 const RANK = (r: string | null) => (r ? r.replace("_", " ") : "");
 
 const NOTIF_TYPES = [
@@ -38,6 +39,7 @@ export default function Profile() {
   if (sub === "framelab") return <FrameLab onBack={() => setSub(null)} />;
   if (sub === "store" && me) return <BuyEntry competitorId={me} onClose={() => setSub(null)} onPaid={() => setSub(null)} />;
   if (sub === "shop") return <Store onBack={() => setSub(null)} />;
+  if (sub === "sponsorframe" && me) return <SponsorFrames competitorId={me} onBack={() => setSub(null)} />;
 
   if (!info) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
 
@@ -65,6 +67,7 @@ export default function Profile() {
       <Row icon="🔔" label="Notifications" onPress={() => setSub("notifs")} />
       <Row icon="✦" label="Tournament entry & plans" onPress={() => setSub("store")} />
       <Row icon="🛒" label="Store" onPress={() => setSub("shop")} />
+      <Row icon="🖼️" label="Sponsor frames" onPress={() => setSub("sponsorframe")} />
       <Row icon="📖" label="Rules & Help" onPress={() => setSub("rules")} />
       <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} />
       <Row icon="🏆" label="Tournament & entries" onPress={() => setSub("home")} />
