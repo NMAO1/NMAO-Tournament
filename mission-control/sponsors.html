@@ -200,7 +200,8 @@ async function afterLogin(){
 }
 
 /* ---------- state + load ---------- */
-let TIERS=[], CATALOG=[], cur=null, awardsOpen=null;
+let TIERS=[], CATALOG=[], cur=null, awardsOpen=null, targetOpen=null;
+const csv = s => String(s||'').split(',').map(x=>x.trim()).filter(Boolean);
 function tierName(id){ const t=TIERS.find(x=>x.id===id); return t?t.name:'—'; }
 function tierOptions(sel){ return `<option value="">— tier —</option>`+TIERS.map(t=>`<option value="${t.id}" ${t.id===sel?'selected':''}>${esc(t.name)}</option>`).join(''); }
 const n = v => Number(v||0).toLocaleString();
@@ -310,7 +311,7 @@ async function showDetail(id){
     $('listView').classList.add('hide'); $('detailView').classList.remove('hide'); window.scrollTo(0,0);
   }catch(e){ toast(e.message||'Could not open sponsor.','err'); }
 }
-function backToList(){ cur=null; awardsOpen=null; $('detailView').classList.add('hide'); $('listView').classList.remove('hide'); load(); }
+function backToList(){ cur=null; awardsOpen=null; targetOpen=null; $('detailView').classList.add('hide'); $('listView').classList.remove('hide'); load(); }
 
 function statusButtons(s){
   const b=[];
@@ -348,12 +349,27 @@ function renderDetail(s, ads, products, ents, frame, titles, events, prizes, awa
         </div>
       </div>
       <table><thead><tr><th>Offering</th><th style="width:70px">Surface</th><th style="width:64px">On</th><th style="width:96px"></th></tr></thead>
-      <tbody>${(ents||[]).map(o=>`<tr>
-        <td class="name"><b>${esc(o.name)}</b><small>${esc(o.category)}${o.source?(' · via '+esc(o.source)):''}</small></td>
+      <tbody>${(ents||[]).map(o=>{
+        const tg=((o.age_brackets||[]).length)+((o.states||[]).length)+((o.regions||[]).length)+((o.events||[]).length)+((o.ranks||[]).length);
+        return `<tr>
+        <td class="name"><b>${esc(o.name)}</b><small>${esc(o.category)}${o.source?(' · via '+esc(o.source)):''}${tg?' · <span style="color:var(--gold-soft)">targeted</span>':(o.has?' · national':'')}</small></td>
         <td>${o.live?'<span class="pill active">live</span>':'<span class="pill lapsed">soon</span>'}</td>
         <td>${o.has?'<span class="pill active">on</span>':'<span class="pill lapsed">off</span>'}</td>
-        <td class="rowbtns"><button class="btn sm" data-act="toggleEnt" data-code="${esc(o.code)}" data-on="${o.has?1:0}">${o.has?'Remove':'Add'}</button></td>
-      </tr>`).join('')}</tbody></table>
+        <td class="rowbtns">
+          ${o.has?`<button class="btn sm" data-act="toggleTarget" data-code="${esc(o.code)}">${targetOpen===o.code?'Close':'🎯 Target'}</button>`:''}
+          <button class="btn sm" data-act="toggleEnt" data-code="${esc(o.code)}" data-on="${o.has?1:0}">${o.has?'Remove':'Add'}</button>
+        </td></tr>${o.has && targetOpen===o.code ? `<tr><td colspan="4" style="background:#0e0e11;padding:10px 14px">
+          <div class="muted2" style="font-size:11px;margin-bottom:8px">Leave a field blank for "all". Blank everything = national (reaches everyone).</div>
+          <div class="frm" style="padding:0">
+            <div><label>Age brackets</label><input id="tg_age" value="${(o.age_brackets||[]).join(', ')}" placeholder="all — or 12-14, 15-17"/></div>
+            <div><label>Ranks</label><input id="tg_rank" value="${(o.ranks||[]).join(', ')}" placeholder="all — or beginner, advanced"/></div>
+            <div><label>Regions</label><input id="tg_region" value="${(o.regions||[]).join(', ')}" placeholder="all — Northeast/Southeast/Midwest/Southwest/West"/></div>
+            <div><label>States (2-letter)</label><input id="tg_state" value="${(o.states||[]).join(', ')}" placeholder="all — or NY, CA"/></div>
+            <div><label>Events</label><input id="tg_event" value="${(o.events||[]).join(', ')}" placeholder="all — or open_forms"/></div>
+            <div style="display:flex;align-items:flex-end"><span class="muted" style="font-size:12.5px">Audience reach: <b id="tg_reach" style="color:var(--gold-soft)">—</b></span></div>
+            <div class="actions-row"><button class="btn sm" data-act="reachTarget">Estimate reach</button><button class="btn gold sm" data-act="saveTarget" data-code="${esc(o.code)}">Save targeting</button></div>
+          </div></td></tr>`:''}`;
+      }).join('')}</tbody></table>
     </div>
 
     <div class="subcard">
@@ -437,12 +453,13 @@ function renderDetail(s, ads, products, ents, frame, titles, events, prizes, awa
       <div class="hd"><h3>◆ Title sponsorship &nbsp;<span class="muted2">"presented by ${esc(s.company_name)}"</span></h3></div>
       <table><thead><tr><th>Presenting</th><th style="width:70px">Active</th><th style="width:96px"></th></tr></thead>
       <tbody>${(titles||[]).length?(titles||[]).map(t=>`<tr>
-        <td>${esc(t.label)}</td>
+        <td>${esc(t.label)} <span class="muted2" style="font-size:11px">· ${(t.regions&&t.regions.length)?esc(t.regions.join(', ')):'national'}</span></td>
         <td>${t.active?'<span class="pill active">on</span>':'<span class="pill lapsed">off</span>'}</td>
         <td class="rowbtns"><button class="btn danger sm" data-act="removeTitle" data-scope="${esc(t.scope)}" data-key="${esc(t.scope_key)}">Remove</button></td>
       </tr>`).join(''):`<tr><td colspan="3" class="empty">Not presenting anything yet.</td></tr>`}</tbody></table>
       <div class="frm">
-        <div class="full"><button class="btn gold sm" data-act="presentSeason">Present the current season</button></div>
+        <div class="full"><label>Region (optional — blank = national)</label><input id="title_region" placeholder="Northeast · Southeast · Midwest · Southwest · West (comma-separate for multiple)"/></div>
+        <div style="display:flex;align-items:flex-end"><button class="btn gold sm" data-act="presentSeason">Present the season</button></div>
         <div><label>…or an event</label><select id="title_event"><option value="">— pick an event —</option>${(events||[]).map(e=>`<option value="${esc(e.code)}">${esc(e.name)}</option>`).join('')}</select></div>
         <div style="display:flex;align-items:flex-end"><button class="btn sm" data-act="sponsorEvent">Present this event</button></div>
       </div>
@@ -537,6 +554,13 @@ document.addEventListener('click', async (e)=>{
     if(act==='applyTier'){ const tier=val('tierApply'); if(!tier){ toast('Pick a tier first.','err'); btn.disabled=false; return; }
       await rpc('admin_apply_tier',{ p_sponsor:cur, p_tier:tier }); toast('Tier applied — its offerings are granted.','ok'); return showDetail(cur); }
     if(act==='toggleEnt'){ await rpc('admin_set_entitlement',{ p_sponsor:cur, p_offering:btn.dataset.code, p_active: btn.dataset.on==='1' ? false : true }); return showDetail(cur); }
+    if(act==='toggleTarget'){ targetOpen = targetOpen===btn.dataset.code ? null : btn.dataset.code; return showDetail(cur); }
+    if(act==='reachTarget'){ const n=await rpc('admin_segment_reach',{ p_age:csv($('tg_age').value), p_states:csv($('tg_state').value).map(x=>x.toUpperCase()), p_regions:csv($('tg_region').value), p_ranks:csv($('tg_rank').value) });
+      const el=$('tg_reach'); if(el) el.textContent = n+' competitor'+(n===1?'':'s'); btn.disabled=false; return; }
+    if(act==='saveTarget'){
+      await rpc('admin_set_entitlement_targeting',{ p_sponsor:cur, p_offering:btn.dataset.code,
+        p_age:csv($('tg_age').value), p_states:csv($('tg_state').value).map(x=>x.toUpperCase()), p_regions:csv($('tg_region').value), p_events:csv($('tg_event').value), p_ranks:csv($('tg_rank').value) });
+      toast('Targeting saved.','ok'); return showDetail(cur); }
 
     if(act==='saveAd'){
       const video=await uploadFile('sponsor-videos',$('ad_video'),'ads');
@@ -563,9 +587,9 @@ document.addEventListener('click', async (e)=>{
       await rpc('admin_upsert_sponsor_frame',{ p }); toast('Frame saved — competitors can now equip it.','ok'); return showDetail(cur);
     }
 
-    if(act==='presentSeason'){ await rpc('admin_set_title',{ p_sponsor:cur, p_scope:'season', p_key:'', p_active:true }); toast('Now presenting the current season.','ok'); return showDetail(cur); }
+    if(act==='presentSeason'){ await rpc('admin_set_title',{ p_sponsor:cur, p_scope:'season', p_key:'', p_active:true, p_regions:csv($('title_region').value) }); toast('Now presenting the season.','ok'); return showDetail(cur); }
     if(act==='sponsorEvent'){ const ev=val('title_event'); if(!ev){ toast('Pick an event first.','err'); btn.disabled=false; return; }
-      await rpc('admin_set_title',{ p_sponsor:cur, p_scope:'event', p_key:ev, p_active:true }); toast('Now presenting that event.','ok'); return showDetail(cur); }
+      await rpc('admin_set_title',{ p_sponsor:cur, p_scope:'event', p_key:ev, p_active:true, p_regions:csv($('title_region').value) }); toast('Now presenting that event.','ok'); return showDetail(cur); }
     if(act==='removeTitle'){ await rpc('admin_set_title',{ p_sponsor:cur, p_scope:btn.dataset.scope, p_key:btn.dataset.key, p_active:false }); toast('Removed.','ok'); return showDetail(cur); }
 
     if(act==='savePrize'){

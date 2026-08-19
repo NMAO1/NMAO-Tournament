@@ -73,8 +73,9 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   }, []);
 
   useEffect(() => { faceOff(duelId).then(setFace); }, [duelId]);
-  // prefetch a sponsor for the interstitial that plays between the tale + the ring
-  useEffect(() => { duelSponsor().then(setSponsor); }, [duelId]);
+  // prefetch a sponsor for the interstitial — targeted to the viewer's segment
+  // (age/region) + the duel's event once the face-off (event) has loaded.
+  useEffect(() => { duelSponsor(voterId, face?.type).then(setSponsor); }, [duelId, voterId, face?.type]);
 
   // leaving the tale → show the sponsor break if one is loaded, else the ring
   const afterTale = () => setPhase(sponsor ? "sponsor" : "ring");
@@ -140,7 +141,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   }
 
   if (phase === "tale") {
-    return <TaleOfThePath face={face} count={count} onEnter={afterTale} onExit={() => onClose(false)} />;
+    return <TaleOfThePath face={face} count={count} voterId={voterId} onEnter={afterTale} onExit={() => onClose(false)} />;
   }
 
   // sponsor interstitial — a short sponsor clip between the tale and the vote
@@ -426,9 +427,9 @@ function closesIn(face: FaceOff): string {
 // ── "Tale of the Path" — the fight-card face-off before the ring (spec §2a) ──
 // Landscape cinematic: the two panels slide in from opposite edges while a large
 // VS pops (spring overshoot) in the centre.
-function TaleOfThePath({ face, count, onEnter, onExit }: { face: FaceOff; count: number; onEnter: () => void; onExit: () => void }) {
+function TaleOfThePath({ face, count, voterId, onEnter, onExit }: { face: FaceOff; count: number; voterId: string; onEnter: () => void; onExit: () => void }) {
   const season = useSeasonLabel();
-  const title = useTitleSponsor(face.type);
+  const title = useTitleSponsor(voterId, face.type);
   const w = Dimensions.get("window").width;
   const [crest, setCrest] = useState<CrestAnchor | null>(null);
   const slideL = useRef(new Animated.Value(-w)).current;

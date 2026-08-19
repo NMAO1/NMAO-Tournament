@@ -162,8 +162,8 @@ export async function duelReveal(duelId: string): Promise<Reveal | null> {
 // A short sponsor clip plays as an interstitial between the Tale of the Path and
 // the vote ring. Returns null when there's nothing to show (so the ad is skipped).
 export type Sponsor = { id: string; name: string; tagline: string | null; videoUrl: string; clickUrl: string | null; minSeconds: number };
-export async function duelSponsor(): Promise<Sponsor | null> {
-  const { data, error } = await supabase.rpc("duel_sponsor");
+export async function duelSponsor(viewerId?: string, event?: string): Promise<Sponsor | null> {
+  const { data, error } = await supabase.rpc("duel_sponsor", { p_viewer: viewerId ?? null, p_event: event ?? null });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const row = (Array.isArray(data) ? data[0] : data) as any;
   if (error || !row || !row.video_url) return null;

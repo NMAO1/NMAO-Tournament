@@ -407,7 +407,7 @@ export default function SchoolPortal() {
                 <Field label="Street"><input style={inpF} value={profile.address?.line1 ?? ""} onChange={(e) => setAddr({ line1: e.target.value })} /></Field>
                 <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
                   <Field label="City"><input style={inpF} value={profile.address?.city ?? ""} onChange={(e) => setAddr({ city: e.target.value })} /></Field>
-                  <Field label="State"><input style={inpF} value={profile.address?.state ?? ""} onChange={(e) => setAddr({ state: e.target.value })} /></Field>
+                  <Field label="State"><input style={inpF} placeholder="NY" maxLength={2} value={profile.address?.state ?? ""} onChange={(e) => setAddr({ state: e.target.value.toUpperCase() })} /></Field>
                   <Field label="Postal"><input style={inpF} value={profile.address?.postal ?? ""} onChange={(e) => setAddr({ postal: e.target.value })} /></Field>
                 </div>
                 <Field label="Logo URL"><input style={inpF} placeholder="https://…" value={profile.logo_url ?? ""} onChange={(e) => setProfile({ ...profile, logo_url: e.target.value })} /></Field>
