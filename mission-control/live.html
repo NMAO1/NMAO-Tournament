@@ -33,6 +33,13 @@
   .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));
             box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
   .btn.danger{border-color:#4a2b2b;color:#E9A0A0;background:#1c1414}
+  .demobar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 2px;padding:11px 15px;border-radius:12px;
+    border:1px solid var(--gold-deep);background:linear-gradient(100deg,rgba(230,185,63,.12),rgba(163,43,247,.06));}
+  .demobar .demo-tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#141210;
+    background:linear-gradient(160deg,var(--gold-soft),var(--gold) 60%,var(--gold-deep));padding:4px 10px;border-radius:99px}
+  .demobar .demo-msg{font-size:12.5px;color:var(--muted)}
+  .demobar .demo-msg b{color:var(--text)}
+  .demobar .demo-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
   .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
   .badge{font-size:12px;font-weight:600;padding:4px 11px;border-radius:99px}
   .hide{display:none!important}
@@ -126,6 +133,7 @@
         <select class="sel" id="roundSel"></select>
         <span class="badge state-badge" id="stateBadge">—</span>
         <button class="btn" id="fillBtn" title="Backfill any pods still short of judges (deadline safety-net)">Fill unclaimed</button>
+        <button class="btn" id="seedBtn" title="Create a fresh synthetic demo round to showcase the full pipeline end-to-end">✨ Seed demo</button>
         <button class="btn" id="refreshBtn">Refresh</button>
         <a class="btn" href="./config.html" title="Manage events, age brackets, and pod settings">Config</a>
         <a class="btn" href="./judges.html" title="Review judge applications and onboarding">Judges</a>
@@ -135,6 +143,8 @@
     </header>
 
     <div class="kpis" id="kpis"></div>
+
+    <div id="demoBar" class="hide"></div>
 
     <div class="grid">
       <div class="card">
@@ -194,16 +204,18 @@ async function afterLogin(){
 }
 
 // ---------- round selector ----------
-async function loadRounds(){
+async function loadRounds(preferId){
   const { data } = await sb.from('rounds').select('id, seq, state, season_id, seasons(name)').order('seq', { ascending:false });
   const rounds = data || [];
-  $('roundSel').innerHTML = rounds.map(r =>
-    `<option value="${r.id}">${(r.seasons?.name || 'Season')} · Round ${r.seq} (${r.state})</option>`).join('') || '<option>No rounds</option>';
-  if (rounds.length) { ROUND = rounds[0].id; $('roundSel').value = ROUND; await selectRound(ROUND); }
+  $('roundSel').innerHTML = rounds.map(r => (r.seq >= 900)
+    ? `<option value="${r.id}">🧪 DEMO · Round ${r.seq} (${r.state})</option>`
+    : `<option value="${r.id}">${(r.seasons?.name || 'Season')} · Round ${r.seq} (${r.state})</option>`).join('') || '<option>No rounds</option>';
+  if (rounds.length) { ROUND = preferId && rounds.some(r=>r.id===preferId) ? preferId : rounds[0].id; $('roundSel').value = ROUND; await selectRound(ROUND); }
 }
 $('roundSel').onchange = e => selectRound(e.target.value);
 $('refreshBtn').onclick = () => ROUND && loadRound(ROUND);
 $('fillBtn').onclick = () => ROUND && fillUnclaimed();
+$('seedBtn').onclick = seedDemo;
 
 // Hybrid safety-net: backfill pods still short of judges after the claim window.
 async function fillUnclaimed(){
@@ -263,8 +275,27 @@ const TIER = k => k==='advanced' ? 'var(--ruby)' : k==='intermediate' ? 'var(--a
 
 function render(){
   const S = STATE, st = S.round.state || 'open';
+  const isDemo = (S.round.seq ?? 0) >= 900;
   $('stateBadge').textContent = '● ' + st;
-  $('pipeSub').innerHTML = `${S.round.seasons?.name || ''} · Round ${S.round.seq ?? ''} · <span class="tiny">${(S.round.id||'').slice(0,8)}</span>`;
+  $('pipeSub').innerHTML = `${esc(S.round.seasons?.name || '')} · Round ${esc(S.round.seq ?? '')} · <span class="tiny">${esc((S.round.id||'').slice(0,8))}</span>`;
+
+  // Demo bar — only for synthetic test rounds (seq >= 900). One-click full-pipeline showcase.
+  const demoBar = $('demoBar');
+  if (isDemo) {
+    demoBar.classList.remove('hide');
+    const finished = st === 'finalized';
+    demoBar.innerHTML = `
+      <span class="demo-tag">🧪 Demo round</span>
+      <span class="demo-msg">Synthetic data — safe to run end-to-end. ${finished
+        ? 'Pipeline <b>finalized</b>. Delete to reseed and run again.'
+        : 'Press <b>Auto-run</b> to watch every stage fire, or step through the pipeline manually.'}</span>
+      <span class="demo-actions">
+        ${finished ? '' : '<button class="btn gold" id="autoRunBtn">▶ Auto-run full pipeline</button>'}
+        <button class="btn danger" id="delDemoBtn">🗑 Delete demo round</button>
+      </span>`;
+  } else {
+    demoBar.classList.add('hide'); demoBar.innerHTML = '';
+  }
 
   // KPIs
   const pct = S.jaTotal ? Math.round(S.jaSubmitted / S.jaTotal * 100) : 0;
@@ -293,7 +324,8 @@ function render(){
     else if (key===nextStep || (opts.force && !done[key])) cls='next';
     const time = (S.steps[key] && S.steps[key].completed_at) ? fmtTime(S.steps[key].completed_at) : (opts.time||'');
     let right = `<span class="status-pill s-${cls}">${pill||cls}</span>`;
-    if (opts.action && !done[key] && (opts.force || cls==='next' || cls==='error')) right = `<button class="btn ${opts.gold?'gold':''}" data-run="${opts.runAs||key}">${opts.action}</button>`;
+    if (opts.demo && !done[key]) right = `<button class="btn gold" data-demo="${opts.demo}">${opts.demoLabel}</button>`;
+    else if (opts.action && !done[key] && (opts.force || cls==='next' || cls==='error')) right = `<button class="btn ${opts.gold?'gold':''}" data-run="${opts.runAs||key}">${opts.action}</button>`;
     else if (opts.view && done[key]) right = `<button class="btn" data-view="${key}">${opts.view}</button>`;
     return `<div class="stage"><span class="dot ${cls}"></span>
       <div><div class="st-title">${title}${opts.muted?` <span class="muted">— ${opts.muted}</span>`:''}</div>
@@ -306,29 +338,33 @@ function render(){
     stage('closed', 'Entries closed', `<b>${S.validEntries}</b> valid entries`, canClose ? { action:'Close entries', runAs:'close', force:true } : {}) +
     stage('divide', 'Divide', `<b>${S.divisions.length}</b> divisions · <b>${S.pods.length}</b> pods${collapsed?` · ${collapsed} collapsed`:''}`, { muted:'classify → collapse → form pods', action:'Run divide', view:'View divisions' }) +
     stage('assign_judges', 'Assign judges', `<b>${S.jaTotal}</b> assignments`, { action:'Run assign', view:'View judges' }) +
-    stage('judging', 'Judging window', `<b>${S.jaSubmitted} / ${S.jaTotal}</b> scored · ${pct}%`) +
+    stage('judging', 'Judging window', `<b>${S.jaSubmitted} / ${S.jaTotal}</b> scored · ${pct}%`,
+      (isDemo && S.jaTotal > 0 && S.jaSubmitted < S.jaTotal) ? { demo:'autoscore', demoLabel:'⚡ Autoscore (demo)' } : {}) +
     stage('resolve', 'Resolve', `<b>${S.results}</b> results · ratings updated`, { muted:'placements + ratings', action:'Run resolve', view:'View results' }) +
     stage('distribute', 'Distribute', `<b>${S.medals}</b> medals · <b>${S.boxes}</b> boxes`, { muted:'medals + ship list', action:'Run distribute', view:'View medals' }) +
     stage('finalize', 'Finalize round', 'Freeze scheme, publish results, archive.', { action:'Finalize ✓', gold:true });
 
-  // wire run + view buttons
+  // wire run + view + demo buttons
   $('pipeline').querySelectorAll('[data-run]').forEach(b => b.onclick = () => runStep(b.dataset.run));
   $('pipeline').querySelectorAll('[data-view]').forEach(b => b.onclick = () => openView(b.dataset.view));
+  $('pipeline').querySelectorAll('[data-demo]').forEach(b => b.onclick = () => { if (b.dataset.demo === 'autoscore') autoscoreDemo(); });
+  if ($('autoRunBtn')) $('autoRunBtn').onclick = autoRunPipeline;
+  if ($('delDemoBtn')) $('delDemoBtn').onclick = deleteDemo;
 
   // right rail
   const flagList = Object.values(S.steps).flatMap(s => Array.isArray(s.detail?.flags) ? s.detail.flags : []);
   const divRows = S.divisions.map(d => {
     const pod = S.pods.find(p => p.divisions && p.rank_key === d.rank_key && (p.divisions.event===d.event));
-    return `<div class="row"><span><span class="tier" style="background:${TIER(d.rank_key)}"></span>${d.event} · ${d.rank_key}</span>
+    return `<div class="row"><span><span class="tier" style="background:${TIER(d.rank_key)}"></span>${esc(d.event)} · ${esc(d.rank_key)}</span>
       <span class="muted" style="margin-left:auto">${d.entry_count||0} entries</span></div>`;
   }).join('') || '<div class="row muted">No divisions yet.</div>';
   const auditRows = S.audit.map(a =>
-    `<div class="row"><span class="t">${new Date(a.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span><span>${a.action}${a.actor_id?' · <span class="muted">operator</span>':''}</span></div>`
+    `<div class="row"><span class="t">${new Date(a.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span><span>${esc(a.action)}${a.actor_id?' · <span class="muted">operator</span>':''}</span></div>`
   ).join('') || '<div class="row muted">No activity yet.</div>';
 
   $('rail').innerHTML = `
     <div class="card"><div class="hd"><h2>Exceptions &amp; guardrails</h2></div>
-      ${flagList.length ? flagList.map(f=>`<div class="flag">▲ ${f}</div>`).join('') : '<div class="allclear">● All clear — no flags.</div>'}
+      ${flagList.length ? flagList.map(f=>`<div class="flag">▲ ${esc(f)}</div>`).join('') : '<div class="allclear">● All clear — no flags.</div>'}
       <ul class="guard"><li>Can't divide with 0 valid entries.</li><li>Can't distribute with a pod unresolved.</li><li>Finalize only from <i>distributed</i>.</li></ul>
     </div>
     <div class="card"><div class="hd"><h2>Divisions &amp; pods</h2><span class="sub">${S.divisions.length}</span></div><div class="list">${divRows}</div></div>
@@ -402,6 +438,65 @@ async function payJudges(){
   } catch(e){ toast('Pay judges: ' + e.message, 'err'); }
 }
 
+// ---------- demo round (staff-only admin_* RPCs; seq >= 900 test band) ----------
+async function seedDemo(){
+  if (!confirm('Create a fresh DEMO round?\n\nClones the latest round\'s entry shape onto brand-new synthetic competitors (isolated — real ratings are never touched). It lands in the 900+ test band and can be deleted anytime.')) return;
+  $('seedBtn').disabled = true; toast('Seeding demo round…');
+  try {
+    const { data, error } = await sb.rpc('admin_create_test_round');
+    if (error) throw error;
+    toast(`Demo Round ${data.seq} created · ${data.entries} entries. Press “▶ Auto-run full pipeline”.`, 'ok');
+    await loadRounds(data.round_id);
+  } catch(e){ toast('Seed: ' + (e.message || e), 'err'); }
+  finally { $('seedBtn').disabled = false; }
+}
+async function autoscoreDemo(){
+  toast('Autoscoring judge seats…');
+  try {
+    const { data, error } = await sb.rpc('admin_autoscore_round', { p_round_id: ROUND });
+    if (error) throw error;
+    toast(`Autoscored ${data.seats_scored} seat(s).`, 'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast('Autoscore: ' + (e.message || e), 'err'); }
+}
+async function deleteDemo(){
+  if (!confirm('Delete this demo round and its synthetic competitors? This cannot be undone.')) return;
+  const btn = $('delDemoBtn'); if (btn) btn.disabled = true; toast('Deleting demo round…');
+  try {
+    const { data, error } = await sb.rpc('admin_delete_test_round', { p_round_id: ROUND });
+    if (error) throw error;
+    toast(`Deleted · ${data.deleted_synthetic_competitors} synthetic competitors removed.`, 'ok');
+    await loadRounds();
+  } catch(e){ toast('Delete: ' + (e.message || e), 'err'); if (btn) btn.disabled = false; }
+}
+// One-click showcase: run every stage in order, letting the board light up between each.
+async function autoRunPipeline(){
+  if ((STATE.round.seq ?? 0) < 900) return toast('Auto-run is only for demo rounds.', 'err');
+  if (!confirm('Run the ENTIRE pipeline on this demo round?\n\nclose → divide → assign judges → autoscore → resolve → distribute → finalize')) return;
+  const btn = $('autoRunBtn'); if (btn){ btn.disabled = true; }
+  const steps = [
+    ['close',         () => callController({ roundId: ROUND, step:'close' })],
+    ['divide',        () => callController({ roundId: ROUND, step:'divide' })],
+    ['assign judges', () => callController({ roundId: ROUND, step:'assign_judges' })],
+    ['autoscore',     async () => { const { error } = await sb.rpc('admin_autoscore_round', { p_round_id: ROUND }); if (error) throw error; }],
+    ['resolve',       () => callController({ roundId: ROUND, step:'resolve' })],
+    ['distribute',    () => callController({ roundId: ROUND, step:'distribute' })],
+    ['finalize',      () => callController({ roundId: ROUND, step:'finalize' })],
+  ];
+  try {
+    for (const [name, fn] of steps){
+      toast('▶ ' + name + '…');
+      await fn();
+      await loadRound(ROUND);                              // repaint the board
+      await new Promise(r => setTimeout(r, 850));          // let the stage visibly light up
+    }
+    toast('✓ Pipeline complete — round finalized.', 'ok');
+  } catch(e){
+    toast('Auto-run stopped: ' + (e.message || e), 'err');
+    await loadRound(ROUND);
+  }
+}
+
 // ---------- stage drill-downs (View buttons) ----------
 const vItem = (hd, sub) => `<div style="padding:9px 12px;border-bottom:1px solid var(--line,#26262b)"><div style="display:flex;align-items:center;gap:8px;font-size:13px">${hd}</div>${sub?`<div style="font-size:12px;color:var(--muted-2,#7a7060);margin-top:3px">${sub}</div>`:''}</div>`;
 async function openView(key){
@@ -423,17 +518,17 @@ async function openView(key){
       const byPod = {}; (data||[]).forEach(a => (byPod[a.pod_id]=byPod[a.pod_id]||[]).push(a));
       body = Object.keys(byPod).sort((a,b)=>(seq[a]??0)-(seq[b]??0)).map(pid => {
         const rows = byPod[pid], sub = rows.filter(r=>r.state==='submitted').length;
-        const names = rows.map(r => `${(r.judges?.first_name||'')} ${(r.judges?.last_name||'')}`.trim()||'Judge').join(', ');
+        const names = rows.map(r => esc(`${(r.judges?.first_name||'')} ${(r.judges?.last_name||'')}`.trim()||'Judge')).join(', ');
         return vItem(`<b>Pod ${seq[pid]??'?'}</b><span style="margin-left:auto;color:var(--muted-2,#7a7060)">${sub}/${rows.length} scored</span>`, names);
       }).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No assignments yet.</div>';
     } else if (key === 'resolve'){
       title = 'Results & placements';
       const { data } = await sb.from('results').select('placement,score,rating_after,entries!inner(round_id,event,competitors(first_name,last_name))').eq('entries.round_id', ROUND).order('placement');
-      body = (data||[]).map(r => vItem(`<b>#${r.placement}</b> ${(r.entries?.competitors?.first_name||'')} ${(r.entries?.competitors?.last_name||'')}<span style="margin-left:auto;color:var(--muted-2,#7a7060)">${r.entries?.event||''} · score ${r.score} · rating ${r.rating_after}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No results yet.</div>';
+      body = (data||[]).map(r => vItem(`<b>#${r.placement}</b> ${esc(r.entries?.competitors?.first_name||'')} ${esc(r.entries?.competitors?.last_name||'')}<span style="margin-left:auto;color:var(--muted-2,#7a7060)">${esc(r.entries?.event||'')} · score ${r.score} · rating ${r.rating_after}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No results yet.</div>';
     } else if (key === 'distribute'){
       title = 'Medal ship list';
       const { data } = await sb.from('medal_shipments').select('item_count,ship_status,schools(name)').eq('round_id', ROUND).order('item_count', { ascending:false });
-      body = (data||[]).map(m => vItem(`<b>${m.schools?.name||'School'}</b><span style="margin-left:auto;color:var(--muted-2,#7a7060)">${m.item_count} items · ${m.ship_status}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No shipments yet.</div>';
+      body = (data||[]).map(m => vItem(`<b>${esc(m.schools?.name||'School')}</b><span style="margin-left:auto;color:var(--muted-2,#7a7060)">${m.item_count} items · ${esc(m.ship_status)}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No shipments yet.</div>';
     }
     showModal(title, body);
   } catch(e){ showModal('Error', `<div style="padding:16px;color:var(--danger,#e07070)">${e.message}</div>`); }
@@ -453,18 +548,26 @@ function showModal(title, html){
 // ---------- realtime ----------
 function subscribe(id){
   if (channel) sb.removeChannel(channel);
+  clearInterval(pollTimer);
   let t; const reload = () => { clearTimeout(t); t = setTimeout(() => loadRound(id), 400); };
   channel = sb.channel('mc-' + id);
   ['round_step_runs','judge_assignments','results','engine_audit','rounds','pods'].forEach(tbl =>
     channel.on('postgres_changes', { event:'*', schema:'public', table: tbl }, reload));
-  channel.subscribe();
+  channel.subscribe(status => {
+    if (['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)) toast('Live updates dropped — reconnecting. The board still refreshes every 30s.','err');
+  });
+  // safety net: a dropped socket must never silently freeze the board mid-round
+  pollTimer = setInterval(() => loadRound(id), 30000);
 }
 
 // ---------- helpers ----------
 function setMsg(id, t, k){ const e=$(id); e.textContent=t||''; e.className='msg'+(t?(' '+k):''); }
-let toastTimer;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let toastTimer, pollTimer;
 function toast(t, k){ let e=document.querySelector('.toast'); if(!e){ e=document.createElement('div'); e.className='toast'; document.body.appendChild(e); }
-  e.className='toast'+(k?(' '+k):''); e.textContent=t; clearTimeout(toastTimer); toastTimer=setTimeout(()=>e.remove(), 4200); }
+  e.className='toast'+(k?(' '+k):''); e.textContent=t; e.onclick=()=>e.remove(); clearTimeout(toastTimer);
+  // errors stay until clicked so an operator never misses a failed step; others auto-clear
+  if(k!=='err') toastTimer=setTimeout(()=>e.remove(), 4200); }
 
 // resume an existing session
 (async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
