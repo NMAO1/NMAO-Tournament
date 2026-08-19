@@ -7,6 +7,7 @@ import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/de
 import { emblemUrl } from "../lib/badges";
 import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
+import { sponsorClick } from "../lib/store";
 
 // A worn frame/crest (equipped badge) — what the crest popover reveals.
 type Crest = NonNullable<Card["frame"]>;
@@ -250,7 +251,7 @@ function SponsorBreak({ sponsor, onDone, onExit }: { sponsor: Sponsor; onDone: (
         <Text style={{ color: "#fff", fontSize: 18, fontWeight: "800", textShadowColor: "#000", textShadowRadius: 6 }} numberOfLines={1}>{sponsor.name}</Text>
         {sponsor.tagline ? <Text style={{ color: neutrals.muted, fontSize: 13, marginTop: 2, textShadowColor: "#000", textShadowRadius: 6 }} numberOfLines={2}>{sponsor.tagline}</Text> : null}
         {sponsor.clickUrl ? (
-          <TouchableOpacity onPress={() => { const u = sponsor.clickUrl; if (u) Linking.openURL(u).catch(() => {}); }}
+          <TouchableOpacity onPress={() => { sponsorClick("ad_click", { adId: sponsor.id }); const u = sponsor.clickUrl; if (u) Linking.openURL(u).catch(() => {}); }}
             style={{ marginTop: 10, alignSelf: "flex-start", borderWidth: 1, borderColor: "rgba(255,255,255,0.4)", borderRadius: 9, paddingHorizontal: 14, paddingVertical: 8 }}>
             <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Learn more  ↗</Text>
           </TouchableOpacity>
