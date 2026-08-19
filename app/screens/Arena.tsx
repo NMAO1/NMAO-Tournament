@@ -7,7 +7,7 @@ import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/de
 import { emblemUrl } from "../lib/badges";
 import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
-import { sponsorClick } from "../lib/store";
+import { sponsorClick, sponsorAdWatch } from "../lib/store";
 
 // A worn frame/crest (equipped badge) — what the crest popover reveals.
 type Crest = NonNullable<Card["frame"]>;
@@ -228,10 +228,10 @@ function SponsorBreak({ sponsor, onDone, onExit }: { sponsor: Sponsor; onDone: (
     const t = setInterval(() => setRemaining((r) => Math.max(0, r - 1)), 1000);
     return () => clearInterval(t);
   }, []);
-  useEffect(() => {                                                    // auto-advance when the clip ends
-    const sub = player.addListener("playToEnd", () => onDone());
+  useEffect(() => {                                                    // watched to the end → count a completion + advance
+    const sub = player.addListener("playToEnd", () => { sponsorAdWatch(sponsor.id, "ad_complete", player.currentTime); onDone(); });
     return () => sub.remove();
-  }, [player, onDone]);
+  }, [player, onDone, sponsor.id]);
 
   const canSkip = remaining <= 0;
   return (
@@ -259,7 +259,7 @@ function SponsorBreak({ sponsor, onDone, onExit }: { sponsor: Sponsor; onDone: (
       </View>
 
       {/* Skip (bottom-right) — locked until minSeconds elapse */}
-      <TouchableOpacity disabled={!canSkip} onPress={onDone}
+      <TouchableOpacity disabled={!canSkip} onPress={() => { sponsorAdWatch(sponsor.id, "ad_skip", player.currentTime); onDone(); }}
         style={{ position: "absolute", right: 18, bottom: 22, backgroundColor: canSkip ? "rgba(233,193,90,0.95)" : "rgba(0,0,0,0.55)", borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 }}>
         <Text style={{ color: canSkip ? "#141210" : "#fff", fontWeight: "800", fontSize: 13 }}>
           {canSkip ? "Skip ad  ›" : `Skip in ${remaining}s`}

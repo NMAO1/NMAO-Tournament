@@ -117,8 +117,8 @@
 
       <div class="card">
         <div class="hd"><h2><span class="rail"></span>Analytics</h2>
-          <div class="sub">Impressions, clicks &amp; click-through rate per sponsor.</div></div>
-        <table><thead><tr><th>Company</th><th style="width:104px">Status</th><th style="width:100px">Impr.</th><th style="width:100px">Ad clicks</th><th style="width:110px">Product clicks</th><th style="width:80px">CTR</th></tr></thead>
+          <div class="sub">Views (times the ad was watched), completion rate, avg watch time, clicks &amp; CTR per sponsor.</div></div>
+        <table><thead><tr><th>Company</th><th style="width:88px">Status</th><th style="width:70px">Views</th><th style="width:84px">Completed</th><th style="width:74px">Compl.%</th><th style="width:60px">Avg s</th><th style="width:74px">Ad clicks</th><th style="width:58px">CTR</th><th style="width:92px">Product clicks</th></tr></thead>
           <tbody id="analyticsBody"></tbody></table>
       </div>
       <div class="foot-note">Staff-gated. Ads &amp; products go live only after a sponsor is <b>active</b>. Tournament suite — separate product from the membership platform.</div>
@@ -215,8 +215,13 @@ function renderAnalytics(rows){
   if(!rows.length){ b.innerHTML=`<tr><td colspan="6" class="empty">No data yet.</td></tr>`; return; }
   b.innerHTML = rows.map(r=>`<tr>
     <td>${esc(r.company_name)}</td><td><span class="pill ${esc(r.status)}">${esc(r.status)}</span></td>
-    <td class="num">${n(r.impressions)}</td><td class="num">${n(r.ad_clicks)}</td><td class="num">${n(r.product_clicks)}</td>
-    <td class="num">${r.ctr!=null?esc(r.ctr)+'%':'—'}</td></tr>`).join('');
+    <td class="num">${n(r.impressions)}</td>
+    <td class="num">${n(r.completions)}</td>
+    <td class="num">${r.completion_rate!=null?esc(r.completion_rate)+'%':'—'}</td>
+    <td class="num">${r.avg_watch!=null?esc(r.avg_watch)+'s':'—'}</td>
+    <td class="num">${n(r.ad_clicks)}</td>
+    <td class="num">${r.ctr!=null?esc(r.ctr)+'%':'—'}</td>
+    <td class="num">${n(r.product_clicks)}</td></tr>`).join('');
 }
 
 function renderHouse(list){
@@ -246,10 +251,10 @@ function renderHouseForm(){
 async function showDetail(id){
   cur=id;
   try{
-    const [sponsors, ads, products] = await Promise.all([
-      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}) ]);
+    const [sponsors, ads, products, ents] = await Promise.all([
+      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}), rpc('admin_sponsor_entitlements',{p_sponsor:id}) ]);
     const s=(sponsors||[]).find(x=>x.id===id); if(!s){ toast('Sponsor not found.','err'); return backToList(); }
-    renderDetail(s, ads||[], products||[]);
+    renderDetail(s, ads||[], products||[], ents||[]);
     $('listView').classList.add('hide'); $('detailView').classList.remove('hide'); window.scrollTo(0,0);
   }catch(e){ toast(e.message||'Could not open sponsor.','err'); }
 }
@@ -263,7 +268,7 @@ function statusButtons(s){
   return b.join(' ');
 }
 
-function renderDetail(s, ads, products){
+function renderDetail(s, ads, products, ents){
   $('detailView').innerHTML = `
   <div class="card">
     <div class="hd"><h2><span class="rail"></span>${esc(s.company_name)} <span class="pill ${esc(s.status)}">${esc(s.status)}</span></h2>
@@ -280,6 +285,23 @@ function renderDetail(s, ads, products){
         ${statusButtons(s)}
         <button class="btn gold sm" data-act="saveSponsor">Save details</button>
       </div>
+    </div>
+
+    <div class="subcard">
+      <div class="hd" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <h3>◆ Offerings &nbsp;<span class="muted2">what this sponsor gets</span></h3>
+        <div style="display:flex;gap:6px;align-items:center">
+          <select id="tierApply" style="padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:12px">${tierOptions(s.tier_id)}</select>
+          <button class="btn gold sm" data-act="applyTier">Apply tier bundle</button>
+        </div>
+      </div>
+      <table><thead><tr><th>Offering</th><th style="width:70px">Surface</th><th style="width:64px">On</th><th style="width:96px"></th></tr></thead>
+      <tbody>${(ents||[]).map(o=>`<tr>
+        <td class="name"><b>${esc(o.name)}</b><small>${esc(o.category)}${o.source?(' · via '+esc(o.source)):''}</small></td>
+        <td>${o.live?'<span class="pill active">live</span>':'<span class="pill lapsed">soon</span>'}</td>
+        <td>${o.has?'<span class="pill active">on</span>':'<span class="pill lapsed">off</span>'}</td>
+        <td class="rowbtns"><button class="btn sm" data-act="toggleEnt" data-code="${esc(o.code)}" data-on="${o.has?1:0}">${o.has?'Remove':'Add'}</button></td>
+      </tr>`).join('')}</tbody></table>
     </div>
 
     <div class="subcard">
@@ -372,6 +394,10 @@ document.addEventListener('click', async (e)=>{
     }
 
     if(act==='status'){ await rpc('admin_set_sponsor_status',{ p_id:cur, p_status:btn.dataset.s }); toast('Status updated.','ok'); return showDetail(cur); }
+
+    if(act==='applyTier'){ const tier=val('tierApply'); if(!tier){ toast('Pick a tier first.','err'); btn.disabled=false; return; }
+      await rpc('admin_apply_tier',{ p_sponsor:cur, p_tier:tier }); toast('Tier applied — its offerings are granted.','ok'); return showDetail(cur); }
+    if(act==='toggleEnt'){ await rpc('admin_set_entitlement',{ p_sponsor:cur, p_offering:btn.dataset.code, p_active: btn.dataset.on==='1' ? false : true }); return showDetail(cur); }
 
     if(act==='saveAd'){
       const video=await uploadFile('sponsor-videos',$('ad_video'),'ads');

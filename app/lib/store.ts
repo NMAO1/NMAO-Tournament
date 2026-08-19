@@ -22,3 +22,9 @@ export async function storeProducts(): Promise<StoreProduct[]> {
 export async function sponsorClick(kind: "ad_click" | "product_click", opts: { adId?: string; productId?: string }): Promise<void> {
   try { await supabase.rpc("sponsor_click", { p_kind: kind, p_ad: opts.adId ?? null, p_product: opts.productId ?? null }); } catch { /* best-effort */ }
 }
+
+// Ad-watch tracking — how many people actually watch (to the end) vs skip, with
+// seconds watched. Surfaces in sponsor analytics as views + completion rate.
+export async function sponsorAdWatch(adId: string, kind: "ad_view" | "ad_complete" | "ad_skip", seconds?: number): Promise<void> {
+  try { await supabase.rpc("sponsor_ad_watch", { p_ad: adId, p_kind: kind, p_seconds: seconds != null ? Math.round(seconds) : null }); } catch { /* best-effort */ }
+}
