@@ -121,6 +121,14 @@
         <table><thead><tr><th>Company</th><th style="width:88px">Status</th><th style="width:70px">Views</th><th style="width:84px">Completed</th><th style="width:74px">Compl.%</th><th style="width:60px">Avg s</th><th style="width:74px">Ad clicks</th><th style="width:58px">CTR</th><th style="width:92px">Product clicks</th></tr></thead>
           <tbody id="analyticsBody"></tbody></table>
       </div>
+
+      <div class="card">
+        <div class="hd"><h2><span class="rail"></span>Tiers &amp; pricing</h2>
+          <div class="sub">Set each plan's monthly price + its Stripe recurring price ID (from the Stripe dashboard). A plan is purchasable on the signup page only once its price ID is set.</div></div>
+        <table><thead><tr><th>Tier</th><th style="width:120px">Monthly $</th><th>Stripe price ID</th><th style="width:80px"></th></tr></thead>
+          <tbody id="tiersBody"></tbody></table>
+      </div>
+
       <div class="foot-note">Staff-gated. Ads &amp; products go live only after a sponsor is <b>active</b>. Tournament suite — separate product from the membership platform.</div>
     </div>
 
@@ -183,7 +191,7 @@ async function afterLogin(){
 }
 
 /* ---------- state + load ---------- */
-let TIERS=[], cur=null;
+let TIERS=[], cur=null, awardsOpen=null;
 function tierName(id){ const t=TIERS.find(x=>x.id===id); return t?t.name:'—'; }
 function tierOptions(sel){ return `<option value="">— tier —</option>`+TIERS.map(t=>`<option value="${t.id}" ${t.id===sel?'selected':''}>${esc(t.name)}</option>`).join(''); }
 const n = v => Number(v||0).toLocaleString();
@@ -193,7 +201,7 @@ async function load(){
     const [sponsors, tiers, analytics, house] = await Promise.all([
       rpc('admin_list_sponsors'), rpc('admin_list_tiers'), rpc('admin_sponsor_analytics'), rpc('admin_house_ads') ]);
     TIERS = tiers||[];
-    renderSponsors(sponsors||[]); renderAnalytics(analytics||[]); renderHouse(house||[]); renderHouseForm();
+    renderSponsors(sponsors||[]); renderAnalytics(analytics||[]); renderHouse(house||[]); renderHouseForm(); renderTiers();
   }catch(e){ toast(e.message||'Could not load.','err'); }
 }
 
@@ -236,6 +244,15 @@ function renderHouse(list){
     <td class="rowbtns"><button class="btn sm" data-act="toggleHouse" data-id="${a.id}" data-on="${a.active?1:0}">${a.active?'Disable':'Enable'}</button></td>
   </tr>`).join('');
 }
+function renderTiers(){
+  const b=$('tiersBody'); if(!b) return;
+  b.innerHTML = (TIERS||[]).map(t=>`<tr>
+    <td class="name"><b>${esc(t.name)}</b><small>${(t.product_slots)} products · weight ${t.ad_weight}</small></td>
+    <td><input class="rate" id="tp_price_${t.id}" type="number" min="0" value="${t.monthly_price_cents?(t.monthly_price_cents/100):''}" placeholder="0"/></td>
+    <td><input id="tp_sid_${t.id}" value="${esc(t.stripe_price_id||'')}" placeholder="price_..." style="width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:6px 8px;font-size:12px;font-family:ui-monospace,monospace"/></td>
+    <td class="rowbtns"><button class="btn gold sm" data-act="saveTier" data-id="${t.id}">Save</button></td>
+  </tr>`).join('');
+}
 function renderHouseForm(){
   $('houseForm').innerHTML = `
     <div><label>Name</label><input id="h_name" placeholder="Become a judge"/></div>
@@ -251,14 +268,15 @@ function renderHouseForm(){
 async function showDetail(id){
   cur=id;
   try{
-    const [sponsors, ads, products, ents, frames, titles, events] = await Promise.all([
-      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}), rpc('admin_sponsor_entitlements',{p_sponsor:id}), rpc('admin_sponsor_frame',{p_sponsor:id}), rpc('admin_list_titles',{p_sponsor:id}), rpc('duel_events').catch(()=>[]) ]);
+    const [sponsors, ads, products, ents, frames, titles, events, prizes] = await Promise.all([
+      rpc('admin_list_sponsors'), rpc('admin_sponsor_ads',{p_sponsor:id}), rpc('admin_sponsor_products',{p_sponsor:id}), rpc('admin_sponsor_entitlements',{p_sponsor:id}), rpc('admin_sponsor_frame',{p_sponsor:id}), rpc('admin_list_titles',{p_sponsor:id}), rpc('duel_events').catch(()=>[]), rpc('admin_list_prizes',{p_sponsor:id}) ]);
     const s=(sponsors||[]).find(x=>x.id===id); if(!s){ toast('Sponsor not found.','err'); return backToList(); }
-    renderDetail(s, ads||[], products||[], ents||[], (frames||[])[0]||null, titles||[], events||[]);
+    let awards=[]; if(awardsOpen){ awards = await rpc('admin_list_awards',{p_prize:awardsOpen}).catch(()=>[]); }
+    renderDetail(s, ads||[], products||[], ents||[], (frames||[])[0]||null, titles||[], events||[], prizes||[], awards||[]);
     $('listView').classList.add('hide'); $('detailView').classList.remove('hide'); window.scrollTo(0,0);
   }catch(e){ toast(e.message||'Could not open sponsor.','err'); }
 }
-function backToList(){ cur=null; $('detailView').classList.add('hide'); $('listView').classList.remove('hide'); load(); }
+function backToList(){ cur=null; awardsOpen=null; $('detailView').classList.add('hide'); $('listView').classList.remove('hide'); load(); }
 
 function statusButtons(s){
   const b=[];
@@ -268,7 +286,7 @@ function statusButtons(s){
   return b.join(' ');
 }
 
-function renderDetail(s, ads, products, ents, frame, titles, events){
+function renderDetail(s, ads, products, ents, frame, titles, events, prizes, awards){
   $('detailView').innerHTML = `
   <div class="card">
     <div class="hd"><h2><span class="rail"></span>${esc(s.company_name)} <span class="pill ${esc(s.status)}">${esc(s.status)}</span></h2>
@@ -377,6 +395,44 @@ function renderDetail(s, ads, products, ents, frame, titles, events){
         <div style="display:flex;align-items:flex-end"><button class="btn sm" data-act="sponsorEvent">Present this event</button></div>
       </div>
     </div>
+
+    <div class="subcard">
+      <div class="hd"><h3>◆ Prizes &nbsp;<span class="muted2">(${(prizes||[]).length})</span></h3></div>
+      <table><thead><tr><th>Prize</th><th style="width:130px">Awarded to</th><th style="width:80px">Status</th><th style="width:60px">Won</th><th style="width:150px"></th></tr></thead>
+      <tbody>${(prizes||[]).length?(prizes||[]).map(p=>`<tr>
+        <td class="name"><b>${esc(p.title)}</b><small>${p.value_cents?('$'+(p.value_cents/100)):''}</small></td>
+        <td class="muted" style="font-size:12px">${esc(p.scope)}</td>
+        <td><span class="pill ${p.status==='awarded'?'active':'pending'}">${esc(p.status)}</span></td>
+        <td class="num">${p.award_count}</td>
+        <td class="rowbtns">
+          ${['duel_month','voter_award','round_placement'].includes(p.scope)?`<button class="btn gold sm" data-act="awardPrize" data-id="${p.id}">Award</button>`:''}
+          <button class="btn sm" data-act="viewAwards" data-id="${p.id}">${awardsOpen===p.id?'Hide':'Winners'}</button>
+        </td>
+      </tr>${awardsOpen===p.id?`<tr><td colspan="5" style="background:#0e0e11;padding:8px 14px">
+        ${(awards||[]).length?(awards||[]).map(a=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid #1c1c20">
+          <span><b>${esc(a.competitor_name)}</b> <span class="muted2" style="font-size:11px">→ ${esc(a.school||'no dojo')}</span></span>
+          <span style="display:flex;align-items:center;gap:8px"><span class="pill ${a.claim_status==='fulfilled'?'active':(a.claim_status==='claimed'?'pending':'lapsed')}">${esc(a.claim_status)}</span>
+          ${a.claim_status!=='fulfilled'?`<button class="btn sm" data-act="markFulfilled" data-id="${a.award_id}">Mark fulfilled</button>`:`<span class="muted2" style="font-size:11px">${esc(a.tracking||'✓')}</span>`}</span>
+        </div>`).join(''):'<span class="muted2" style="font-size:12px">No winners yet — click Award to compute them.</span>'}
+      </td></tr>`:''}`).join(''):`<tr><td colspan="5" class="empty">No prizes yet.</td></tr>`}</tbody></table>
+      <div class="frm">
+        <div><label>Prize title</label><input id="pz_title" placeholder="Century gear bundle"/></div>
+        <div><label>Value (USD)</label><input id="pz_value" type="number" placeholder="99"/></div>
+        <div class="full"><label>Description</label><textarea id="pz_desc" placeholder="What the winner gets"></textarea></div>
+        <div><label>Awarded to</label><select id="pz_scope">
+          <option value="duel_month">Top of the dueling leaderboard</option>
+          <option value="voter_award">Top voters (accuracy)</option>
+          <option value="round_placement">Tournament placement</option>
+          <option value="custom">Custom (award manually)</option>
+        </select></div>
+        <div><label>How many winners (top N)</label><input id="pz_top" type="number" value="1" min="1"/></div>
+        <div><label>Event (placement only)</label><select id="pz_event"><option value="">— any —</option>${(events||[]).map(e=>`<option value="${esc(e.code)}">${esc(e.name)}</option>`).join('')}</select></div>
+        <div><label>Place (placement only)</label><input id="pz_place" type="number" placeholder="1"/></div>
+        <div><label>Prize image</label><input id="pz_img" type="file" accept="image/*"/></div>
+        <div class="actions-row"><button class="btn gold sm" data-act="savePrize">Create prize</button></div>
+      </div>
+      <div class="foot-note" style="text-align:left;padding:0 18px 14px">Prizes ship to the winner's dojo — never a minor's home address.</div>
+    </div>
   </div>`;
 }
 
@@ -460,6 +516,21 @@ document.addEventListener('click', async (e)=>{
       await rpc('admin_set_title',{ p_sponsor:cur, p_scope:'event', p_key:ev, p_active:true }); toast('Now presenting that event.','ok'); return showDetail(cur); }
     if(act==='removeTitle'){ await rpc('admin_set_title',{ p_sponsor:cur, p_scope:btn.dataset.scope, p_key:btn.dataset.key, p_active:false }); toast('Removed.','ok'); return showDetail(cur); }
 
+    if(act==='savePrize'){
+      if(!val('pz_title')){ toast('Prize needs a title.','err'); btn.disabled=false; return; }
+      const scope=val('pz_scope')||'custom'; const crit={};
+      if(scope==='duel_month'||scope==='voter_award'){ crit.top=Number(val('pz_top')||'1'); }
+      if(scope==='round_placement'){ if(val('pz_event')) crit.event=val('pz_event'); if(val('pz_place')) crit.place=Number(val('pz_place')); }
+      const p={ sponsor_id:cur, title:val('pz_title'), description:val('pz_desc'),
+        value_cents: val('pz_value')?Math.round(Number(val('pz_value'))*100):null, scope, criteria:crit,
+        quantity:Number(val('pz_top')||'1'), status:'active' };
+      const iu=await uploadFile('sponsor-assets',$('pz_img'),'prizes'); if(iu) p.image_url=iu;
+      await rpc('admin_upsert_prize',{ p }); toast('Prize created.','ok'); return showDetail(cur);
+    }
+    if(act==='awardPrize'){ const n=await rpc('admin_award_prize',{ p_prize:btn.dataset.id }); awardsOpen=btn.dataset.id; toast(`Awarded to ${n} competitor${n===1?'':'s'}.`,'ok'); return showDetail(cur); }
+    if(act==='viewAwards'){ awardsOpen = awardsOpen===btn.dataset.id ? null : btn.dataset.id; return showDetail(cur); }
+    if(act==='markFulfilled'){ const t=prompt('Tracking # (optional):')||''; await rpc('admin_mark_fulfilled',{ p_award:btn.dataset.id, p_tracking:t||null }); toast('Marked fulfilled.','ok'); return showDetail(cur); }
+
     if(act==='saveHouse'){
       const video=await uploadFile('sponsor-videos',$('h_video'),'house');
       if(!video){ toast('Choose a video clip.','err'); btn.disabled=false; return; }
@@ -468,6 +539,9 @@ document.addEventListener('click', async (e)=>{
       toast('House ad added.','ok'); return load();
     }
     if(act==='toggleHouse'){ await rpc('admin_upsert_sponsor_ad',{ p:{ id:btn.dataset.id, active: btn.dataset.on==='1' ? false : true } }); return load(); }
+
+    if(act==='saveTier'){ const id=btn.dataset.id; const dollars=$('tp_price_'+id).value; const sid=$('tp_sid_'+id).value.trim();
+      await rpc('admin_set_tier_pricing',{ p_tier:id, p_price_cents: dollars!=='' ? Math.round(Number(dollars)*100) : null, p_stripe_price_id: sid }); toast('Tier saved.','ok'); return load(); }
   }catch(err){ toast(err.message||'Action failed.','err'); }
   finally{ btn.disabled=false; }
 });

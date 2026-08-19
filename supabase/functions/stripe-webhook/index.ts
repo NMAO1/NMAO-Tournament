@@ -74,6 +74,15 @@ Deno.serve(async (req) => {
         await svc.from("entry_entitlements").update(patch).eq("id", entId);
         if (s.mode === "subscription" || s.payment_status === "paid") await activateEntitlement(entId);
       }
+      // SPONSOR subscription — link Stripe refs + grant the tier's offerings.
+      // Status stays 'pending' until staff moderate the ad/products, then → active.
+      if (s.metadata?.kind === "sponsor" && s.metadata.sponsor_id) {
+        const sp: any = { updated_at: now() };
+        if (s.subscription) sp.stripe_subscription_id = s.subscription;
+        if (s.customer) sp.stripe_customer_id = s.customer;
+        await svc.from("sponsors").update(sp).eq("id", s.metadata.sponsor_id);
+        await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id });
+      }
     } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       const sub = event.data.object;
       const next = subToEnt(sub.status);
@@ -82,16 +91,28 @@ Deno.serve(async (req) => {
         if (next === "canceled") patch.canceled_at = now();
         await svc.from("entry_entitlements").update(patch).eq("stripe_subscription_id", sub.id);
       }
+      // a sponsor whose subscription goes bad drops out of rotation
+      if (sub.status === "past_due" || sub.status === "unpaid" || sub.status === "canceled" || sub.status === "incomplete_expired") {
+        await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", sub.id);
+      }
     } else if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object;
       await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("stripe_subscription_id", sub.id);
+      await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", sub.id);
     } else if (event.type === "invoice.payment_succeeded") {
       // Recurring monthly renewal — keep the entitlement active.
       const inv = event.data.object;
-      if (inv.subscription) await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).neq("status", "canceled");
+      if (inv.subscription) {
+        await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).neq("status", "canceled");
+        // recover a previously-lapsed sponsor (staff-approved ones return to active)
+        await svc.from("sponsors").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).eq("status", "lapsed");
+      }
     } else if (event.type === "invoice.payment_failed") {
       const inv = event.data.object;
-      if (inv.subscription) await svc.from("entry_entitlements").update({ status: "past_due", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
+      if (inv.subscription) {
+        await svc.from("entry_entitlements").update({ status: "past_due", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
+        await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
+      }
     }
   } catch (e: any) {
     console.error("webhook handler error:", e?.message || e);

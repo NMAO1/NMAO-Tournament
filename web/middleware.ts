@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Host-based routing so each subdomain lands on its own portal, even though
 // School + Judge live in one Next.js app:
-//   school.nmao.us/*  ->  /school/*   (school owner portal)
-//   judge.nmao.us/    ->  /judge      (judge app; /login and /apply are already root-level)
+//   school.nmao.us/*    ->  /school/*   (school owner portal)
+//   judge.nmao.us/      ->  /judge      (judge app; /login and /apply are already root-level)
+//   sponsor.nmao.us/    ->  /sponsor    (public sponsor signup; /sponsor/return is root-level)
 // Any other host (localhost, the raw *.vercel.app) is left untouched, so local
 // dev and preview URLs keep working with the normal /school + /judge paths.
 export function middleware(req: NextRequest) {
@@ -22,6 +23,13 @@ export function middleware(req: NextRequest) {
     if (pathname === "/") {
       const url = req.nextUrl.clone();
       url.pathname = "/judge";
+      return NextResponse.rewrite(url);
+    }
+  } else if (host.startsWith("sponsor.")) {
+    // /sponsor and /sponsor/return are already root-level; map the bare landing.
+    if (pathname === "/") {
+      const url = req.nextUrl.clone();
+      url.pathname = "/sponsor";
       return NextResponse.rewrite(url);
     }
   }
