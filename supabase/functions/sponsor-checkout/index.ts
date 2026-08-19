@@ -56,11 +56,13 @@ Deno.serve(async (req) => {
           : { quantity: 1, price_data: { currency: "usd", unit_amount: Number(tier.monthly_price_cents), recurring: { interval: "month" }, product_data: { name: `NMAO ${tier.name} Sponsorship` } } });
       }
     }
+    const billedCodes: string[] = [];
     if (codes.length) {
       const { data: offs } = await svc.from("sponsor_offerings").select("code, name, default_price_cents, billing").in("code", codes);
       for (const o of (offs ?? [])) {
         if (o.billing !== "monthly" || !(Number(o.default_price_cents) > 0)) continue; // recurring, priced only
         line_items.push({ quantity: 1, price_data: { currency: "usd", unit_amount: Number(o.default_price_cents), recurring: { interval: "month" }, product_data: { name: `NMAO — ${o.name}` } } });
+        billedCodes.push(o.code); // only grant what was actually charged
       }
     }
     if (!line_items.length) return json({ ok: false, error: "Cart is empty (pick a priced monthly item or bundle)." }, 400);
@@ -68,7 +70,7 @@ Deno.serve(async (req) => {
     const origin = (typeof b.origin === "string" && /^https?:\/\//.test(b.origin)) ? b.origin.replace(/\/$/, "") : (Deno.env.get("SITE_URL") || "").replace(/\/$/, "");
     const meta: Record<string, string> = { kind: "sponsor", sponsor_id: String(b.sponsor_id) };
     if (b.tier_id) meta.tier_id = String(b.tier_id);
-    if (codes.length) meta.offerings = codes.join(",");
+    if (billedCodes.length) meta.offerings = billedCodes.join(",");
 
     const stripe = new Stripe(stripeKey, { httpClient: Stripe.createFetchHttpClient() });
     const session = await stripe.checkout.sessions.create({
