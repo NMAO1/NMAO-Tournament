@@ -10,7 +10,13 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "us.nmao.compete",
-      "associatedDomains": ["applinks:compete.nmao.us"]
+      "buildNumber": "1",
+      "associatedDomains": [
+        "applinks:compete.nmao.us"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "us.nmao.compete",
@@ -25,9 +31,24 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "compete.nmao.us", "pathPrefix": "/invite" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "https",
+              "host": "compete.nmao.us",
+              "pathPrefix": "/invite"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
+      ],
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -43,7 +64,14 @@
       ],
       "expo-audio",
       "expo-web-browser",
-      "expo-video"
-    ]
+      "expo-video",
+      "expo-asset"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f410fb85-09ed-41bf-bd1f-6cec899e8df3"
+      }
+    },
+    "owner": "nmao3"
   }
 }
