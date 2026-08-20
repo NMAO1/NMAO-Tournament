@@ -52,6 +52,16 @@ Deno.serve(async (req) => {
     await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("id", entitlementId).neq("status", "canceled");
     await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("entitlement_id", entitlementId).neq("payment_status", "paid");
   }
+  // Refund / chargeback: revoke the entitlement bought by this PaymentIntent and
+  // un-pay its entries, so paid access can't survive a refund or won dispute.
+  async function revokeByPaymentIntent(pi: string) {
+    const { data: ents } = await svc.from("entry_entitlements").select("id").eq("stripe_payment_intent_id", pi);
+    for (const e of (ents ?? []) as any[]) {
+      await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("id", e.id);
+      await svc.from("entries").update({ payment_status: "unpaid", paid_at: null }).eq("entitlement_id", e.id);
+    }
+    return (ents ?? []).length;
+  }
 
   try {
     if (event.type === "payment_intent.succeeded") {
@@ -116,6 +126,18 @@ Deno.serve(async (req) => {
         await svc.from("entry_entitlements").update({ status: "past_due", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
         await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
       }
+    } else if (event.type === "charge.refunded") {
+      // A charge was (fully or partially) refunded — revoke the access it bought.
+      const ch = event.data.object;
+      if (ch.payment_intent) await revokeByPaymentIntent(String(ch.payment_intent));
+      // a sponsor whose charge is refunded drops out of rotation
+      if (ch.customer) await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_customer_id", ch.customer);
+    } else if (event.type === "charge.dispute.created") {
+      // Chargeback opened — pull access immediately (don't wait for the outcome).
+      const d = event.data.object;
+      let pi: string | null = d.payment_intent ? String(d.payment_intent) : null;
+      if (!pi && d.charge) { try { const c: any = await stripe.charges.retrieve(String(d.charge)); pi = c.payment_intent ? String(c.payment_intent) : null; } catch (_) { /* ignore */ } }
+      if (pi) await revokeByPaymentIntent(pi);
     }
   } catch (e: any) {
     console.error("webhook handler error:", e?.message || e);

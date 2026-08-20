@@ -23,6 +23,8 @@ const WANT = [
   "customer.subscription.deleted",
   "invoice.payment_succeeded",
   "invoice.payment_failed",
+  "charge.refunded",
+  "charge.dispute.created",
 ];
 
 Deno.serve(async (req) => {
