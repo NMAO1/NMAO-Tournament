@@ -36,6 +36,13 @@ Deno.serve(async (req) => {
 
   const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
   try {
+    // per-IP rate limit FIRST (public endpoint) — throttle spam entrant rows +
+    // outbound Stripe calls regardless of payload. Generous cap so a busy venue
+    // (many parents behind one NAT) isn't blocked. Same limiter as the sponsor EFs.
+    const ip = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
+    const { data: rateOk } = await svc.rpc("rate_ok", { p_bucket: "inhouse_register", p_key: ip, p_max: 30, p_window_secs: 600 });
+    if (rateOk === false) return json({ ok: false, error: "Too many registrations from this network — please try again shortly." }, 429);
+
     const body = await req.json().catch(() => ({}));
     const token = String(body.token || "").trim();
     const athlete = String(body.athlete_name || "").trim();
