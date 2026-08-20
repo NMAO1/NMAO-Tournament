@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Switch } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Switch, TextInput, Alert } from "react-native";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { supabase } from "../lib/supabase";
@@ -13,7 +13,7 @@ import Store from "./Store";
 import SponsorFrames from "./SponsorFrames";
 import MyPrizes from "./MyPrizes";
 
-type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab";
+type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount";
 const RANK = (r: string | null) => (r ? r.replace("_", " ") : "");
 
 const NOTIF_TYPES = [
@@ -43,6 +43,7 @@ export default function Profile() {
   if (sub === "shop") return <Store onBack={() => setSub(null)} />;
   if (sub === "sponsorframe" && me) return <SponsorFrames competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "prizes" && me) return <MyPrizes competitorId={me} onBack={() => setSub(null)} />;
+  if (sub === "deleteaccount") return <DeleteAccount onBack={() => setSub(null)} />;
 
   if (!info) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
 
@@ -79,7 +80,63 @@ export default function Profile() {
       <TouchableOpacity onPress={() => supabase.auth.signOut()} style={{ marginTop: 18, alignItems: "center" }}>
         <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>
       </TouchableOpacity>
+      <TouchableOpacity onPress={() => setSub("deleteaccount")} style={{ marginTop: 12, alignItems: "center" }}>
+        <Text style={{ color: "#8a6b6b", fontSize: 12 }}>Delete account</Text>
+      </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function DeleteAccount({ onBack }: { onBack: () => void }) {
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const ready = confirm.trim().toUpperCase() === "DELETE";
+
+  const run = () => {
+    Alert.alert(
+      "Delete your account?",
+      "This permanently deletes your login and personal information — your name, email, birthdate, photo, and journal. Past competition results are kept but anonymized. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete", style: "destructive", onPress: async () => {
+            setBusy(true); setErr("");
+            try {
+              const { data, error } = await supabase.functions.invoke("delete-account", { body: {} });
+              if (error || (data && data.ok === false)) throw new Error((data && data.error) || error?.message || "Could not delete your account.");
+              await supabase.auth.signOut(); // App.tsx auth listener returns to login
+            } catch (e: any) {
+              setErr(e?.message || "Could not delete your account. Please try again."); setBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  return (
+    <Panel title="Delete account" onBack={onBack}>
+      <Text style={{ color: neutrals.text, fontSize: 15, lineHeight: 22 }}>
+        Deleting your account permanently removes your login and personal information — your name, email, birthdate, photo, and journal.
+      </Text>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 20, marginTop: 10 }}>
+        Past competition results are retained but anonymized, so other competitors' records stay intact. This action cannot be undone.
+      </Text>
+      <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 20, marginBottom: 7, letterSpacing: 0.4 }}>TYPE "DELETE" TO CONFIRM</Text>
+      <TextInput
+        value={confirm} onChangeText={setConfirm} autoCapitalize="characters" autoCorrect={false}
+        placeholder="DELETE" placeholderTextColor={neutrals.muted2}
+        style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, padding: 12, color: neutrals.text, backgroundColor: neutrals.surface, fontSize: 15 }}
+      />
+      {err ? <Text style={{ color: "#E07070", fontSize: 13, marginTop: 12 }}>{err}</Text> : null}
+      <TouchableOpacity
+        disabled={!ready || busy} onPress={run} activeOpacity={0.85}
+        style={{ marginTop: 18, backgroundColor: ready && !busy ? "#3a1414" : neutrals.surface, borderWidth: 1, borderColor: ready ? "#7a2b2b" : neutrals.border, borderRadius: 14, padding: 14, alignItems: "center" }}
+      >
+        {busy ? <ActivityIndicator color="#E07070" /> : <Text style={{ color: ready ? "#E9A0A0" : neutrals.muted2, fontSize: 15, fontWeight: "700" }}>Delete my account</Text>}
+      </TouchableOpacity>
+    </Panel>
   );
 }
 
