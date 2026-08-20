@@ -62,8 +62,12 @@ export default function JudgeOnboarding({ onActive }: { onActive: () => void }) 
 
   const call = useCallback(async (fn: string, body: unknown) => {
     const h = await headers(); if (!h) return null;
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${fn}`, { method: "POST", headers: h, body: JSON.stringify(body) });
-    return res.json();
+    // Never throw: a network blip / non-JSON response must not leave the
+    // onboarding buttons spinning. Callers treat null as a failed call.
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${fn}`, { method: "POST", headers: h, body: JSON.stringify(body) });
+      return await res.json();
+    } catch { return null; }
   }, [headers]);
 
   const refresh = useCallback(async () => {

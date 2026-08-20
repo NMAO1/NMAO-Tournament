@@ -395,6 +395,15 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore & Divi
         .neq('state', 'submitted');
       return count ?? 0;
     },
+    async unassignedEntryCount(roundId) {
+      // Valid entries in this round that have NO judge_assignment row at all.
+      const { data: ents } = await db.from('entries').select('id').eq('round_id', roundId).eq('status', 'valid');
+      const ids = (ents ?? []).map((e: any) => e.id);
+      if (!ids.length) return 0;
+      const { data: ja } = await db.from('judge_assignments').select('entry_id').in('entry_id', ids);
+      const assigned = new Set((ja ?? []).map((a: any) => a.entry_id));
+      return ids.filter((id: string) => !assigned.has(id)).length;
+    },
     async getPodsForAssignment(roundId) {
       const { data: pods } = await db
         .from('pods')

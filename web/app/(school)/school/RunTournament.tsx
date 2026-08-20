@@ -19,6 +19,7 @@ export default function RunTournament({ tournament, criteria, entrants, onClose,
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [err, setErr] = useState("");
   const cur = ents[i];
 
   const inp: React.CSSProperties = { padding: "9px 11px", borderRadius: 9, border: `1px solid ${neutrals.border}`, background: "#0e0e11", color: neutrals.text, fontSize: 15, width: 90, textAlign: "center" };
@@ -30,19 +31,26 @@ export default function RunTournament({ tournament, criteria, entrants, onClose,
   }
   async function saveCurrent() {
     const s = cur.scores || {};
-    await supabase.from("ih_entrants").update({ scores: s, score: total(s, criteria) }).eq("id", cur.id);
+    const { error } = await supabase.from("ih_entrants").update({ scores: s, score: total(s, criteria) }).eq("id", cur.id);
+    if (error) throw new Error(error.message); // never advance/finish on a lost save
   }
   async function go(dir: 1 | -1) {
-    setBusy(true); await saveCurrent(); setBusy(false);
+    setBusy(true); setErr("");
+    try { await saveCurrent(); }
+    catch { setBusy(false); setErr("Couldn't save this score — check your connection and try again."); return; }
+    setBusy(false);
     setI((n) => Math.min(ents.length - 1, Math.max(0, n + dir)));
   }
   async function finish() {
-    setBusy(true);
-    await saveCurrent();
-    const ranked = [...ents].map((e) => ({ e, t: total(e.scores, criteria) })).sort((a, b) => b.t - a.t);
-    for (let p = 0; p < ranked.length; p++) {
-      await supabase.from("ih_entrants").update({ score: ranked[p].t, placement: p + 1, scores: ranked[p].e.scores || {} }).eq("id", ranked[p].e.id);
-    }
+    setBusy(true); setErr("");
+    try {
+      await saveCurrent();
+      const ranked = [...ents].map((e) => ({ e, t: total(e.scores, criteria) })).sort((a, b) => b.t - a.t);
+      for (let p = 0; p < ranked.length; p++) {
+        const { error } = await supabase.from("ih_entrants").update({ score: ranked[p].t, placement: p + 1, scores: ranked[p].e.scores || {} }).eq("id", ranked[p].e.id);
+        if (error) throw new Error(error.message);
+      }
+    } catch { setBusy(false); setErr("Couldn't save the final results — nothing was finalized. Please try again."); return; }
     setBusy(false); setFinished(true); onSaved();
   }
 
@@ -123,6 +131,8 @@ export default function RunTournament({ tournament, criteria, entrants, onClose,
             <span style={{ color: hues.gold.hi, fontSize: 22, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{runningTotal}</span>
           </div>
         </div>
+
+        {err && <div style={{ color: "#E88", fontSize: 13, marginTop: 16, textAlign: "center" }}>{err}</div>}
 
         {/* nav */}
         <div style={{ display: "flex", gap: 10, marginTop: 20 }}>

@@ -20,7 +20,8 @@ const LANES: { key: Lane; name: string; blurb: string; unit: string }[] = [
 const money = (c: number) => `$${(c / 100).toFixed(0)}`;
 
 // The paid-entry flow: pick event count + which events + a payment lane, then
-// pay via the Stripe PaymentSheet. A webhook activates the entitlement.
+// pay via Stripe hosted Checkout in the browser (no in-app IAP). A webhook
+// activates the entitlement.
 export default function BuyEntry({ competitorId, onClose, onPaid }: { competitorId: string; onClose: () => void; onPaid: () => void }) {
   const [tiers, setTiers] = useState<PricingTier[] | null>(null);
   const [slots, setSlots] = useState<1 | 2>(1);

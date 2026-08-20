@@ -135,6 +135,7 @@ export async function faceOff(duelId: string): Promise<FaceOff | null> {
   const { data, error } = await supabase.rpc("duel_faceoff", { p_duel_id: duelId });
   if (error || !data) return null;
   const j = data as Record<string, unknown>;
+  if (!j.challenger || !j.opponent) return null; // malformed payload — don't deref undefined
   return { duelId: String(j.duel_id), type: j.type as DuelType, status: String(j.status), challenger: toCard(j.challenger as Record<string, unknown>), opponent: toCard(j.opponent as Record<string, unknown>) };
 }
 

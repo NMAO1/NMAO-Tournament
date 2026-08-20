@@ -28,6 +28,7 @@ class MemStore implements EngineStore {
   ) {}
 
   unsubmittedSeatCount() { return 0; } // test scenarios pre-fill all judge scores
+  unassignedEntryCount() { return 0; } // and every entry is judged
   getStepStatus(r: string, s: StepName) { return this.steps.get(`${r}:${s}`) ?? null; }
   setStepStatus(r: string, s: StepName, st: StepStatus) { this.steps.set(`${r}:${s}`, st); }
   claimStep(r: string, s: StepName) {

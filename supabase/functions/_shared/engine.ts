@@ -69,6 +69,11 @@ export interface EngineStore extends StepLedger {
   // resolve/distribute refuse to run while this is > 0 (judging incomplete),
   // so no path can lock in placements from a half-judged round.
   unsubmittedSeatCount(roundId: string): Await<number>;
+  // How many VALID entries in this round have NO judge assigned at all (e.g. a
+  // pod whose every eligible judge was conflicted out). Those have no seat rows,
+  // so the seat check above can't see them — resolve/distribute refuse while > 0
+  // so their competitors never get silently dropped from placements/medals.
+  unassignedEntryCount(roundId: string): Await<number>;
 
   // assign_judges
   getPodsForAssignment(roundId: string): Await<AssignPod[]>;
@@ -140,6 +145,8 @@ export function stepResolve(
     // guard cannot (tail/all create the seats mid-run).
     const pending = await store.unsubmittedSeatCount(roundId);
     if (pending > 0) throw new Error(`Cannot resolve: ${pending} judge seat(s) haven't submitted a score yet — judging is incomplete.`);
+    const unassigned = await store.unassignedEntryCount(roundId);
+    if (unassigned > 0) throw new Error(`Cannot resolve: ${unassigned} valid entr${unassigned === 1 ? 'y has' : 'ies have'} no judge assigned — run assign judges / Fill unclaimed first.`);
 
     const pods = await store.getPodsForResolve(roundId);
     const results: ResultWrite[] = [];
@@ -189,6 +196,8 @@ export function stepDistribute(store: EngineStore, roundId: string): Promise<Ste
     // unscored pods and hand out no medals for them. Covers tail/all too.
     const pending = await store.unsubmittedSeatCount(roundId);
     if (pending > 0) throw new Error(`Cannot distribute: ${pending} judge seat(s) haven't submitted a score yet — judging is incomplete.`);
+    const unassigned = await store.unassignedEntryCount(roundId);
+    if (unassigned > 0) throw new Error(`Cannot distribute: ${unassigned} valid entr${unassigned === 1 ? 'y has' : 'ies have'} no judge assigned — run assign judges / Fill unclaimed first.`);
 
     const results = await store.getResultsForShipping(roundId);
     const schools = await store.getSchools(roundId);

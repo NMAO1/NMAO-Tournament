@@ -95,7 +95,7 @@ export default function Home({ onCompete }: { onCompete: () => void }) {
         const after = Number(r.rating_after), d = Number(r.rating_delta);
         const entry = Array.isArray(r.entries) ? r.entries[0] : r.entries;
         const { data: medal } = await supabase.from("medals").select("medal_type").eq("entry_id", r.entry_id).maybeSingle();
-        setResult({ placement: r.placement, before: after - d, after, delta: d, event: entry.event, medalType: medal ? (medal as { medal_type: string }).medal_type : null });
+        setResult({ placement: r.placement, before: after - d, after, delta: d, event: entry?.event ?? "", medalType: medal ? (medal as { medal_type: string }).medal_type : null });
       }
       setLoading(false);
     })();
