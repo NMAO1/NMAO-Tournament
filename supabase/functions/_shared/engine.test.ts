@@ -137,6 +137,23 @@ async function main() {
      'each step persisted exactly once despite the replay');
 }
 
+// ---- guard: resolve/distribute refuse while judging is incomplete ----
+{
+  const s1 = new MemStore(assignPods, judges, pods, resultRows, schools);
+  (s1 as any).unsubmittedSeatCount = () => 3;
+  let threw = false;
+  try { await stepResolve(s1, 'rGuardA'); } catch { threw = true; }
+  ok(threw, 'resolve refuses while judge seats are unsubmitted');
+  ok(s1.saveCounts.results === 0, 'no results written when judging incomplete');
+
+  const s2 = new MemStore(assignPods, judges, pods, resultRows, schools);
+  (s2 as any).unassignedEntryCount = () => 1;
+  let threw2 = false;
+  try { await stepDistribute(s2, 'rGuardB'); } catch { threw2 = true; }
+  ok(threw2, 'distribute refuses while a valid entry has no judge assigned');
+  ok(s2.saveCounts.ship === 0, 'no ship list written when an entry is unjudged');
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) { for (const f of fails) console.log('  ✗ ' + f); process.exit(1); }
 else console.log('All engine orchestration tests passed.');
