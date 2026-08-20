@@ -27,6 +27,7 @@ class MemStore implements EngineStore {
     private schools: Record<string, { name: string; address?: unknown }>,
   ) {}
 
+  unsubmittedSeatCount() { return 0; } // test scenarios pre-fill all judge scores
   getStepStatus(r: string, s: StepName) { return this.steps.get(`${r}:${s}`) ?? null; }
   setStepStatus(r: string, s: StepName, st: StepStatus) { this.steps.set(`${r}:${s}`, st); }
   claimStep(r: string, s: StepName) {
@@ -57,9 +58,12 @@ const assignPods: AssignPod[] = [{
     { entryId: 'e3', competitorId: 'c3', schoolId: 's3' },
   ],
 }];
+// Pod p1 holds entries from s1/s2/s3; per-pod conflict exclusion means the panel
+// must come from OTHER schools, so the pool needs >=3 judges outside s1/s2/s3.
 const judges: JudgeInput[] = [
   { id: 'j1', schoolId: 's1' }, { id: 'j2', schoolId: 's2' },
   { id: 'j3', schoolId: 's3' }, { id: 'j4', schoolId: 's4' },
+  { id: 'j5', schoolId: 's5' }, { id: 'j6', schoolId: 's6' },
 ];
 const pods: PodForResolve[] = [{
   podId: 'p1',
@@ -84,6 +88,10 @@ async function main() {
   ok(out.ran === true, 'assign_judges runs first time');
   ok(store.assignments.length === 3, '3 videos -> 3 assignment rows');
   ok(store.assignments.every((a) => a.judgeIds.length === 3), 'each advanced video gets 3 judges');
+  // per-pod: every entry in the pod shares the SAME panel (comparable scoring)
+  const panel0 = JSON.stringify(store.assignments[0].judgeIds);
+  ok(store.assignments.every((a) => JSON.stringify(a.judgeIds) === panel0), 'all pod entries get the SAME judge panel');
+  ok(store.assignments[0].judgeIds.every((id) => ['j4', 'j5', 'j6'].includes(id)), 'panel excludes every pod school (s1/s2/s3)');
   const e1 = store.assignments.find((a) => a.entryId === 'e1')!;
   ok(!e1.judgeIds.includes('j1'), 'e1 (school s1) not judged by own-school judge j1');
   const out2 = await stepAssignJudges(store, 'r1');

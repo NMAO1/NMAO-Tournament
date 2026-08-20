@@ -91,7 +91,7 @@ function many(n: number, event: string, age: string, rank: string): Entry[] {
     { id: 'j3', schoolId: 's2' }, { id: 'j4', schoolId: 's3' } ];
   const { assignments, flags } = assignJudges(pods, judges);
   ok(assignments.every((a) => a.judgeIds.length === 2 && a.shortfall === 1), 'only 2 eligible -> shortfall 1 each');
-  ok(flags.length === 3, 'a flag per short-staffed video');
+  ok(flags.length === 1, 'one flag per short-staffed pod');
   ok(assignments.every((a) => !a.judgeIds.includes('j1') && !a.judgeIds.includes('j2')), 'no own-school (s1) judge used');
 
   // enough judges -> no shortfall, still no own-school judge

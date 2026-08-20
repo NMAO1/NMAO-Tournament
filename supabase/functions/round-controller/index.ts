@@ -91,13 +91,15 @@ Deno.serve(async (req: Request) => {
       const { count } = await guardSvc().from('entries').select('id', { count: 'exact', head: true }).eq('round_id', roundId).eq('status', 'valid');
       if (!count) return json({ error: 'Cannot divide a round with zero valid entries — close the round first (an entry needs a video to be valid).' }, 409);
     }
-    if (step === 'distribute') {
-      // Distribute would silently skip pods whose judges haven't scored, handing
-      // out no medals for them. Block until every assigned seat is submitted.
+    if (step === 'resolve' || step === 'distribute') {
+      // Resolve/distribute would silently skip pods whose judges haven't scored,
+      // locking in placements / handing out no medals for them. Block until every
+      // assigned seat is submitted. (tail/all are additionally guarded inside the
+      // engine's resolve/distribute steps, since they create seats mid-run.)
       const { count } = await guardSvc().from('judge_assignments')
         .select('id, entries!inner(round_id)', { count: 'exact', head: true })
         .eq('entries.round_id', roundId).neq('state', 'submitted');
-      if (count && count > 0) return json({ error: `Cannot distribute: ${count} judge seat(s) haven't submitted a score yet. Finish judging first (use "Fill unclaimed" or recuse to clear stuck seats).` }, 409);
+      if (count && count > 0) return json({ error: `Cannot ${step}: ${count} judge seat(s) haven't submitted a score yet. Finish judging first (use "Fill unclaimed" or recuse to clear stuck seats).` }, 409);
     }
   } catch (e) {
     console.error('round-controller guard error', { roundId, step, e: String(e) });

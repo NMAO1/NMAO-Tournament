@@ -65,6 +65,11 @@ export interface StepLedger {
 }
 
 export interface EngineStore extends StepLedger {
+  // How many assigned judge seats in this round have NOT submitted a score yet.
+  // resolve/distribute refuse to run while this is > 0 (judging incomplete),
+  // so no path can lock in placements from a half-judged round.
+  unsubmittedSeatCount(roundId: string): Await<number>;
+
   // assign_judges
   getPodsForAssignment(roundId: string): Await<AssignPod[]>;
   getJudgePool(roundId: string): Await<JudgeInput[]>;
@@ -129,6 +134,13 @@ export function stepResolve(
   ratingCfg: RatingConfig = DEFAULT_RATING_CONFIG,
 ): Promise<StepOutcome> {
   return idempotent(store, roundId, 'resolve', async () => {
+    // Judging must be COMPLETE before we resolve — otherwise partial/empty pods
+    // get placements locked in and the step marks itself done (unrecoverable).
+    // This runs on every path (direct step, tail, all), which the HTTP-level
+    // guard cannot (tail/all create the seats mid-run).
+    const pending = await store.unsubmittedSeatCount(roundId);
+    if (pending > 0) throw new Error(`Cannot resolve: ${pending} judge seat(s) haven't submitted a score yet — judging is incomplete.`);
+
     const pods = await store.getPodsForResolve(roundId);
     const results: ResultWrite[] = [];
     const ratings: RatingWrite[] = [];
@@ -173,6 +185,11 @@ export function stepResolve(
 // ---------- step: distribute (ship list) ----------
 export function stepDistribute(store: EngineStore, roundId: string): Promise<StepOutcome> {
   return idempotent(store, roundId, 'distribute', async () => {
+    // Same judging-complete precondition — distribute would silently skip
+    // unscored pods and hand out no medals for them. Covers tail/all too.
+    const pending = await store.unsubmittedSeatCount(roundId);
+    if (pending > 0) throw new Error(`Cannot distribute: ${pending} judge seat(s) haven't submitted a score yet — judging is incomplete.`);
+
     const results = await store.getResultsForShipping(roundId);
     const schools = await store.getSchools(roundId);
     const list = buildShipList(results, schools);

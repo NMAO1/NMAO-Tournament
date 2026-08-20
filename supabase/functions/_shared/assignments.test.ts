@@ -34,17 +34,36 @@ const judges: JudgeInput[] = [
   ok(a.every((id) => id === 'j3' || id === 'j4' || id === 'j5' || id === 'j6'), 'A2 none from school A');
 }
 
-// ---- load balancing across many entries ----
+// ---- per-pod: whole pod shares ONE panel; load balances across PODS ----
 {
-  const entries = Array.from({ length: 12 }, (_, i) => ({ entryId: 'e' + i, competitorId: 'c' + i, schoolId: 'A' }));
-  const pods: AssignPod[] = [{ podId: 'p3', judgeCount: 1, entries }];
-  const { assignments } = assignJudges(pods, judges);
+  // 5 entries in a single 1-judge pod -> all scored by the SAME judge
+  const onePod: AssignPod[] = [{ podId: 'p3', judgeCount: 1,
+    entries: Array.from({ length: 5 }, (_, i) => ({ entryId: 'e' + i, competitorId: 'c' + i, schoolId: 'A' })) }];
+  const r1 = assignJudges(onePod, judges);
+  ok(r1.assignments.length === 5, 'A3 5 entries -> 5 assignment rows');
+  ok(new Set(r1.assignments.map((a) => a.judgeIds[0])).size === 1, 'A3 all entries in a pod share ONE judge');
+  ok(!['j1', 'j2'].includes(r1.assignments[0].judgeIds[0]), 'A3 own-school (A) judge never used');
+
+  // 4 separate 1-judge pods -> load spreads one pod per eligible judge (j3-j6)
+  const fourPods: AssignPod[] = Array.from({ length: 4 }, (_, i) => ({
+    podId: 'q' + i, judgeCount: 1, entries: [{ entryId: 'x' + i, competitorId: 'y' + i, schoolId: 'A' }],
+  }));
   const counts: Record<string, number> = {};
-  assignments.forEach((x) => x.judgeIds.forEach((id) => { counts[id] = (counts[id] || 0) + 1; }));
-  // 12 entries, 4 eligible judges (B & C schools) -> 3 each
-  const vals = ['j3', 'j4', 'j5', 'j6'].map((id) => counts[id] || 0);
-  ok(vals.every((v) => v === 3), 'A3 load evenly balanced (3 each across 4 eligible judges)');
-  ok(!counts['j1'] && !counts['j2'], 'A3 own-school judges never used');
+  assignJudges(fourPods, judges).assignments.forEach((a) => a.judgeIds.forEach((id) => { counts[id] = (counts[id] || 0) + 1; }));
+  ok(['j3', 'j4', 'j5', 'j6'].every((id) => counts[id] === 1), 'A3 load balances one pod per eligible judge');
+  ok(!counts['j1'] && !counts['j2'], 'A3 own-school judges never used across pods');
+}
+
+// ---- pod-level conflict: a judge from ANY pod school is excluded ----
+{
+  const pods: AssignPod[] = [{ podId: 'p6', judgeCount: 1, entries: [
+    { entryId: 'm1', competitorId: 'cm1', schoolId: 'A' },
+    { entryId: 'm2', competitorId: 'cm2', schoolId: 'B' },
+  ] }];
+  const { assignments } = assignJudges(pods, judges);
+  const used = assignments[0].judgeIds[0];
+  ok(!['j1', 'j2', 'j3', 'j4'].includes(used), 'A6 judge from neither pod school (A nor B) is used');
+  ok(assignments.every((a) => a.judgeIds[0] === used), 'A6 both entries share the same clean judge');
 }
 
 // ---- shortfall flagged when too few eligible ----
@@ -56,7 +75,7 @@ const judges: JudgeInput[] = [
   ] }];
   const { assignments, flags } = assignJudges(pods, onlyB);
   ok(assignments[0].judgeIds.length === 0 && assignments[0].shortfall === 3, 'A4 zero eligible -> shortfall 3');
-  ok(flags.length === 1 && flags[0].includes('e4'), 'A4 shortfall flagged for operator');
+  ok(flags.length === 1 && flags[0].includes('p4'), 'A4 shortfall flagged for operator (per pod)');
 }
 
 // ---- partial shortfall (advanced pod, only 2 eligible) ----

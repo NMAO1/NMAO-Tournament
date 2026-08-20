@@ -386,6 +386,15 @@ export function createSupabaseStore(client?: SupabaseClient): EngineStore & Divi
     },
 
     // ---------- assign_judges ----------
+    async unsubmittedSeatCount(roundId) {
+      // Assigned judge seats for this round that have not submitted a score.
+      const { count } = await db
+        .from('judge_assignments')
+        .select('id, entries!inner(round_id)', { count: 'exact', head: true })
+        .eq('entries.round_id', roundId)
+        .neq('state', 'submitted');
+      return count ?? 0;
+    },
     async getPodsForAssignment(roundId) {
       const { data: pods } = await db
         .from('pods')
