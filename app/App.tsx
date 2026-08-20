@@ -50,9 +50,16 @@ function MainTabs() {
       const m = await latestUnseenMonthly();
       if (m) setReveal({ kind: "monthly", period: m.period, payload: m.payload }); // auto-detect on launch (§8b)
     })();
-    const unsub = subscribeNotifications(() => { unreadCount().then(setUnread); });
-    return unsub;
   }, []);
+
+  // Subscribe to notifications filtered to this user's competitor(s) — re-subscribes
+  // once the ward list loads. Filtering routes server-side (no whole-table fan-out).
+  const compKey = comps.map((c) => c.id).join(",");
+  useEffect(() => {
+    const ids = compKey ? compKey.split(",") : undefined;
+    const unsub = subscribeNotifications(() => { unreadCount().then(setUnread); }, ids);
+    return unsub;
+  }, [compKey]);
 
   function routeNotif(n: Notif) {
     setAlertsOpen(false);

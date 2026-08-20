@@ -67,11 +67,15 @@ export default function JudgeQueue() {
 
   useEffect(() => {
     load(); loadPool();
+    // Debounce: assign_judges / fill-unclaimed bulk-insert thousands of rows at
+    // once — collapse the burst into one reload instead of a query per insert.
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const reload = () => { clearTimeout(t); t = setTimeout(() => { load(); loadPool(); }, 400); };
     const ch = supabase
       .channel("judge-queue")
-      .on("postgres_changes", { event: "*", schema: "public", table: "judge_assignments" }, () => { load(); loadPool(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "judge_assignments" }, reload)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearTimeout(t); supabase.removeChannel(ch); };
   }, [load, loadPool, supabase]);
 
   async function claim(podId: string) {

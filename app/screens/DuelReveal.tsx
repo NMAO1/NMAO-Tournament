@@ -69,6 +69,12 @@ function VideoThumb({ card }: { card: Card }) {
       </Frame>
       <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 1, textTransform: "uppercase", marginTop: 6 }}>{card.firstName}</Text>
       <Text style={{ color: neutrals.text, fontSize: 13, fontWeight: "900", textTransform: "uppercase" }}>{card.lastName}</Text>
+      {card.sponsorFrame ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 5, backgroundColor: "rgba(6,5,4,0.6)", paddingVertical: 3, paddingHorizontal: 8, borderRadius: 99, borderWidth: 1, borderColor: card.sponsorFrame.accentColor }}>
+          {card.sponsorFrame.logoUrl ? <Image source={{ uri: card.sponsorFrame.logoUrl }} style={{ width: 12, height: 12, borderRadius: 6 }} /> : <Text style={{ fontSize: 8 }}>◆</Text>}
+          <Text style={{ color: "#fff", fontSize: 7, fontWeight: "800", letterSpacing: 0.3 }} numberOfLines={1}>PRESENTED BY {card.sponsorFrame.label.toUpperCase()}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }

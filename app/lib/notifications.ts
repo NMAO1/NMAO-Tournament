@@ -47,12 +47,21 @@ export async function markAllRead(): Promise<void> {
 }
 
 /** Realtime: fire `cb` when a notification arrives for this user. Returns an unsubscribe. */
-export function subscribeNotifications(cb: (n: Notif) => void): () => void {
+export function subscribeNotifications(cb: (n: Notif) => void, competitorIds?: string[]): () => void {
+  // Route on competitor_id so Realtime delivers only THIS user's notifications
+  // instead of pushing every insert to every client for a per-client RLS check
+  // (that fan-out is the first thing to cap concurrency at national scale).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const opts: any = { event: "INSERT", schema: "public", table: "notifications" };
+  if (competitorIds && competitorIds.length) {
+    opts.filter = competitorIds.length === 1
+      ? `competitor_id=eq.${competitorIds[0]}`
+      : `competitor_id=in.(${competitorIds.join(",")})`;
+  }
   const ch = supabase
     .channel("notifs")
-    .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (payload: any) => cb(toNotif(payload.new)))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .on("postgres_changes", opts, (payload: any) => cb(toNotif(payload.new)))
     .subscribe();
   return () => { supabase.removeChannel(ch); };
 }
