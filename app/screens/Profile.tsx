@@ -12,8 +12,9 @@ import FrameLab from "./FrameLab";
 import Store from "./Store";
 import SponsorFrames from "./SponsorFrames";
 import MyPrizes from "./MyPrizes";
+import { myBlocked, unblockCompetitor, type BlockedCompetitor } from "../lib/duel";
 
-type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount";
+type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount" | "blocked";
 const RANK = (r: string | null) => (r ? r.replace("_", " ") : "");
 
 const NOTIF_TYPES = [
@@ -44,6 +45,7 @@ export default function Profile() {
   if (sub === "sponsorframe" && me) return <SponsorFrames competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "prizes" && me) return <MyPrizes competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "deleteaccount") return <DeleteAccount onBack={() => setSub(null)} />;
+  if (sub === "blocked" && me) return <BlockedAccounts competitorId={me} onBack={() => setSub(null)} />;
 
   if (!info) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
 
@@ -73,6 +75,7 @@ export default function Profile() {
       <Row icon="🛒" label="Store" onPress={() => setSub("shop")} />
       <Row icon="🖼️" label="Sponsor frames" onPress={() => setSub("sponsorframe")} />
       <Row icon="🏆" label="My prizes" onPress={() => setSub("prizes")} />
+      <Row icon="🚫" label="Blocked accounts" onPress={() => setSub("blocked")} />
       <Row icon="📖" label="Rules & Help" onPress={() => setSub("rules")} />
       <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} />
       <Row icon="🏆" label="Tournament & entries" onPress={() => setSub("home")} />
@@ -84,6 +87,36 @@ export default function Profile() {
         <Text style={{ color: "#8a6b6b", fontSize: 12 }}>Delete account</Text>
       </TouchableOpacity>
     </ScrollView>
+  );
+}
+
+function BlockedAccounts({ competitorId, onBack }: { competitorId: string; onBack: () => void }) {
+  const [list, setList] = useState<BlockedCompetitor[] | null>(null);
+  useEffect(() => { myBlocked(competitorId).then(setList); }, [competitorId]);
+  const unblock = async (id: string) => {
+    await unblockCompetitor(competitorId, id);
+    setList((l) => (l ?? []).filter((b) => b.competitorId !== id));
+  };
+  return (
+    <Panel title="Blocked accounts" onBack={onBack}>
+      {list === null ? (
+        <ActivityIndicator color={neutrals.muted} />
+      ) : list.length === 0 ? (
+        <Text style={{ color: neutrals.muted2, fontSize: 14, lineHeight: 20 }}>You haven't blocked anyone. You can block a competitor from the Arena — tap the ⚑ on their video.</Text>
+      ) : (
+        list.map((b) => (
+          <View key={b.competitorId} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: neutrals.border }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: neutrals.text, fontSize: 15, fontWeight: "700" }}>{b.name}</Text>
+              {b.school ? <Text style={{ color: neutrals.muted2, fontSize: 12 }}>{b.school}</Text> : null}
+            </View>
+            <TouchableOpacity onPress={() => unblock(b.competitorId)} style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 9, paddingVertical: 7, paddingHorizontal: 14 }}>
+              <Text style={{ color: hues.gold.hi, fontSize: 13, fontWeight: "700" }}>Unblock</Text>
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
+    </Panel>
   );
 }
 

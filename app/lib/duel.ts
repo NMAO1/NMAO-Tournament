@@ -111,6 +111,26 @@ export async function myActiveDuels(competitorId: string): Promise<ActiveDuel[]>
 export type FrameAnim = "none" | "shimmer" | "pulse" | "sheen";
 export type SponsorFrame = { id: string; name: string; logoUrl: string | null; accentColor: string; label: string; imageUrl: string | null; animation: FrameAnim };
 function asAnim(a: unknown): FrameAnim { return a === "shimmer" || a === "pulse" || a === "sheen" ? a : "none"; }
+// ---- UGC safety: report a duel + block / unblock a competitor (App Store 1.2) ----
+export async function reportDuel(duelId: string, reporterId: string, target: Choice | "other", reason: string): Promise<boolean> {
+  const { error } = await supabase.rpc("report_duel", { p_duel_id: duelId, p_reporter: reporterId, p_target: target, p_reason: reason });
+  return !error;
+}
+export async function blockCompetitor(blockerId: string, blockedId: string): Promise<boolean> {
+  const { error } = await supabase.rpc("block_competitor", { p_blocker: blockerId, p_blocked: blockedId });
+  return !error;
+}
+export async function unblockCompetitor(blockerId: string, blockedId: string): Promise<boolean> {
+  const { error } = await supabase.rpc("unblock_competitor", { p_blocker: blockerId, p_blocked: blockedId });
+  return !error;
+}
+export type BlockedCompetitor = { competitorId: string; name: string; school: string | null };
+export async function myBlocked(competitorId: string): Promise<BlockedCompetitor[]> {
+  const { data, error } = await supabase.rpc("my_blocked", { p_competitor_id: competitorId });
+  if (error || !data) return [];
+  return (data as Record<string, unknown>[]).map((r) => ({ competitorId: String(r.competitor_id), name: String(r.name), school: (r.school as string) ?? null }));
+}
+
 export type Card = {
   competitorId: string; name: string; firstName: string; lastName: string;
   school: string | null; rank: string | null; ageBracket: string | null; photo: string | null;

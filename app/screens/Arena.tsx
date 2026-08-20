@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet, Linking } from "react-native";
+import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimensions, StyleSheet, Linking, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
-import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, type FaceOff, type Choice, type Card, type Sponsor, type FrameAnim } from "../lib/duel";
+import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, reportDuel, blockCompetitor, type FaceOff, type Choice, type Card, type Sponsor, type FrameAnim } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
 import { sponsorClick, sponsorAdWatch } from "../lib/store";
 import { useTitleSponsor } from "../lib/title";
@@ -135,6 +135,43 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
     setTimeout(() => onClose(true), 950);
   }
 
+  // ---- UGC safety (App Store 1.2): report a video / block a competitor ----
+  function openSafety(side: Choice) {
+    const card = side === "challenger" ? face?.challenger : face?.opponent;
+    if (!card) return;
+    Alert.alert(card.name, "Keep the community safe.", [
+      { text: "Report this video", onPress: () => promptReport(side) },
+      { text: "Block this competitor", style: "destructive", onPress: () => confirmBlock(card.competitorId, card.name) },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+  function promptReport(side: Choice) {
+    const reasons: { label: string; code: string }[] = [
+      { label: "Inappropriate or unsafe", code: "inappropriate" },
+      { label: "Not a martial arts entry", code: "not_martial_arts" },
+      { label: "Bullying or harassment", code: "harassment" },
+    ];
+    Alert.alert("Why are you reporting?", undefined, [
+      ...reasons.map((r) => ({
+        text: r.label,
+        onPress: async () => {
+          await reportDuel(duelId, voterId, side, r.code);
+          Alert.alert("Reported", "Thanks — our team will review this, and it's now hidden from voting.", [{ text: "OK", onPress: () => onClose(false) }]);
+        },
+      })),
+      { text: "Cancel", style: "cancel" as const },
+    ]);
+  }
+  function confirmBlock(competitorId: string, name: string) {
+    Alert.alert("Block this competitor?", `You won't be matched with ${name}, and their duels won't appear for you.`, [
+      { text: "Block", style: "destructive", onPress: async () => {
+        await blockCompetitor(voterId, competitorId);
+        Alert.alert("Blocked", `${name} is blocked. You can unblock from Profile → Blocked accounts.`, [{ text: "OK", onPress: () => onClose(false) }]);
+      } },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  }
+
   if (!face) {
     return (
       <View style={{ flex: 1, backgroundColor: "#060504", alignItems: "center", justifyContent: "center" }}>
@@ -164,6 +201,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           player={chPlayer} hasVideo={!!urls.challenger}
           onAudio={() => focusAudio("challenger")} onVote={() => vote("challenger")}
           onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
+          onSafety={() => openSafety("challenger")}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
@@ -171,6 +209,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           player={opPlayer} hasVideo={!!urls.opponent}
           onAudio={() => focusAudio("opponent")} onVote={() => vote("opponent")}
           onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
+          onSafety={() => openSafety("opponent")}
         />
       </View>
 
@@ -305,11 +344,11 @@ function AnimatedBorder({ animation, color, radius = 26 }: { animation: FrameAni
 }
 
 function Side({
-  card, choice, rarity, active, unlocked, voted, player, hasVideo, onAudio, onVote, onCrest,
+  card, choice, rarity, active, unlocked, voted, player, hasVideo, onAudio, onVote, onCrest, onSafety,
 }: {
   card: Card; choice: Choice; rarity: "common" | "rare" | "epic" | "legendary";
   active: boolean; unlocked: boolean; voted: Choice | null;
-  player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void;
+  player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void; onSafety: () => void;
 }) {
   const dim = voted && voted !== choice;
   const sf = card.sponsorFrame;             // a branded sponsor frame overrides the rarity band
@@ -336,6 +375,11 @@ function Side({
                 <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
                 {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
               </View>
+              {/* UGC safety: report the video / block this competitor */}
+              <TouchableOpacity onPress={onSafety} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ position: "absolute", top: 7, left: 7, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(6,5,4,0.5)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", zIndex: 6 }}>
+                <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>⚑</Text>
+              </TouchableOpacity>
               {/* both forms roll at once; this chip shows/toggles which side's audio
                   is live (tap to hear this side; the other side mutes). */}
               {hasVideo ? (
