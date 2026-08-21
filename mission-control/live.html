@@ -646,11 +646,40 @@ async function openView(key){
     let title = '', body = '';
     if (key === 'divide'){
       title = 'Divisions & pods';
+      // Pull the roster + event labels so each division expands to the athletes inside it.
+      const [entRes, evRes] = await Promise.all([
+        sb.from('entries').select('division_id,pod_id,age_bracket,declared_rank,competitors!inner(first_name,last_name,schools(name))').eq('round_id', ROUND),
+        sb.from('event_types').select('code,name'),
+      ]);
+      const codeToName = {}; (evRes.data||[]).forEach(e => codeToName[e.code]=e.name);
+      const evLabel = e => codeToName[e] || e;
+      const podSeq = {}; S.pods.forEach(p => podSeq[p.id]=p.seq);
+      const byDiv = {}; (entRes.data||[]).forEach(en => (byDiv[en.division_id]=byDiv[en.division_id]||[]).push(en));
       body = S.divisions.map(d => {
         const dp = S.pods.filter(p => p.divisions && p.divisions.event===d.event && p.divisions.rank_key===d.rank_key);
-        const pods = dp.map(p => `Pod ${p.seq} · ${p.size} entries · ${p.judge_count} judge${p.judge_count===1?'':'s'} · ${p.state}`).join('<br>') || 'no pods';
-        return vItem(`<span class="tier" style="width:8px;height:8px;border-radius:2px;background:${TIER(d.rank_key)}"></span><b>${d.event}</b> · ${d.rank_key} · ${d.age_key}${d.is_collapsed?' · <span style="color:var(--muted-2,#7a7060)">collapsed</span>':''}<span style="margin-left:auto;color:var(--muted-2,#7a7060)">${d.entry_count||0} entries</span>`, pods);
-      }).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No divisions yet.</div>';
+        const podLine = dp.map(p => `Pod ${p.seq} · ${p.size} entries · ${p.judge_count} judge${p.judge_count===1?'':'s'} · ${p.state}`).join('  ·  ') || 'no pods yet';
+        const roster = (byDiv[d.id]||[])
+          .sort((a,b)=>(`${a.competitors?.last_name||''}`).localeCompare(`${b.competitors?.last_name||''}`))
+          .map(en => {
+            const nm = esc(`${en.competitors?.first_name||''} ${en.competitors?.last_name||''}`.trim()||'—');
+            const school = esc(en.competitors?.schools?.name||'');
+            const pod = en.pod_id!=null ? `Pod ${podSeq[en.pod_id]??'?'}` : 'unpodded';
+            const meta = [esc(en.age_bracket||''), esc(en.declared_rank||''), school, pod].filter(Boolean).join(' · ');
+            return `<div style="padding:6px 12px 6px 26px;border-top:1px solid var(--line,#26262b)"><div style="font-size:12px;color:var(--text,#f5f0e8)">${nm}</div><div style="font-size:11px;color:var(--muted-2,#7a7060);margin-top:1px">${meta}</div></div>`;
+          }).join('') || `<div style="padding:6px 12px 6px 26px;font-size:12px;color:var(--muted-2,#7a7060)">No athletes in this division.</div>`;
+        const count = (byDiv[d.id]||[]).length || d.entry_count || 0;
+        return `<details style="border-bottom:1px solid var(--line,#26262b)">
+          <summary style="padding:9px 12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:13px">
+            <span class="tier" style="width:8px;height:8px;border-radius:2px;background:${TIER(d.rank_key)}"></span>
+            <b>${esc(evLabel(d.event))}</b> · ${esc(d.rank_key)} · ${esc(d.age_key)}${d.is_collapsed?' · <span style="color:var(--muted-2,#7a7060)">collapsed</span>':''}
+            <span style="margin-left:auto;color:var(--muted-2,#7a7060)">${count} athlete${count===1?'':'s'} ▾</span>
+          </summary>
+          <div style="background:rgba(0,0,0,.15);padding-bottom:4px">
+            <div style="padding:5px 12px;font-size:11px;color:var(--muted-2,#7a7060)">${podLine}</div>
+            ${roster}
+          </div>
+        </details>`;
+      }).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No divisions yet — run Divide first.</div>';
     } else if (key === 'assign_judges'){
       title = 'Judge assignments';
       const { data } = await sb.from('judge_assignments').select('state,pod_id,judges(first_name,last_name),entries!inner(round_id)').eq('entries.round_id', ROUND);
