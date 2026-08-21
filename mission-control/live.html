@@ -135,6 +135,7 @@
         <button class="btn" id="fillBtn" title="Backfill any pods still short of judges (deadline safety-net)">Fill unclaimed</button>
         <button class="btn" id="seedBtn" title="Create a fresh synthetic demo round to showcase the full pipeline end-to-end">✨ Seed demo</button>
         <button class="btn" id="resetAppBtn" title="Reset the Compete-app dueling demo (competitor showcase): the monthly reveal replays, the bell alerts return, and every vote-queue duel reappears">🔄 Reset app demo</button>
+        <button class="btn" id="printMedalsBtn" title="Printable per-school packing &amp; shipping list — medal counts by type, the competitor receiving each medal, and the school's shipping address">🖨 Packing list</button>
         <button class="btn" id="refreshBtn">Refresh</button>
         <a class="btn" href="./config.html" title="Manage events, age brackets, and pod settings">Config</a>
         <a class="btn" href="./judges.html" title="Review judge applications and onboarding">Judges</a>
@@ -218,6 +219,7 @@ $('refreshBtn').onclick = () => ROUND && loadRound(ROUND);
 $('fillBtn').onclick = () => ROUND && fillUnclaimed();
 $('seedBtn').onclick = seedDemo;
 $('resetAppBtn').onclick = resetAppDemo;
+$('printMedalsBtn').onclick = printPackingList;
 
 // Hybrid safety-net: backfill pods still short of judges after the claim window.
 async function fillUnclaimed(){
@@ -463,6 +465,130 @@ async function resetAppDemo(){
     toast('App demo reset ✓ — reveal replays, alerts + vote queue restored. Re-open the Compete app.', 'ok');
   } catch(e){ toast('Reset: ' + (e.message || e), 'err'); }
   finally { if (btn) btn.disabled = false; }
+}
+// ---- Medal packing & shipping list (operations) -----------------------------
+// A printable, per-school manifest for physically distributing medals: how many
+// of each medal type each school receives, the competitor who earns each one and
+// the category (event · age · rank) they earned it in, plus the ship-to address.
+// Sourced from the `medals` table (authoritative award record — includes the
+// per-competitor participation medals), joined to competitor → school → division.
+const _PK_ORDER = ['gold','silver','bronze','participation'];
+const _PK_LABEL = { gold:'Gold', silver:'Silver', bronze:'Bronze', participation:'Participation' };
+const _PK_EMOJI = { gold:'🥇', silver:'🥈', bronze:'🥉', participation:'🎗️' };
+const _PK_RANK  = { gold:0, silver:1, bronze:2, participation:3 };
+function _pkAddr(a){
+  if (!a || typeof a !== 'object') return '— no address on file —';
+  const city = a.city ? String(a.city).replace(/\b\w/g, c => c.toUpperCase()) : '';
+  const st = a.state ? (String(a.state).length <= 3 ? String(a.state).toUpperCase() : a.state) : '';
+  const tail = [[city, st].filter(Boolean).join(', '), a.postal].filter(Boolean).join(' ');  // "City, ST 12345"
+  return [a.line1, a.line2, tail].filter(Boolean).join(', ') || '— no address on file —';
+}
+function _pkKey(s){
+  if (!s) return '';
+  return String(s)
+    .replace(/(\d)_(\d)/g, '$1–$2')    // 10_12 -> 10–12
+    .replace(/_/g, ' ')                // under_10 -> under 10
+    .replace(/\+/g, ' + ')             // intermediate+advanced -> intermediate + advanced
+    .replace(/\s+/g, ' ').trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+function _pkCat(label, cat){
+  const parts = [label];
+  if (cat) { if (cat.age) parts.push(_pkKey(cat.age)); if (cat.rank) parts.push(_pkKey(cat.rank)); }
+  return parts.filter(Boolean).join(' · ') || '—';
+}
+async function printPackingList(){
+  if (!ROUND) return toast('Pick a round first.', 'err');
+  toast('Building packing list…');
+  // medals = the awarded medals (incl. per-competitor participation); entries carry the
+  // division (the category the medal was won in — medals.division_id is never stamped);
+  // event_types maps event codes -> display names.
+  const [medalsRes, entriesRes, evRes] = await Promise.all([
+    sb.from('medals').select('medal_type, placement, event, competitor_id, competitors!inner(first_name,last_name,school_id,schools(name,address,contact_name,contact_email,phone))').eq('round_id', ROUND),
+    sb.from('entries').select('competitor_id, event, age_bracket, declared_rank, divisions(age_key,rank_key)').eq('round_id', ROUND),
+    sb.from('event_types').select('code, name'),
+  ]);
+  if (medalsRes.error) return toast('Packing list: ' + (medalsRes.error.message || medalsRes.error), 'err');
+  const data = medalsRes.data;
+  if (!data || !data.length) return toast('No medals for this round yet — run Distribute first.', 'err');
+
+  // Normalize event codes <-> labels so both the join key and the display are stable
+  // whether a medal's `event` was stored as "trad_forms" or "Traditional Forms".
+  const codeToName = {}, nameToCode = {};
+  for (const e of (evRes.data || [])) { codeToName[e.code] = e.name; nameToCode[String(e.name).toLowerCase()] = e.code; }
+  const canonEv = e => codeToName[e] ? e : (nameToCode[String(e || '').toLowerCase()] || e);
+  const evLabel = e => codeToName[canonEv(e)] || _pkKey(e);
+
+  // category (age · rank) keyed by competitor + event; prefer the division, fall back to the entry.
+  const catMap = new Map();
+  for (const en of (entriesRes.data || [])) {
+    const d = en.divisions;
+    catMap.set(`${en.competitor_id}|${canonEv(en.event)}`, { age: (d && d.age_key) || en.age_bracket, rank: (d && d.rank_key) || en.declared_rank });
+  }
+
+  const bySchool = new Map();
+  for (const m of data){
+    const c = m.competitors || {}, s = c.schools || {};
+    const key = c.school_id || s.name || 'unknown';
+    if (!bySchool.has(key)) bySchool.set(key, { school: s, items: [], counts: { gold:0, silver:0, bronze:0, participation:0 } });
+    const g = bySchool.get(key);
+    g.items.push({
+      name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || '—',
+      cat: _pkCat(evLabel(m.event), catMap.get(`${m.competitor_id}|${canonEv(m.event)}`)),
+      medal: m.medal_type, place: m.placement,
+    });
+    if (g.counts[m.medal_type] != null) g.counts[m.medal_type]++;
+  }
+  const groups = [...bySchool.values()].sort((a,b) => (a.school.name || '').localeCompare(b.school.name || ''));
+  const grand = { gold:0, silver:0, bronze:0, participation:0 }; let grandTot = 0;
+  groups.forEach(g => _PK_ORDER.forEach(t => { grand[t] += g.counts[t]; grandTot += g.counts[t]; }));
+
+  const seq = STATE?.round?.seq ?? '';
+  const when = new Date().toLocaleString();
+  const tally = c => _PK_ORDER.filter(t => c[t] > 0).map(t => `${_PK_EMOJI[t]} ${_PK_LABEL[t]} × <b>${c[t]}</b>`).join('&nbsp;&nbsp;&nbsp;') || '—';
+
+  const blocks = groups.map(g => {
+    const s = g.school, total = _PK_ORDER.reduce((x,t) => x + g.counts[t], 0);
+    g.items.sort((a,b) => (a.cat||'').localeCompare(b.cat||'') || (_PK_RANK[a.medal]-_PK_RANK[b.medal]) || a.name.localeCompare(b.name));
+    const rows = g.items.map(it =>
+      `<tr><td>${esc(it.name)}</td><td>${esc(it.cat)}</td><td class="c">${it.place ?? '—'}</td><td>${_PK_EMOJI[it.medal] || ''} ${esc(_PK_LABEL[it.medal] || it.medal)}</td></tr>`).join('');
+    const contact = [s.contact_name, s.contact_email, s.phone].filter(Boolean).join(' · ') || '—';
+    return `<section class="pk-s">
+      <div class="pk-h"><div><h2>${esc(s.name || 'School')}</h2>
+        <div class="pk-a">📦 ${esc(_pkAddr(s.address))}</div>
+        <div class="pk-c">${esc(contact)}</div></div>
+        <div class="pk-t"><div class="n">${total}</div><div class="l">medals</div></div></div>
+      <div class="pk-y">${tally(g.counts)}</div>
+      <table class="pk-tb"><thead><tr><th>Competitor</th><th>Category</th><th class="c">Place</th><th>Medal</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="pk-k">Packed&nbsp;☐&nbsp;&nbsp;&nbsp;Shipped&nbsp;☐&nbsp;&nbsp;&nbsp;Carrier / Tracking&nbsp;#&nbsp;____________________________</div>
+    </section>`;
+  }).join('');
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Medal Packing List — Round ${esc(seq)}</title><style>
+    *{box-sizing:border-box} body{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#141210;margin:22px}
+    h1{font-size:20px;margin:0} .pk-m{color:#6b6357;font-size:12px;margin:2px 0 14px}
+    .pk-sum{background:#f6efdc;border:1px solid #e6d8b4;border-radius:9px;padding:11px 15px;margin-bottom:18px;font-size:14px}
+    .pk-s{border:1px solid #cbb98f;border-radius:10px;padding:14px 16px;margin-bottom:14px;page-break-inside:avoid}
+    .pk-h{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid #eee;padding-bottom:9px;margin-bottom:9px}
+    .pk-h h2{font-size:17px;margin:0 0 3px} .pk-a{font-size:13px} .pk-c{color:#8a8172;font-size:12px;margin-top:2px}
+    .pk-t{text-align:center;min-width:64px} .pk-t .n{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums} .pk-t .l{font-size:9px;color:#a99;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+    .pk-y{font-size:13px;margin-bottom:9px} .pk-y b{font-variant-numeric:tabular-nums}
+    table.pk-tb{width:100%;border-collapse:collapse;font-size:12px} .pk-tb th,.pk-tb td{border:1px solid #e3ddca;padding:4px 9px;text-align:left} .pk-tb th{background:#faf6ea;font-weight:700} .pk-tb .c{text-align:center}
+    .pk-k{margin-top:9px;font-size:12px;color:#333}
+    .pk-bar{margin-bottom:14px} .pk-bar button{font:600 13px sans-serif;padding:8px 16px;border-radius:8px;border:1px solid #141210;background:#141210;color:#fff;cursor:pointer}
+    @media print{ body{margin:12mm} .noprint{display:none} }
+  </style></head><body>
+    <div class="pk-bar noprint"><button onclick="window.print()">🖨 Print</button></div>
+    <h1>NMAO Tournament — Medal Packing &amp; Shipping List</h1>
+    <div class="pk-m">Round ${esc(seq)} · ${groups.length} school${groups.length===1?'':'s'} · ${grandTot} medals total · generated ${esc(when)}</div>
+    <div class="pk-sum"><b>Grand total:</b> ${tally(grand)}</div>
+    ${blocks}
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) return toast('Pop-up blocked — allow pop-ups to open the packing list.', 'err');
+  w.document.write(html); w.document.close(); w.focus();
+  toast('Packing list opened in a new tab — press Print.', 'ok');
 }
 async function autoscoreDemo(){
   toast('Autoscoring judge seats…');
