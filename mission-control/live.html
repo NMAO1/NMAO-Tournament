@@ -134,6 +134,7 @@
         <span class="badge state-badge" id="stateBadge">—</span>
         <button class="btn" id="fillBtn" title="Backfill any pods still short of judges (deadline safety-net)">Fill unclaimed</button>
         <button class="btn" id="seedBtn" title="Create a fresh synthetic demo round to showcase the full pipeline end-to-end">✨ Seed demo</button>
+        <button class="btn" id="resetAppBtn" title="Reset the Compete-app dueling demo (competitor showcase): the monthly reveal replays, the bell alerts return, and every vote-queue duel reappears">🔄 Reset app demo</button>
         <button class="btn" id="refreshBtn">Refresh</button>
         <a class="btn" href="./config.html" title="Manage events, age brackets, and pod settings">Config</a>
         <a class="btn" href="./judges.html" title="Review judge applications and onboarding">Judges</a>
@@ -216,6 +217,7 @@ $('roundSel').onchange = e => selectRound(e.target.value);
 $('refreshBtn').onclick = () => ROUND && loadRound(ROUND);
 $('fillBtn').onclick = () => ROUND && fillUnclaimed();
 $('seedBtn').onclick = seedDemo;
+$('resetAppBtn').onclick = resetAppDemo;
 
 // Hybrid safety-net: backfill pods still short of judges after the claim window.
 async function fillUnclaimed(){
@@ -449,6 +451,18 @@ async function seedDemo(){
     await loadRounds(data.round_id);
   } catch(e){ toast('Seed: ' + (e.message || e), 'err'); }
   finally { $('seedBtn').disabled = false; }
+}
+// Reset the Compete-app dueling demo (competitor showcase) — reveal replays,
+// alerts return, all vote-queue duels reappear. Rounds are untouched.
+async function resetAppDemo(){
+  if (!confirm('Reset the Compete-app demo for the competitor showcase?\n\n• The monthly reveal will auto-play again\n• The bell alerts (won / loss / monthly) return\n• Every vote-queue duel reappears\n\nRounds are untouched — use “✨ Seed demo” for a fresh round.')) return;
+  const btn = $('resetAppBtn'); if (btn) btn.disabled = true; toast('Resetting app demo…');
+  try {
+    const { error } = await sb.rpc('admin_reset_dueling_demo');
+    if (error) throw error;
+    toast('App demo reset ✓ — reveal replays, alerts + vote queue restored. Re-open the Compete app.', 'ok');
+  } catch(e){ toast('Reset: ' + (e.message || e), 'err'); }
+  finally { if (btn) btn.disabled = false; }
 }
 async function autoscoreDemo(){
   toast('Autoscoring judge seats…');

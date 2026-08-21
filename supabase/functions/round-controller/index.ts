@@ -141,6 +141,12 @@ Deno.serve(async (req: Request) => {
       }
       default:              return json({ error: `unknown step: ${step}` }, 400);
     }
+    // Notify judges once a REAL round gets its pods (finding #9b). Guarded so
+    // demo/test rounds (seq >= 900) stay silent, and deduped per round so a
+    // retry of assign_judges / tail / all can't re-blast every judge. Non-fatal.
+    if (step === 'assign_judges' || step === 'tail' || step === 'all') {
+      await maybeNotifyJudges(roundId).catch((e) => console.error('notify-judges dispatch failed', String(e)));
+    }
     return json({ ok: true, roundId, step, outcome });
   } catch (err) {
     console.error('round-controller error', { roundId, step, err: String(err) });
@@ -153,4 +159,27 @@ function json(payload: unknown, status = 200): Response {
     status,
     headers: { ...cors, 'content-type': 'application/json' },
   });
+}
+
+// Fire the "new pods available" broadcast to judges — exactly once per REAL round.
+// Guard: demo/test rounds (seq >= 900) never notify. Dedup: claim the
+// (round_id, kind) row first; a unique violation means it already went out. If the
+// send fails, release the claim so a later retry re-attempts.
+async function maybeNotifyJudges(roundId: string): Promise<void> {
+  const URL_ = Deno.env.get('SUPABASE_URL')!;
+  const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
+  const { data: r } = await svc.from('rounds').select('seq').eq('id', roundId).maybeSingle();
+  if (!r || (r as { seq: number }).seq >= 900) return;               // demo/test round → silent
+  const { error: claimErr } = await svc.from('judge_notify_log').insert({ round_id: roundId, kind: 'new_pods' });
+  if (claimErr) return;                                              // already notified for this round
+  const resp = await fetch(`${URL_}/functions/v1/notify-judges`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + SERVICE, apikey: SERVICE, 'content-type': 'application/json' },
+    body: JSON.stringify({ kind: 'new_pods' }),
+  });
+  if (!resp.ok) {
+    await svc.from('judge_notify_log').delete().eq('round_id', roundId).eq('kind', 'new_pods');
+    console.error('notify-judges returned', resp.status, await resp.text().catch(() => ''));
+  }
 }
