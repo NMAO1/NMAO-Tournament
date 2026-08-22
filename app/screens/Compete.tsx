@@ -104,6 +104,14 @@ export default function Compete() {
       });
       const j = await res.json();
       if (!res.ok || !j.ok) throw new Error(j.error || "Could not start payment.");
+      // Season-pass claim: entered for free by spending a credit — no browser checkout.
+      if (j.claimed) {
+        setCompetitorId(cid); setEvent(evt); setPaid(true); setPhase("idle"); setStep("");
+        setPending((p) => p.filter((x) => !(x.competitor_id === cid && x.event === evt)));
+        const left = typeof j.credits_remaining === "number" ? `  ${j.credits_remaining} credit${j.credits_remaining === 1 ? "" : "s"} left.` : "";
+        Alert.alert("You're in!", `Entered with your season pass.${left}`);
+        return;
+      }
       setStep("Opening secure checkout…");
       await WebBrowser.openBrowserAsync(j.url); // resolves when the user closes the browser
       setStep("Confirming payment…");

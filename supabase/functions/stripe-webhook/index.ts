@@ -117,6 +117,11 @@ Deno.serve(async (req) => {
       const inv = event.data.object;
       if (inv.subscription) {
         await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).neq("status", "canceled").throwOnError();
+        // Monthly entry pass: each paid invoice adds a rolling credit (idempotent by
+        // invoice id; a no-op for sponsor subscriptions, which aren't entitlements).
+        const { data: refillCfg } = await svc.from("app_settings").select("value").eq("key", "monthly_credit_refill").maybeSingle();
+        const refill = refillCfg ? Number((refillCfg as any).value) : 1;
+        await svc.rpc("add_subscription_credits", { p_subscription_id: String(inv.subscription), p_n: refill, p_invoice_id: inv.id ? String(inv.id) : null }).throwOnError();
         // recover a previously-lapsed sponsor (staff-approved ones return to active)
         await svc.from("sponsors").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).eq("status", "lapsed").throwOnError();
       }

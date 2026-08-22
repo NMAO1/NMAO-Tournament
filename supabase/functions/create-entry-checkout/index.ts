@@ -73,9 +73,23 @@ Deno.serve(async (req) => {
     const { data: et } = await svc.from("event_types").select("code").eq("code", event).maybeSingle();
     if (!et) return json({ ok: false, error: "Unknown event." }, 400);
 
-    const { data: open } = await svc.from("rounds").select("id, state").in("state", ACCEPTING).order("opens_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: open } = await svc.from("rounds").select("id, state").in("state", ACCEPTING).or("seq.is.null,seq.lt.900").order("opens_at", { ascending: false, nullsFirst: false }).limit(1).maybeSingle();
     if (!open) return json({ ok: false, error: "No round is open for entries right now." }, 409);
     const roundId = (open as any).id;
+
+    // Season-pass bucket first: if this competitor has entry credits, spend one
+    // and enter for FREE (no Stripe). Prevents the double-charge — a pass holder
+    // tapping "Register" claims a credit instead of paying the flat fee again.
+    const { data: claim, error: claimErr } = await svc.rpc("claim_round_entry", { p_competitor_id: competitorId, p_event: event });
+    if (!claimErr && claim) {
+      if ((claim as any).claimed) {
+        return json({ ok: true, claimed: true, entry_id: (claim as any).entry_id, credits_remaining: (claim as any).credits_remaining });
+      }
+      if ((claim as any).reason === "already_entered") {
+        return json({ ok: false, error: "You're already entered in this event." }, 409);
+      }
+      // reason "no_credits" (no pass / bucket empty) → fall through to paid checkout below
+    }
 
     const { data: comp } = await svc.from("competitors").select("dob, declared_rank").eq("id", competitorId).single();
     if (!comp) return json({ ok: false, error: "Competitor not found." }, 404);
