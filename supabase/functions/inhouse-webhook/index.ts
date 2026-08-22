@@ -51,12 +51,16 @@ Deno.serve(async (req) => {
         const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
         await svc.from("ih_entrants")
           .update({ payment_status: "paid", paid_at: new Date().toISOString(), checkout_session_id: s.id })
-          .eq("id", entrantId);
+          .eq("id", entrantId)
+          .throwOnError();
       }
     }
   } catch (e: any) {
+    // FAIL CLOSED: return 5xx so Stripe retries a real write failure (~3 days of
+    // backoff). "0 rows matched" is a success and won't throw, so a stale/unknown
+    // entrant won't retry forever — only genuine DB errors do. Update is idempotent.
     console.error("inhouse-webhook handler error:", e?.message || e);
-    // still 200 so Stripe doesn't retry forever on a data issue
+    return new Response(JSON.stringify({ error: "handler_failed", message: e?.message || "error" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "Content-Type": "application/json" } });

@@ -49,16 +49,16 @@ Deno.serve(async (req) => {
     : s === "canceled" || s === "incomplete_expired" ? "canceled" : null;
   // Activate an entitlement + mark any round entries it staged as paid.
   async function activateEntitlement(entitlementId: string) {
-    await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("id", entitlementId).neq("status", "canceled");
-    await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("entitlement_id", entitlementId).neq("payment_status", "paid");
+    await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("id", entitlementId).neq("status", "canceled").throwOnError();
+    await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("entitlement_id", entitlementId).neq("payment_status", "paid").throwOnError();
   }
   // Refund / chargeback: revoke the entitlement bought by this PaymentIntent and
   // un-pay its entries, so paid access can't survive a refund or won dispute.
   async function revokeByPaymentIntent(pi: string) {
-    const { data: ents } = await svc.from("entry_entitlements").select("id").eq("stripe_payment_intent_id", pi);
+    const { data: ents } = await svc.from("entry_entitlements").select("id").eq("stripe_payment_intent_id", pi).throwOnError();
     for (const e of (ents ?? []) as any[]) {
-      await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("id", e.id);
-      await svc.from("entries").update({ payment_status: "unpaid", paid_at: null }).eq("entitlement_id", e.id);
+      await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("id", e.id).throwOnError();
+      await svc.from("entries").update({ payment_status: "unpaid", paid_at: null }).eq("entitlement_id", e.id).throwOnError();
     }
     return (ents ?? []).length;
   }
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       if (pi.metadata?.entitlement_id) await activateEntitlement(pi.metadata.entitlement_id);
       // Legacy: single-entry PI.
       if (pi.metadata?.entry_id) {
-        await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("id", pi.metadata.entry_id);
+        await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("id", pi.metadata.entry_id).throwOnError();
       }
     } else if (event.type === "checkout.session.completed") {
       // Hosted Checkout finished — link Stripe refs + activate the entitlement.
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
         if (s.subscription) patch.stripe_subscription_id = s.subscription;
         if (s.customer) patch.stripe_customer_id = s.customer;
         if (s.payment_intent) patch.stripe_payment_intent_id = s.payment_intent;
-        await svc.from("entry_entitlements").update(patch).eq("id", entId);
+        await svc.from("entry_entitlements").update(patch).eq("id", entId).throwOnError();
         if (s.mode === "subscription" || s.payment_status === "paid") await activateEntitlement(entId);
       }
       // SPONSOR subscription — link Stripe refs + grant the tier's offerings.
@@ -90,11 +90,11 @@ Deno.serve(async (req) => {
         const sp: any = { updated_at: now() };
         if (s.subscription) sp.stripe_subscription_id = s.subscription;
         if (s.customer) sp.stripe_customer_id = s.customer;
-        await svc.from("sponsors").update(sp).eq("id", s.metadata.sponsor_id);
+        await svc.from("sponsors").update(sp).eq("id", s.metadata.sponsor_id).throwOnError();
         // grant what was actually purchased: a bundle tier and/or à-la-carte offerings
-        if (s.metadata.tier_id) await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id });
-        if (s.metadata.offerings) await svc.rpc("grant_offering_entitlements", { p_sponsor: s.metadata.sponsor_id, p_codes: String(s.metadata.offerings).split(",").filter(Boolean) });
-        if (!s.metadata.tier_id && !s.metadata.offerings) await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id });
+        if (s.metadata.tier_id) await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id }).throwOnError();
+        if (s.metadata.offerings) await svc.rpc("grant_offering_entitlements", { p_sponsor: s.metadata.sponsor_id, p_codes: String(s.metadata.offerings).split(",").filter(Boolean) }).throwOnError();
+        if (!s.metadata.tier_id && !s.metadata.offerings) await svc.rpc("grant_tier_entitlements", { p_sponsor: s.metadata.sponsor_id }).throwOnError();
       }
     } else if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
       const sub = event.data.object;
@@ -102,36 +102,36 @@ Deno.serve(async (req) => {
       if (next) {
         const patch: any = { status: next, updated_at: now() };
         if (next === "canceled") patch.canceled_at = now();
-        await svc.from("entry_entitlements").update(patch).eq("stripe_subscription_id", sub.id);
+        await svc.from("entry_entitlements").update(patch).eq("stripe_subscription_id", sub.id).throwOnError();
       }
       // a sponsor whose subscription goes bad drops out of rotation
       if (sub.status === "past_due" || sub.status === "unpaid" || sub.status === "canceled" || sub.status === "incomplete_expired") {
-        await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", sub.id);
+        await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", sub.id).throwOnError();
       }
     } else if (event.type === "customer.subscription.deleted") {
       const sub = event.data.object;
-      await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("stripe_subscription_id", sub.id);
-      await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", sub.id);
+      await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("stripe_subscription_id", sub.id).throwOnError();
+      await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", sub.id).throwOnError();
     } else if (event.type === "invoice.payment_succeeded") {
       // Recurring monthly renewal — keep the entitlement active.
       const inv = event.data.object;
       if (inv.subscription) {
-        await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).neq("status", "canceled");
+        await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).neq("status", "canceled").throwOnError();
         // recover a previously-lapsed sponsor (staff-approved ones return to active)
-        await svc.from("sponsors").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).eq("status", "lapsed");
+        await svc.from("sponsors").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).eq("status", "lapsed").throwOnError();
       }
     } else if (event.type === "invoice.payment_failed") {
       const inv = event.data.object;
       if (inv.subscription) {
-        await svc.from("entry_entitlements").update({ status: "past_due", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
-        await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", inv.subscription);
+        await svc.from("entry_entitlements").update({ status: "past_due", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).throwOnError();
+        await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).throwOnError();
       }
     } else if (event.type === "charge.refunded") {
       // A charge was (fully or partially) refunded — revoke the access it bought.
       const ch = event.data.object;
       if (ch.payment_intent) await revokeByPaymentIntent(String(ch.payment_intent));
       // a sponsor whose charge is refunded drops out of rotation
-      if (ch.customer) await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_customer_id", ch.customer);
+      if (ch.customer) await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_customer_id", ch.customer).throwOnError();
     } else if (event.type === "charge.dispute.created") {
       // Chargeback opened — pull access immediately (don't wait for the outcome).
       const d = event.data.object;
@@ -140,8 +140,12 @@ Deno.serve(async (req) => {
       if (pi) await revokeByPaymentIntent(pi);
     }
   } catch (e: any) {
+    // FAIL CLOSED: a real DB/RPC failure (not just "0 rows matched" — that's a
+    // success) returns 5xx so Stripe RETRIES with backoff (~3 days). Otherwise a
+    // transient write failure would silently leave a paid entry unactivated, or
+    // a refund without access revoked. Idempotent handlers make retries safe.
     console.error("webhook handler error:", e?.message || e);
-    // still 200 so Stripe doesn't retry forever on a data issue
+    return new Response(JSON.stringify({ error: "handler_failed", message: e?.message || "error" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
   return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "Content-Type": "application/json" } });
