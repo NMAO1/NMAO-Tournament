@@ -8,6 +8,8 @@ import { supabase } from "../lib/supabase";
 import { uploadEntryVideo, PickedVideo } from "../lib/upload";
 import { myCompetitors } from "../lib/competitors";
 import { getActiveCompetitorId, setActiveCompetitorId } from "../lib/activeCompetitor";
+import { creditSummary } from "../lib/pricing";
+import BuyEntry from "./BuyEntry";
 import * as WebBrowser from "expo-web-browser";
 
 // Export competition videos at 1080p H.264 (flip to H264_1280x720 for smaller
@@ -37,6 +39,15 @@ export default function Compete() {
   const [loadErr, setLoadErr] = useState("");
   const [paid, setPaid] = useState(false);
   const [pending, setPending] = useState<{ id: string; competitor_id: string; event: string }[]>([]);
+  const [credits, setCredits] = useState<number | null>(null); // spendable entry credits for the active competitor
+  const [showBuy, setShowBuy] = useState(false);
+
+  async function refreshCredits(cid: string | null) {
+    if (!cid) { setCredits(null); return; }
+    const s = await creditSummary(cid);
+    setCredits(s.credits_remaining);
+  }
+  useEffect(() => { refreshCredits(competitorId); }, [competitorId]);
 
   async function loadPending(compIds: string[]) {
     if (!compIds.length) { setPending([]); return; }
@@ -108,6 +119,7 @@ export default function Compete() {
       if (j.claimed) {
         setCompetitorId(cid); setEvent(evt); setPaid(true); setPhase("idle"); setStep("");
         setPending((p) => p.filter((x) => !(x.competitor_id === cid && x.event === evt)));
+        if (typeof j.credits_remaining === "number") setCredits(j.credits_remaining);
         const left = typeof j.credits_remaining === "number" ? `  ${j.credits_remaining} credit${j.credits_remaining === 1 ? "" : "s"} left.` : "";
         Alert.alert("You're in!", `Entered with your season pass.${left}`);
         return;
@@ -156,7 +168,29 @@ export default function Compete() {
     }
   }
 
+  // Register tap: with credits, claim one; with an empty bucket, prompt to buy
+  // more (or pay for this single entry). Credits unknown/loading → just proceed.
+  function onRegisterTap(cid?: string, ev?: string) {
+    if (credits === 0) {
+      Alert.alert(
+        "Out of entry credits",
+        "You've used all your credits. Buy more at the season rate, or pay for just this entry.",
+        [
+          { text: "Buy credits", onPress: () => setShowBuy(true) },
+          { text: "Pay for this entry", onPress: () => payAndRegister(cid, ev) },
+          { text: "Cancel", style: "cancel" },
+        ],
+      );
+      return;
+    }
+    payAndRegister(cid, ev);
+  }
+
   function reset() { setDone(null); setEvent(null); setVid1(null); setVid2(null); setPaid(false); }
+
+  if (showBuy && competitorId) {
+    return <BuyEntry competitorId={competitorId} onClose={() => { setShowBuy(false); refreshCredits(competitorId); }} onPaid={() => { setShowBuy(false); refreshCredits(competitorId); }} />;
+  }
 
   if (done) {
     const ev = EVENTS.find((e) => e.code === done.event)?.name ?? done.event;
@@ -190,7 +224,24 @@ export default function Compete() {
           <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>
         </TouchableOpacity>
       </View>
-      <Text style={{ color: neutrals.muted, fontSize: 14, marginBottom: 22 }}>Submit your entry for the open round.</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 14, marginBottom: 16 }}>Submit your entry for the open round.</Text>
+
+      {competitorId && credits !== null && (
+        <TouchableOpacity onPress={() => setShowBuy(true)} activeOpacity={0.85}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20,
+            borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1,
+            borderColor: credits > 0 ? hues.gold.shadow : neutrals.border, backgroundColor: credits > 0 ? "rgba(230,185,63,0.07)" : neutrals.surface }}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={{ color: credits > 0 ? hues.gold.hi : neutrals.text, fontWeight: "800", fontSize: 14 }}>
+              {credits} entry credit{credits === 1 ? "" : "s"}
+            </Text>
+            <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>
+              {credits > 0 ? "Each event you enter uses 1 credit." : "Buy a season pass or credits to enter."}
+            </Text>
+          </View>
+          <Text style={{ color: hues.sapphire.hi, fontWeight: "700", fontSize: 13 }}>Buy credits ›</Text>
+        </TouchableOpacity>
+      )}
 
       {pending.length > 0 && !paid && (
         <Section label="Awaiting payment">
@@ -202,9 +253,9 @@ export default function Compete() {
                   <Text style={{ color: neutrals.text, fontWeight: "600" }}>{EVENTS.find((e) => e.code === p.event)?.name ?? p.event}</Text>
                   <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{c ? `${c.first_name} ${c.last_name}` : "Registered — finish to compete"}</Text>
                 </View>
-                <TouchableOpacity onPress={() => payAndRegister(p.competitor_id, p.event)} activeOpacity={0.85}>
+                <TouchableOpacity onPress={() => onRegisterTap(p.competitor_id, p.event)} activeOpacity={0.85}>
                   <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9 }}>
-                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>Complete</Text>
+                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>{credits && credits > 0 ? "Use 1 credit" : "Complete"}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -240,15 +291,17 @@ export default function Compete() {
 
           {event && !paid && (
             <>
-              <TouchableOpacity onPress={() => payAndRegister()} disabled={phase === "working"} activeOpacity={0.85} style={{ marginTop: 8 }}>
+              <TouchableOpacity onPress={() => onRegisterTap()} disabled={phase === "working"} activeOpacity={0.85} style={{ marginTop: 8 }}>
                 <LinearGradient colors={metalStops("gold")} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
                   style={{ borderRadius: 13, paddingVertical: 16, alignItems: "center", opacity: phase === "working" ? 0.7 : 1 }}>
                   {phase === "working"
                     ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><ActivityIndicator color="#141210" /><Text style={{ color: "#141210", fontWeight: "800" }}>{step || "Opening payment…"}</Text></View>
-                    : <Text style={{ color: "#141210", fontWeight: "800", fontSize: 16 }}>Register</Text>}
+                    : <Text style={{ color: "#141210", fontWeight: "800", fontSize: 16 }}>{credits && credits > 0 ? "Register · uses 1 credit" : "Register"}</Text>}
                 </LinearGradient>
               </TouchableOpacity>
-              <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 10, textAlign: "center" }}>Secure your spot — you'll upload your video next.</Text>
+              <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 10, textAlign: "center" }}>
+                {credits && credits > 0 ? `Uses 1 of your ${credits} credits — you'll upload your video next.` : "You'll pay the entry fee, then upload your video."}
+              </Text>
             </>
           )}
 

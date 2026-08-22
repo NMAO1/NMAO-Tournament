@@ -1,8 +1,18 @@
 import { supabase } from "./supabase";
 
-export type Lane = "alacarte" | "monthly" | "full";
+export type Lane = "alacarte" | "monthly" | "full" | "topup";
 export type PricingTier = { lane: Lane; event_slots: number; unit_amount_cents: number; bill_interval: "month" | null };
 export type Entitlement = { id: string; lane: Lane; event_slots: number; status: string; round_id: string | null; created_at: string };
+
+// A full season = this many entry credits (matches app_settings.season_pass_credits).
+export const SEASON_CREDITS = 9;
+
+// A competitor's spendable entry-credit balance for the current season.
+export async function creditSummary(competitorId: string): Promise<{ credits_remaining: number; has_credits: boolean }> {
+  const { data, error } = await supabase.rpc("competitor_credit_summary", { p_competitor_id: competitorId });
+  if (error || !data) return { credits_remaining: 0, has_credits: false };
+  return data as { credits_remaining: number; has_credits: boolean };
+}
 
 // The public price catalog (6 tiers). Drives the plan screen.
 export async function loadPricing(): Promise<PricingTier[]> {
@@ -23,7 +33,7 @@ export type CheckoutResult = {
 // Buy an entitlement (1–2 event slots) via a lane; returns a Stripe-hosted
 // Checkout URL to open in the browser (keeps purchases off Apple's IAP rails).
 export async function createEntitlementCheckout(input: {
-  competitor_id: string; lane: Lane; event_slots: number; events?: string[];
+  competitor_id: string; lane: Lane; event_slots?: number; events?: string[]; credits?: number;
 }): Promise<CheckoutResult> {
   const { data, error } = await supabase.functions.invoke("create-entitlement-checkout", { body: input });
   if (error) return { ok: false, error: error.message };
