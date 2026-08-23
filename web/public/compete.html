@@ -3,86 +3,105 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NMAO for Schools</title>
-<meta name="description" content="Bring your martial arts school into the NMAO Tournament League. Students compete from your own mat, your school earns, and you can host your own in-house tournaments too." />
+<title>NMAO Compete</title>
+<meta name="description" content="Compete every month from your own dojo. Get ranked and rated, duel other competitors, earn badges and the season medallion, and rise toward a Grand Finale with $10,000+ in prizes. Season I begins January 15, 2027." />
 <style>
   :root{
+    --red:#FF2E3B; --magenta:#C22DE0; --violet:#A32BF7; --blue:#3F6BFF;
     --gold:#C89B3C; --gold-lt:#E9C15A; --gold-br:#F5D462; --gold-dk:#8a671f;
-    --ink:#ece7dc; --muted:#a99f8c; --muted2:#7c7362;
-    --bg0:#08070b; --bg1:#140e1f; --panel:#141019; --line:rgba(233,193,90,0.16);
+    --ink:#F1ECE2; --muted:#B4AEC4; --muted2:#847e9a;
+    --bg0:#070510; --line:rgba(160,140,255,0.14);
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
     --sans:"Helvetica Neue",Arial,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html{scroll-behavior:smooth;}
-  body{background:var(--bg0);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;line-height:1.6;padding-bottom:80px;}
-  .wrap{max-width:480px;margin:0 auto;padding:0 22px;}
+  body{
+    background:
+      radial-gradient(85% 50% at 10% 0%, rgba(255,46,59,0.10) 0%, transparent 55%),
+      radial-gradient(85% 55% at 92% 6%, rgba(63,107,255,0.16) 0%, transparent 55%),
+      radial-gradient(120% 80% at 50% 118%, rgba(163,43,247,0.14) 0%, transparent 60%),
+      var(--bg0);
+    color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;line-height:1.6;padding-bottom:88px;min-height:100vh;}
   .spectrum{background:linear-gradient(100deg,#FF2E3B 0%,#C22DE0 34%,#A32BF7 60%,#3F6BFF 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
   .goldtext{background:linear-gradient(180deg,var(--gold-br) 0%,var(--gold-lt) 48%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
-  .eyebrow{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.34em;text-transform:uppercase;color:var(--gold-lt);}
+  .eyebrow{font-family:var(--sans);font-size:11px;font-weight:800;letter-spacing:0.3em;text-transform:uppercase;color:var(--accent,var(--gold-lt));}
 
   /* HERO */
-  .hero{text-align:center;padding:52px 22px 46px;
-    background:radial-gradient(120% 70% at 50% 6%, rgba(90,50,130,0.34) 0%, rgba(20,14,31,0) 60%), var(--bg0);}
+  .hero{text-align:center;padding:56px 22px 44px;}
   .hero .med{width:104px;height:104px;filter:drop-shadow(0 0 26px rgba(233,193,90,0.5));margin:0 auto 22px;}
   .hero .name{font-family:var(--serif);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:0.01em;}
-  .hero .tl{font-family:var(--serif);font-size:13px;letter-spacing:0.5em;text-transform:uppercase;color:var(--gold);margin-top:7px;padding-left:0.5em;}
-  .hero h1{font-family:var(--serif);font-size:33px;line-height:1.12;font-weight:700;margin:26px 0 14px;text-wrap:balance;}
-  .hero p{color:var(--muted);font-size:16px;max-width:22em;margin:0 auto;}
-  .hero .season{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:var(--muted);margin-top:22px;}
+  .hero .tl{font-family:var(--serif);font-size:13px;letter-spacing:0.5em;text-transform:uppercase;color:var(--violet);margin-top:7px;padding-left:0.5em;}
+  .hero h1{font-family:var(--serif);font-size:36px;line-height:1.1;font-weight:700;margin:24px 0 14px;text-wrap:balance;letter-spacing:-0.01em;}
+  .hero p{color:var(--muted);font-size:16px;max-width:23em;margin:0 auto;}
+  .hero .season{font-family:var(--sans);font-size:11px;font-weight:800;letter-spacing:0.26em;text-transform:uppercase;color:var(--muted);margin-top:22px;}
   .hero .season b{color:var(--gold-lt);}
 
-  .btn{display:inline-block;font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:0.02em;color:#141210;text-decoration:none;
+  .btn{display:inline-block;font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:0.02em;color:#160f04;text-decoration:none;
     background:linear-gradient(160deg,var(--gold-br),var(--gold-lt) 50%,var(--gold));border-radius:12px;padding:14px 26px;border:none;cursor:pointer;
-    box-shadow:0 6px 22px rgba(200,155,60,0.28);}
+    box-shadow:0 8px 26px rgba(233,193,90,0.30);}
   .btn[disabled]{opacity:0.6;cursor:default;}
   .hero .btn{margin-top:26px;}
-  .btn-call{background:transparent;color:var(--gold-lt);border:1.5px solid var(--gold-dk);box-shadow:none;}
   .or{font-family:var(--sans);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted2);margin:16px 0 12px;}
-  .cred{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--gold-lt);margin-top:16px;}
+  .deeplink{display:inline-block;font-family:var(--sans);font-weight:700;font-size:14px;color:var(--accent,var(--gold-lt));text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:2px;margin-top:6px;opacity:0.92;}
 
-  section{padding:44px 0;border-top:1px solid rgba(255,255,255,0.05);}
-  .sec-h{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.14;margin:12px 0 8px;text-wrap:balance;}
+  /* SECTION TILES */
+  section{padding:8px 18px;}
+  section > .wrap{position:relative;overflow:hidden;max-width:520px;margin:0 auto;border-radius:20px;padding:26px 22px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
+    border:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 18px 40px rgba(0,0,0,0.32), inset 0 1px 0 rgba(255,255,255,0.05);}
+  section > .wrap::before{content:"";position:absolute;top:-45%;right:-22%;width:62%;height:88%;pointer-events:none;
+    background:radial-gradient(circle, var(--accent,var(--violet)) 0%, transparent 68%);opacity:0.17;filter:blur(24px);}
+  section > .wrap::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;pointer-events:none;
+    background:linear-gradient(90deg, transparent, var(--accent,var(--violet)), transparent);opacity:0.5;}
+  section:nth-of-type(1) > .wrap{--accent:var(--blue);}
+  section:nth-of-type(2) > .wrap{--accent:var(--violet);}
+  section:nth-of-type(3) > .wrap{--accent:var(--red);}
+  section:nth-of-type(4) > .wrap{--accent:var(--magenta);}
+  section:nth-of-type(5) > .wrap{--accent:var(--gold-lt);}
+  section:nth-of-type(6) > .wrap{--accent:var(--red);}
+  section:nth-of-type(7) > .wrap{--accent:var(--violet);}
+  section:nth-of-type(8) > .wrap{--accent:var(--blue);}
+  section:nth-of-type(9) > .wrap{--accent:var(--magenta);}
+  section:nth-of-type(10) > .wrap{--accent:var(--blue);}
+
+  .sec-h{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.14;margin:10px 0 8px;text-wrap:balance;position:relative;}
   .sec-h em{font-style:italic;}
-  .lead{color:var(--muted);font-size:16px;margin-bottom:8px;}
+  .lead{color:var(--muted);font-size:16px;margin-bottom:8px;position:relative;}
+  .body{position:relative;}
   .body p{color:var(--muted);font-size:15.5px;margin-top:12px;}
   .body p b{color:var(--ink);font-weight:600;}
 
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 17px;margin-top:12px;}
-  .card h3{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--ink);}
-  .card h3 .n{color:var(--gold-lt);margin-right:9px;}
+  .card{position:relative;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:13px;padding:15px 16px;margin-top:11px;}
+  .card h3{font-family:var(--serif);font-size:16.5px;font-weight:700;color:var(--ink);}
+  .card h3 .n{color:var(--accent,var(--gold-lt));margin-right:9px;font-variant-numeric:tabular-nums;}
   .card p{color:var(--muted);font-size:14px;margin-top:4px;line-height:1.5;}
 
-  .earn{display:flex;gap:13px;align-items:flex-start;margin-top:16px;}
-  .earn .k{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--gold-dk);display:flex;align-items:center;justify-content:center;}
-  .earn .k span{width:8px;height:8px;border-radius:50%;background:linear-gradient(160deg,var(--gold-br),var(--gold));}
-  .earn .t b{color:var(--gold-lt);font-weight:700;}
-  .earn .t{font-size:15.5px;line-height:1.4;}
-  .earn .t small{display:block;color:var(--muted2);font-size:12.5px;margin-top:3px;font-family:var(--sans);letter-spacing:0.02em;}
-
-  .stat{text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:18px;}
-  .stat .big{font-family:var(--serif);font-size:40px;font-weight:800;line-height:1;}
-  .stat .lbl{font-family:var(--sans);font-size:12px;letter-spacing:0.06em;color:var(--muted);margin-top:8px;}
-
   .med-sec{text-align:center;}
-  .med-sec .med{width:150px;height:150px;margin:18px auto 0;filter:drop-shadow(0 0 22px rgba(90,50,130,0.4));}
+  .med-sec .med{width:150px;height:150px;margin:16px auto 0;filter:drop-shadow(0 0 22px rgba(163,43,247,0.4));}
 
-  /* signup */
-  #join{text-align:center;padding-bottom:52px;}
-  #join h2{font-family:var(--serif);font-size:30px;font-weight:700;margin:12px 0 8px;}
-  #join p{color:var(--muted);font-size:15.5px;max-width:24em;margin:0 auto 20px;}
-  .form{display:flex;flex-direction:column;gap:10px;max-width:20em;margin:0 auto;}
-  .form input{font-family:var(--sans);font-size:15px;padding:13px 15px;border-radius:11px;border:1px solid var(--line);background:#0e0b14;color:var(--ink);}
+  /* grand finale prize */
+  .prize{position:relative;text-align:center;background:linear-gradient(160deg, rgba(233,193,90,0.13), rgba(20,10,30,0.4));border:1px solid rgba(233,193,90,0.28);border-radius:16px;padding:28px 20px;margin-top:18px;}
+  .prize .amt{font-family:var(--serif);font-size:56px;font-weight:800;line-height:1;}
+  .prize .plus{font-family:var(--serif);font-size:18px;font-style:italic;color:var(--gold-lt);margin-top:12px;}
+  .prize .sub{font-family:var(--sans);font-size:12px;letter-spacing:0.05em;color:var(--muted);margin-top:10px;line-height:1.5;}
+
+  /* invitation */
+  #enrolled{text-align:center;}
+  #enrolled h2{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.16;margin:10px 0 8px;text-wrap:balance;position:relative;}
+  #enrolled .lead{max-width:26em;margin:0 auto 18px;}
+  .form{display:flex;flex-direction:column;gap:10px;max-width:20em;margin:16px auto 0;position:relative;}
+  .form input{font-family:var(--sans);font-size:15px;padding:13px 15px;border-radius:11px;border:1px solid var(--line);background:rgba(4,6,20,0.6);color:var(--ink);}
   .form input::placeholder{color:var(--muted2);}
   .hp{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;}
-  .note{font-family:var(--sans);font-size:11px;color:var(--muted2);margin-top:12px;}
-  .ok{color:var(--gold-lt);font-family:var(--serif);font-size:17px;margin-top:6px;}
-  .err{font-family:var(--sans);font-size:13px;color:var(--gold-lt);margin-top:12px;}
+  .ok{color:var(--gold-lt);font-family:var(--serif);font-size:16px;margin-top:12px;position:relative;}
+  .err{font-family:var(--sans);font-size:13px;color:var(--gold-lt);margin-top:12px;position:relative;}
 
-  .footer{text-align:center;font-family:var(--sans);font-size:11px;color:var(--muted2);padding:26px 22px 10px;letter-spacing:0.03em;}
+  .footer{text-align:center;font-family:var(--sans);font-size:11px;color:var(--muted2);padding:28px 22px 10px;letter-spacing:0.03em;}
 
   /* sticky CTA */
-  .sticky{position:fixed;left:0;right:0;bottom:0;background:rgba(8,7,11,0.9);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+  .sticky{position:fixed;left:0;right:0;bottom:0;background:rgba(7,5,16,0.9);backdrop-filter:blur(8px);border-top:1px solid var(--line);
     padding:12px 22px;display:flex;justify-content:center;z-index:20;}
   .sticky .btn{width:100%;max-width:436px;text-align:center;}
 </style>
@@ -95,148 +114,169 @@
     <div class="med"><svg viewBox="0 0 340 340" aria-label="Season medallion"><use href="#medsym"/></svg></div>
     <div class="name spectrum">National Martial Arts<br/>Organization</div>
     <div class="tl">Tournament League</div>
-    <h1>Where every school competes and <em class="goldtext">earns</em>.</h1>
-    <p>An interactive tournament showcasing forms and weapons from dojos around the United States.</p>
-    <a href="#join" class="btn">Bring your school in</a>
+    <h1>Your dojo. The <em class="goldtext">national stage</em>.</h1>
+    <p>Compete every month, right where you train — ranked, rated, and rising all season long.</p>
+    <a href="#enrolled" class="btn">Be part of Season I</a>
     <div class="season">Season&nbsp;I&nbsp;·&nbsp;<b>Begins January 15, 2027</b></div>
   </header>
 
-  <!-- WHY -->
+  <!-- WHAT THIS IS -->
   <section><div class="wrap">
-    <div class="eyebrow">Why NMAO</div>
-    <h2 class="sec-h">A tournament built for students, schools, and teachers, <em class="goldtext">first</em>.</h2>
+    <div class="eyebrow">The league</div>
+    <h2 class="sec-h">A season, competed from your own mat.</h2>
     <div class="body">
-      <p>NMAO Tournament League exists to give students across the nation a stage. Every student, in every dojo, at every rank, deserves the chance to compete, to grow, and to be seen. Students compete each month by video from their own dojo, judged by experienced martial artists, building a season-long record of their growth.</p>
-      <p>This is more than a tournament. It is a community of dojos rising together. Students earn the spotlight, schools share in regular revenue and in the grand-finale cash prizes, and experienced instructors earn well-paying judging positions. We built it for you, <b>first</b>.</p>
+      <p>NMAO is a national tournament league where you compete once a month by video, filmed right in your own dojo and judged by experienced martial artists. Every round, you're ranked and rated against competitors your age and level across the country — building a season-long record of how far you've come.</p>
+      <p>In between monthly tournaments, sharpen your skills by dueling other martial artists of similar age, rank, and rating from across the country — and let the martial arts community vote to decide who prevails.</p>
+      <p>Nothing like it has existed. And <b>Season I begins January 15, 2027</b> — you can be part of the very first one.</p>
     </div>
   </div></section>
 
-  <!-- HOW -->
+  <!-- HOW IT WORKS -->
   <section><div class="wrap">
     <div class="eyebrow">How it works</div>
-    <h2 class="sec-h">A season, run from your own mat.</h2>
-    <div class="card"><h3><span class="n">01</span>Compete from your own mat</h3><p>Film one form or weapons video on a phone, up to 2 angles for a clear view. That's the entry. One round a month.</p></div>
-    <div class="card"><h3><span class="n">02</span>Fair divisions</h3><p>Division pods of no more than 15, sorted by age, rank, and rating, reshuffled each round for a fair chance every time.</p></div>
-    <div class="card"><h3><span class="n">03</span>Judged with honor</h3><p>Scored by experienced martial artists, paid well for their craft. Effort is honored as loudly as outcome.</p></div>
-    <div class="card"><h3><span class="n">04</span>Duel between rounds</h3><p>Between tournaments, competitors nationwide face off head to head, and the community votes on who prevails.</p></div>
-    <div class="card"><h3><span class="n">05</span>Nine rounds, one journey</h3><p>Nine monthly rounds lead to the semi-finals and a grand finale. Your best five rounds count, so a month you miss never breaks your season.</p></div>
+    <h2 class="sec-h">The Flow.</h2>
+    <div class="card"><h3><span class="n">01</span>Film and submit your video</h3><p>One form or weapons video on a phone, up to two angles for a clear view. That's your entry.</p></div>
+    <div class="card"><h3><span class="n">02</span>Fair division sorting</h3><p>You're placed in a division pod of no more than 15, sorted by age, rank, and rating — reshuffled each round for a fair shot every time.</p></div>
+    <div class="card"><h3><span class="n">03</span>Judged fairly</h3><p>Beginner and intermediate divisions are scored by one judge; advanced divisions by a panel of three.</p></div>
+    <div class="card"><h3><span class="n">04</span>Duel between rounds</h3><p>Duel competitors from around the country in between rounds, and let the community vote on who prevails.</p></div>
+    <div class="card"><h3><span class="n">05</span>Your monthly reveal</h3><p>An animated reveal unveils your stats, medals, and accolades earned throughout the month.</p></div>
+    <div class="card"><h3><span class="n">06</span>Medals at your school</h3><p>Your physical medals ship to your school, to be presented where you train.</p></div>
+    <div class="card"><h3><span class="n">07</span>Back to the mat</h3><p>Start training for the next round.</p></div>
   </div></section>
 
-  <!-- WAYS TO RUN IT -->
+  <!-- DUELING -->
   <section><div class="wrap">
-    <div class="eyebrow">Bring it to your school</div>
-    <h2 class="sec-h">Four ways to run it.</h2>
-    <p class="lead">Start light, or build a program. Any school finds its fit.</p>
-    <div class="card"><h3>The Tournament Team</h3><p>A dedicated squad that competes every month. Deepest engagement, a competition-team identity, and the steadiest monthly revenue.</p></div>
-    <div class="card"><h3>Quarterly by Age</h3><p>One age group per season: January 7–9, April 10–13, July 14–17, October 18+. Each cohort gets its own moment, spread across the year.</p></div>
-    <div class="card"><h3>The Annual School Tournament</h3><p>Once a year, the whole school enters together. Lowest commitment, a signature yearly tradition.</p></div>
-    <div class="card"><h3>All In</h3><p>Make monthly competition a foundational part of your school. A culture of competition builds the motivation and retention that compound, student by student, year over year.</p></div>
+    <div class="eyebrow">Between rounds</div>
+    <h2 class="sec-h">Step into the <em class="goldtext">arena</em>.</h2>
+    <p class="lead">Dueling is head-to-head competition between tournament rounds.</p>
+    <div class="body">
+      <p>You're matched against another competitor — your video against theirs — and the whole community votes on who takes the duel. It's fast, it's fun, and it keeps you sharp and competing even between rounds. Win streaks, badges, and leaderboards all season.</p>
+    </div>
   </div></section>
 
-  <!-- IN-HOUSE TOURNAMENTS -->
+  <!-- BADGES -->
   <section><div class="wrap">
-    <div class="eyebrow">Make it your own</div>
-    <h2 class="sec-h">Host your own tournaments, too.</h2>
-    <p class="lead">The same engine that runs the national season is yours to run in-house — your students, your event, your rules.</p>
-    <div class="card"><h3>Your entry, your prizes</h3><p>Open it free or charge for entry.</p></div>
-    <div class="card"><h3>Your rubric, or ours</h3><p>Score with NMAO's criteria or bring your own. The judging tools, video, and instant results are ready either way.</p></div>
-    <div class="card"><h3>Any event you can imagine</h3><p>Forms, weapons, hand mitt training, workout challenges — the choice is yours.</p></div>
-  </div></section>
-
-  <!-- ECONOMICS -->
-  <section><div class="wrap">
-    <div class="eyebrow">Your school</div>
-    <h2 class="sec-h">Your school competes, and <em class="goldtext">earns</em>.</h2>
-    <div class="stat"><div class="big goldtext">Up to 30%</div><div class="lbl">of every entry fee, back to your school, every month</div></div>
-    <div class="earn"><div class="k"><span></span></div><div class="t"><b>$10,000+ in season prizes.</b><small>Your school competes too, with a share of the grand-finale purse</small></div></div>
-    <div class="earn"><div class="k"><span></span></div><div class="t"><b>Your students on the national stage.</b><small>Ranked, rated, and earning the season medallion</small></div></div>
-    <div class="earn"><div class="k"><span></span></div><div class="t"><b>A recurring channel.</b><small>Engagement and revenue year-round, not one weekend a year</small></div></div>
+    <div class="eyebrow">Every step counts</div>
+    <h2 class="sec-h">Progress, <em class="goldtext">rewarded</em>.</h2>
+    <p class="lead">Placing earns medals — but progress earns badges.</p>
+    <div class="body">
+      <p><b>Competitors earn them through dueling and competing.</b> A first duel won, a personal best, a milestone reached, showing up round after round: each achievement is recognized and displayed. So however a season goes, you always walk away with proof of how far you've come, and every reason to come back stronger.</p>
+    </div>
   </div></section>
 
   <!-- MEDALLION -->
   <section class="med-sec"><div class="wrap">
     <div class="eyebrow">The keepsake</div>
     <h2 class="sec-h">Earned one piece at a time.</h2>
-    <p class="lead">Every round earns a segment of the season medallion, in the metal your student placed. Nine pieces make the whole.</p>
+    <p class="lead">Every round — win or lose — is one to remember and learn from, and each segment marks a step along your path. Together, the pieces form a patchwork yin-yang: the tale of your adventures in the arena. Will you be the first to earn a full gold yin-yang?</p>
     <div class="med"><svg viewBox="0 0 340 340" aria-label="Season medallion"><use href="#medsym"/></svg></div>
-    <div class="card" style="text-align:left;margin-top:26px;">
-      <h3>Badges for the journey</h3>
-      <p>Placing earns medals, but progress earns badges. Every competitor is recognized for milestones, effort, and steady growth, so a student who did not place still leaves with something earned, and every reason to come back stronger.</p>
+  </div></section>
+
+  <!-- GRAND FINALE / PRIZES -->
+  <section><div class="wrap">
+    <div class="eyebrow">The Grand Finale</div>
+    <h2 class="sec-h">Nine rounds lead <em class="goldtext">here</em>.</h2>
+    <p class="lead">The season builds to a Grand Finale, where the top competitors compete for it all.</p>
+    <div class="prize">
+      <div class="amt goldtext">$10,000+</div>
+      <div class="plus">plus prizes from our sponsors</div>
+      <div class="sub">In prize money and sponsored rewards on the line at the Grand Finale</div>
     </div>
   </div></section>
 
-  <!-- FAQ -->
+  <!-- COMMUNITY -->
   <section><div class="wrap">
-    <div class="eyebrow">Questions</div>
-    <h2 class="sec-h">What instructors ask first.</h2>
-    <div class="card"><h3>What does it cost my school?</h3><p>Nothing to join. Students pay a small entry per round, and up to 30% of every entry comes back to your school each month.</p></div>
-    <div class="card"><h3>How much of my time does it take?</h3><p>Very little. Your students film one video a month from your mat. Judging, scoring, and divisions are handled for you.</p></div>
-    <div class="card"><h3>What do my students need?</h3><p>A phone and your mat. One form or weapons video, up to two angles. That's the entry.</p></div>
-    <div class="card"><h3>What is dueling?</h3><p>Between tournament rounds, your students face other competitors head to head — one video against another — and the community votes on the winner. It keeps them competing all month long.</p></div>
-    <div class="card"><h3>Do we have to compete every month?</h3><p>No. Your best five of nine rounds count, so a missed month never breaks a season, and you can host your own in-house events any time.</p></div>
+    <div class="eyebrow">Bigger than a tournament</div>
+    <h2 class="sec-h">A community, <em class="goldtext">rising together</em>.</h2>
+    <div class="body">
+      <p>You and competitors across the country are building something that's never existed. Dojos that once stood alone become one national community. Students who'd never have crossed paths now compete and duel and rise together, season after season.</p>
+      <p>It starts with the very first season — and you can be part of it.</p>
+    </div>
   </div></section>
 
-  <!-- JOIN -->
-  <section id="join"><div class="wrap">
-    <div class="eyebrow">Season I</div>
-    <h2>Bring your school in.</h2>
-    <p>Season I begins January 15, 2027. Text us with any questions and we'll set your school up personally, and walk you through everything.</p>
-    <a href="sms:+14304432777" class="btn btn-call">Text us · 1-430-443-2777</a>
-    <p class="or">or leave your details and we'll reach out</p>
-    <form id="leadform" class="form" novalidate>
-      <input id="lf-school" name="school_name" type="text" placeholder="Your school's name" autocomplete="organization" required />
-      <input id="lf-email" name="email" type="email" placeholder="Your email" autocomplete="email" required />
-      <input id="lf-phone" name="phone" type="tel" placeholder="Phone (optional)" autocomplete="tel" />
-      <input id="lf-website" name="website" class="hp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
-      <button class="btn" type="submit">Reserve my school's place</button>
+  <!-- FAIR & HONORED -->
+  <section><div class="wrap">
+    <div class="eyebrow">Our promise</div>
+    <h2 class="sec-h">Fair every round. Honored every time.</h2>
+    <div class="body">
+      <p>Fair divisions by age, rank, and rating. Experienced martial artists score with a rubric promoting technique, power, stability, balance, timing, and difficulty. And every competitor is recognized — because in the martial arts, effort and growth are honored as loudly as any medal.</p>
+      <p><a class="deeplink" href="https://compete.nmao.us/rubric.html">See our full rubric &amp; rating system →</a></p>
+    </div>
+  </div></section>
+
+  <!-- COST -->
+  <section><div class="wrap">
+    <div class="eyebrow">Getting started</div>
+    <h2 class="sec-h">Simple to join.</h2>
+    <div class="body">
+      <p>A small entry per round, or a season pass if you want the whole journey — and your school is right there in it with you. When your dojo is enrolled, your instructor sends your invite and you set up in the Compete app.</p>
+    </div>
+  </div></section>
+
+  <!-- ENROLLMENT GATE -->
+  <section id="enrolled"><div class="wrap">
+    <div class="eyebrow">Get started</div>
+    <h2>Join us for our 1st Season, starting January 15th, 2027.</h2>
+    <p class="lead">Is your dojo part of it yet? Ask your instructor — and if the word hasn't reached them, you might be the one who brings NMAO home to your school.</p>
+    <a id="shareBtn" class="btn" href="https://join.nmao.us" target="_blank" rel="noopener">Tell your instructor →</a>
+    <p class="or">or we'll let you know the moment your dojo joins</p>
+    <form id="nomForm" class="form" novalidate>
+      <input id="nf-school" name="school_name" type="text" placeholder="Your dojo's name" autocomplete="organization" required />
+      <input id="nf-email" name="email" type="email" placeholder="Your email" autocomplete="email" required />
+      <input id="nf-website" name="website" class="hp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <button class="btn" type="submit">Notify me</button>
     </form>
-    <div id="thx" class="ok" style="display:none;">Thank you. We'll be in touch soon.</div>
-    <div id="err" class="err" style="display:none;">Something went wrong on our end. Please text us at 1-430-443-2777.</div>
-    <p class="cred">Built by martial artists, for the martial arts community.</p>
+    <div id="nom-thx" class="ok" style="display:none;">Thank you — we'll be in touch the moment your dojo joins.</div>
+    <div id="nom-err" class="err" style="display:none;">Something went wrong. Please try again in a moment.</div>
   </div></section>
 
   <div class="footer">National Martial Arts Organization · NMAO Inc. · support@nmao.us</div>
 
-  <div class="sticky"><a href="#join" class="btn">Bring your school in</a></div>
+  <div class="sticky"><a href="#enrolled" class="btn">Be part of Season I</a></div>
 
   <script>
   (function () {
+    // --- share button: native share sheet if available, else open the link ---
+    var shareBtn = document.getElementById("shareBtn");
+    if (shareBtn && navigator.share) {
+      shareBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        navigator.share({
+          title: "NMAO Tournament League",
+          text: "I'd love for our dojo to be part of the NMAO Tournament League — here's how it works:",
+          url: "https://join.nmao.us"
+        }).catch(function () { window.open("https://join.nmao.us", "_blank", "noopener"); });
+      });
+    }
+
+    // --- "notify me" nomination -> capture-school-lead (source: compete-nomination) ---
     var ENDPOINT = "https://oxzuavpyoetchwebdejp.supabase.co/functions/v1/capture-school-lead";
-    var f = document.getElementById("leadform");
-    if (!f) return;
-    var btn = f.querySelector('button[type="submit"]');
-    var thx = document.getElementById("thx");
-    var err = document.getElementById("err");
-    f.addEventListener("submit", function (e) {
-      e.preventDefault();
-      var school = document.getElementById("lf-school").value.trim();
-      var email = document.getElementById("lf-email").value.trim();
-      var phone = document.getElementById("lf-phone").value.trim();
-      var website = document.getElementById("lf-website").value; // honeypot
-      if (!school || !email) return;
-      err.style.display = "none";
-      btn.disabled = true;
-      btn.textContent = "Sending…";
-      fetch(ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ school_name: school, email: email, phone: phone, website: website })
-      })
-        .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
-        .then(function (d) {
-          if (d && d.ok) {
-            f.style.display = "none";
-            thx.style.display = "block";
-          } else {
-            throw new Error((d && d.error) || "failed");
-          }
+    var f = document.getElementById("nomForm");
+    if (f) {
+      var btn = f.querySelector('button[type="submit"]');
+      var thx = document.getElementById("nom-thx");
+      var err = document.getElementById("nom-err");
+      f.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var school = document.getElementById("nf-school").value.trim();
+        var email = document.getElementById("nf-email").value.trim();
+        var website = document.getElementById("nf-website").value; // honeypot
+        if (!school || !email) return;
+        err.style.display = "none";
+        btn.disabled = true; btn.textContent = "Sending…";
+        fetch(ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ school_name: school, email: email, website: website, source: "compete-nomination" })
         })
-        .catch(function () {
-          btn.disabled = false;
-          btn.textContent = "Reserve my school's place";
-          err.style.display = "block";
-        });
-    });
+          .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
+          .then(function (d) {
+            if (d && d.ok) { f.style.display = "none"; thx.style.display = "block"; }
+            else { throw new Error((d && d.error) || "failed"); }
+          })
+          .catch(function () { btn.disabled = false; btn.textContent = "Notify me"; err.style.display = "block"; });
+      });
+    }
   })();
   </script>
 

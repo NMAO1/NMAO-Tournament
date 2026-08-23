@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NMAO Rubric &amp; Rating</title>
+<meta name="description" content="How NMAO scores every performance and rates competitors across a season — the six weighted criteria, the judging panel, and the skill-rating system. Transparent by design." />
+<style>
+  :root{
+    --red:#FF2E3B; --magenta:#C22DE0; --violet:#A32BF7; --blue:#3F6BFF;
+    --gold:#C89B3C; --gold-lt:#E9C15A; --gold-br:#F5D462;
+    --ink:#F1ECE2; --muted:#B4AEC4; --muted2:#847e9a;
+    --bg0:#070510; --bg1:#0d0a1e; --panel:#120e24; --line:rgba(160,140,255,0.14);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:
+      radial-gradient(90% 55% at 12% 0%, rgba(255,46,59,0.12) 0%, transparent 55%),
+      radial-gradient(85% 55% at 88% 8%, rgba(63,107,255,0.16) 0%, transparent 55%),
+      radial-gradient(120% 80% at 50% 120%, rgba(163,43,247,0.14) 0%, transparent 60%),
+      var(--bg0);
+    color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;line-height:1.6;
+    padding:0 0 44px;min-height:100vh;}
+  .spectrum{background:linear-gradient(100deg,#FF2E3B 0%,#C22DE0 34%,#A32BF7 60%,#3F6BFF 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .eyebrow{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:0.28em;text-transform:uppercase;color:var(--accent,var(--gold-lt));}
+
+  /* HERO */
+  .hero{text-align:center;padding:56px 22px 30px;max-width:920px;margin:0 auto;}
+  .emblem{font-size:22px;letter-spacing:0.5em;margin-bottom:16px;}
+  .hero .name{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:0.01em;}
+  .hero .tl{font-family:var(--serif);font-size:10.5px;letter-spacing:0.46em;text-transform:uppercase;color:var(--violet);margin-top:5px;}
+  .hero h1{font-family:var(--serif);font-size:40px;line-height:1.08;font-weight:700;margin:20px 0 14px;text-wrap:balance;letter-spacing:-0.01em;}
+  .hero p{color:var(--muted);font-size:16px;max-width:30em;margin:0 auto;}
+  .back{display:inline-block;font-family:var(--sans);font-weight:700;font-size:12.5px;letter-spacing:0.02em;color:var(--muted);text-decoration:none;margin-top:22px;
+    border:1px solid var(--line);border-radius:999px;padding:8px 18px;transition:color .15s,border-color .15s;}
+  .back:hover{color:var(--ink);border-color:rgba(160,140,255,0.4);}
+
+  /* BENTO */
+  .bento{max-width:920px;margin:22px auto 0;padding:0 18px;display:grid;grid-template-columns:repeat(6,1fr);gap:14px;align-items:stretch;}
+  .tile{position:relative;overflow:hidden;border-radius:20px;padding:24px 22px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012));
+    border:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 18px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.05);}
+  .tile::before{content:"";position:absolute;top:-45%;right:-22%;width:62%;height:88%;pointer-events:none;
+    background:radial-gradient(circle, var(--accent,#3F6BFF) 0%, transparent 68%);opacity:0.20;filter:blur(24px);}
+  .tile::after{content:"";position:absolute;left:0;right:0;top:0;height:2px;pointer-events:none;
+    background:linear-gradient(90deg, transparent, var(--accent,#3F6BFF), transparent);opacity:0.55;}
+  .span6{grid-column:span 6;} .span4{grid-column:span 4;} .span3{grid-column:span 3;} .span2{grid-column:span 2;}
+  .tile > .eyebrow{position:relative;}
+  .tile h2{font-family:var(--serif);font-size:23px;font-weight:700;line-height:1.14;margin:9px 0 6px;text-wrap:balance;position:relative;}
+  .tile h2 em{font-style:italic;}
+  .tile .lead{color:var(--muted);font-size:14.5px;margin-bottom:4px;position:relative;}
+  .tile p.body{color:var(--muted);font-size:14px;margin-top:11px;position:relative;}
+  .tile p.body b{color:var(--ink);font-weight:600;}
+  .tvcenter{display:flex;flex-direction:column;justify-content:center;}
+
+  /* criteria list */
+  .legend{display:flex;gap:14px;margin-top:14px;font-family:var(--sans);font-size:10.5px;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted2);position:relative;}
+  .legend b{font-weight:700;}
+  .legend .lt{color:#ffb9a6;} .legend .lo{color:#a9c2ff;}
+  .crit-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.07);position:relative;}
+  .crit-row:last-of-type{border-bottom:none;}
+  .crit-name{flex:1;min-width:0;}
+  .crit-name .n{font-family:var(--serif);font-size:15.5px;font-weight:700;color:var(--ink);}
+  .crit-name .d{display:block;font-family:var(--sans);font-size:11.5px;color:var(--muted2);margin-top:2px;line-height:1.35;}
+  .wpair{display:flex;gap:7px;flex:none;}
+  .wchip{min-width:36px;text-align:center;font-family:var(--sans);font-weight:800;font-size:13.5px;padding:5px 9px;border-radius:9px;font-variant-numeric:tabular-nums;}
+  .wchip.trad{color:#ffd6c8;background:linear-gradient(160deg, rgba(255,46,59,0.26), rgba(194,45,224,0.20));border:1px solid rgba(255,46,59,0.34);}
+  .wchip.open{color:#cfe0ff;background:linear-gradient(160deg, rgba(63,107,255,0.26), rgba(163,43,247,0.18));border:1px solid rgba(63,107,255,0.36);}
+  .crit-total{display:flex;align-items:center;gap:12px;padding-top:14px;margin-top:4px;border-top:1.5px solid rgba(233,193,90,0.35);position:relative;}
+  .crit-total .n{flex:1;font-family:var(--sans);font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold-lt);}
+  .crit-total .wchip{background:rgba(233,193,90,0.14);border-color:rgba(233,193,90,0.4);color:var(--gold-br);}
+
+  /* steps */
+  .step{display:flex;gap:12px;align-items:flex-start;margin-top:15px;position:relative;}
+  .step:first-of-type{margin-top:16px;}
+  .step .k{flex:none;width:26px;height:26px;border-radius:50%;border:1.5px solid var(--accent,#3F6BFF);display:flex;align-items:center;justify-content:center;
+    font-family:var(--sans);font-weight:800;font-size:12px;color:var(--ink);background:rgba(255,255,255,0.03);}
+  .step .t{font-size:14px;line-height:1.5;color:var(--muted);}
+  .step .t b{color:var(--ink);font-weight:600;}
+
+  /* rank vs rating minis */
+  .mini{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:14px 15px;margin-top:12px;position:relative;}
+  .mini .tag{font-family:var(--sans);font-size:10px;letter-spacing:0.14em;text-transform:uppercase;font-weight:800;}
+  .mini.rank .tag{color:#ff9ec9;} .mini.rating .tag{color:#9ab6ff;}
+  .mini h3{font-family:var(--serif);font-size:16px;font-weight:700;color:var(--ink);margin-top:3px;}
+  .mini p{color:var(--muted);font-size:13px;margin-top:5px;line-height:1.5;}
+
+  /* formula */
+  .formula{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:#cfe0ff;position:relative;
+    background:rgba(4,6,20,0.7);border:1px solid rgba(63,107,255,0.28);border-radius:12px;padding:14px 15px;margin-top:14px;line-height:1.75;overflow-x:auto;}
+  .formula .c{color:var(--muted2);}
+  .formula .hl{color:var(--gold-lt);}
+
+  .caveat{font-family:var(--sans);font-size:12px;color:var(--muted2);line-height:1.6;position:relative;}
+  .footer{text-align:center;font-family:var(--sans);font-size:11px;color:var(--muted2);padding:30px 22px 4px;letter-spacing:0.03em;}
+
+  @media (max-width:640px){
+    .hero h1{font-size:32px;}
+    .bento{grid-template-columns:1fr;gap:13px;}
+    .span6,.span4,.span3,.span2{grid-column:span 1;}
+  }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="emblem spectrum">◆&nbsp;◆&nbsp;◆</div>
+    <div class="name spectrum">National Martial Arts Organization</div>
+    <div class="tl">Tournament League</div>
+    <h1>The Rubric &amp; <span class="spectrum">Rating System</span></h1>
+    <p>How every performance is scored, and how competitors are rated across a season. Transparent by design.</p>
+    <a class="back" href="https://compete.nmao.us">← Back to Compete</a>
+  </header>
+
+  <main class="bento">
+
+    <!-- RUBRIC -->
+    <section class="tile span4" style="--accent:var(--red);">
+      <div class="eyebrow">The rubric</div>
+      <h2>Six criteria, every performance.</h2>
+      <p class="lead">Every performance is judged on six criteria, each scored 0–100 and weighted. The weights shift by style — traditional events reward foundation, open events reward difficulty.</p>
+      <div class="legend"><span class="lt"><b>Trad</b> · traditional forms &amp; weapons</span><span class="lo"><b>Open</b> · open forms &amp; weapons</span></div>
+
+      <div class="crit-row"><div class="crit-name"><span class="n">Technical Execution</span><span class="d">Clean, correct, precise technique</span></div><div class="wpair"><span class="wchip trad">25</span><span class="wchip open">20</span></div></div>
+      <div class="crit-row"><div class="crit-name"><span class="n">Power &amp; Focus (Kime)</span><span class="d">Power delivered with control and focus</span></div><div class="wpair"><span class="wchip trad">20</span><span class="wchip open">15</span></div></div>
+      <div class="crit-row"><div class="crit-name"><span class="n">Balance, Stability &amp; Rooting</span><span class="d">A grounded, stable, rooted base</span></div><div class="wpair"><span class="wchip trad">20</span><span class="wchip open">15</span></div></div>
+      <div class="crit-row"><div class="crit-name"><span class="n">Timing, Rhythm &amp; Fluidity</span><span class="d">Flow, pacing, and command of tempo</span></div><div class="wpair"><span class="wchip trad">15</span><span class="wchip open">15</span></div></div>
+      <div class="crit-row"><div class="crit-name"><span class="n">Spirit &amp; Presentation</span><span class="d">Intensity, confidence, and presence</span></div><div class="wpair"><span class="wchip trad">12</span><span class="wchip open">15</span></div></div>
+      <div class="crit-row"><div class="crit-name"><span class="n">Difficulty &amp; Composition</span><span class="d">The challenge and design of the routine</span></div><div class="wpair"><span class="wchip trad">8</span><span class="wchip open">20</span></div></div>
+      <div class="crit-total"><span class="n">Total weight</span><div class="wpair"><span class="wchip">100</span><span class="wchip">100</span></div></div>
+    </section>
+
+    <!-- WHY WEIGHTS DIFFER -->
+    <section class="tile span2 tvcenter" style="--accent:var(--blue);">
+      <div class="eyebrow">Two profiles</div>
+      <h2>Judged for the <em>style</em>.</h2>
+      <p class="body">Traditional events prize foundation — clean technique, power, and a rooted base carry the most weight.</p>
+      <p class="body">Open events open the door to <b>difficulty and composition</b>, rewarding what a competitor dares to attempt.</p>
+    </section>
+
+    <!-- SCORING -->
+    <section class="tile span3" style="--accent:var(--magenta);">
+      <div class="eyebrow">Scoring</div>
+      <h2>From judges to a final score.</h2>
+      <div class="step"><div class="k">1</div><div class="t"><b>Each judge scores all six criteria.</b> Those combine into one weighted score for that judge, out of 100.</div></div>
+      <div class="step"><div class="k">2</div><div class="t"><b>One judge, or a panel of three.</b> Beginner and intermediate divisions are scored by a single judge; any division including the advanced tier by a panel of three.</div></div>
+      <div class="step"><div class="k">3</div><div class="t"><b>Panels are averaged.</b> Three judges' scores are averaged straight — no high or low dropped.</div></div>
+      <div class="step"><div class="k">4</div><div class="t"><b>Placement.</b> Highest score places first. Ties break by the single highest judge score, then by who submitted first.</div></div>
+    </section>
+
+    <!-- RANK VS RATING -->
+    <section class="tile span3" style="--accent:var(--violet);">
+      <div class="eyebrow">Two different things</div>
+      <h2>Rank and rating aren't the same.</h2>
+      <div class="mini rank"><div class="tag">Rank</div><h3>Your belt tier</h3><p>Set by your school — beginner, intermediate, advanced. The tournament never changes it. Rank is how you're grouped for a fair division.</p></div>
+      <div class="mini rating"><div class="tag">Rating</div><h3>Your skill number</h3><p>A 0–100 number computed as you compete. It tracks your growth and matches you with competitors at your level — not your belt, not the standings.</p></div>
+    </section>
+
+    <!-- RATING SYSTEM -->
+    <section class="tile span4" style="--accent:var(--blue);">
+      <div class="eyebrow">The rating</div>
+      <h2>How your rating <span class="spectrum">moves</span>.</h2>
+      <p class="body">Every competitor starts at <b>50</b>. After each round, your rating adjusts by how you placed against competitors of your <b>same rank</b>. The system expects the higher-rated competitor to come out ahead — so beating a stronger one moves you up more, and an upset is rewarded.</p>
+      <p class="body">Your <b>first three rounds move faster</b>, so you find your level quickly; after that, steadier steps. Ratings always stay between 0 and 100, and only ever move you against same-rank competitors.</p>
+      <div class="formula">
+        <span class="c"># expected result vs one opponent</span><br/>
+        expected = 1 / (1 + 10 ^ ((opponent − you) / 40))<br/>
+        <span class="c"># your change, summed over opponents</span><br/>
+        change = (<span class="hl">K</span> / opponents) × Σ (result − expected)<br/>
+        <span class="c"># result = 1 win · 0 loss · ½ tie</span><br/>
+        <span class="c"># <span class="hl">K</span> = 8 for your first 3 rounds, then 4</span>
+      </div>
+    </section>
+
+    <!-- STANDINGS -->
+    <section class="tile span2 tvcenter" style="--accent:var(--gold-lt);">
+      <div class="eyebrow">The season</div>
+      <h2>What carries the season.</h2>
+      <p class="body">Standings come from your <b>best five of nine</b> rounds, by placement — computed independently of your rating. They're what carry you toward the semi-finals and Grand Finale.</p>
+    </section>
+
+    <!-- CAVEAT -->
+    <section class="tile span6" style="--accent:var(--violet);">
+      <p class="caveat">The weights and rating settings shown here are the current season's configuration, and may be tuned between seasons to keep competition fair. Scores are computed on our servers from the judges' inputs — never on a competitor's device.</p>
+    </section>
+
+  </main>
+
+  <div class="footer">National Martial Arts Organization · NMAO Inc. · support@nmao.us</div>
+</body>
+</html>
