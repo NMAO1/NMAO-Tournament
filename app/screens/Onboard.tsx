@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, status as statusColors } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
 import { listSeasons, listSchools, onboardCompetitor, type Season, type School } from "../lib/onboard";
 
 const RANKS = ["beginner", "intermediate", "advanced"];
-const CONSENTS = [
+const CONSENTS: { key: string; label: string; link?: { text: string; url: string }; after?: string }[] = [
   { key: "media_release", label: "I consent to my competitor's forms being recorded and shown for judging and community voting." },
-  { key: "rules", label: "I have read and agree to the competition rules and code of conduct." },
-  { key: "terms", label: "I agree to the Terms of Service and Privacy Policy." },
+  { key: "rules", label: "I have read and agree to the competition rules and code of conduct, and understand NMAO has no tolerance for objectionable content or abusive behavior — such content and the accounts responsible are removed." },
+  { key: "terms", label: "I agree to the ", link: { text: "Privacy Policy", url: "https://school.nmao.us/privacy.html" }, after: "." },
 ];
 const pad = (s: string) => (s.length === 1 ? "0" + s : s);
 
@@ -113,7 +113,11 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
             <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 1.5, borderColor: checked[c.key] ? hues.gold.base : neutrals.border, backgroundColor: checked[c.key] ? hues.gold.base : "transparent", alignItems: "center", justifyContent: "center", marginRight: 10, marginTop: 1 }}>
               {checked[c.key] ? <Text style={{ color: "#141210", fontWeight: "900", fontSize: 13 }}>✓</Text> : null}
             </View>
-            <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, flex: 1 }}>{c.label}</Text>
+            <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, flex: 1 }}>
+              {c.label}
+              {c.link ? <Text onPress={() => { if (c.link) Linking.openURL(c.link.url); }} style={{ color: hues.sapphire.hi, textDecorationLine: "underline" }}>{c.link.text}</Text> : null}
+              {c.after ?? ""}
+            </Text>
           </TouchableOpacity>
         ))}
 
