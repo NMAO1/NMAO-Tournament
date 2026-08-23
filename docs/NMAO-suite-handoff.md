@@ -95,7 +95,7 @@ Divisions are age × rank × event, but categories live in a per-season "Divisio
 - Overrides: move competitor, merge/split pod, reassign judge, void entry — all audited.
 
 ### 4.6 Ratings & standings [PARTIALLY LOCKED]
-Rating is seeded by declared rank and updated by results; standings use best 6 of 9 qualifying rounds; top competitors advance to semis then the finale. **The exact rating-update formula and rank-seeding values are [TO DEFINE] — the single open input blocking the next build step (§11).**
+Rating is seeded by declared rank and updated by results; standings use best 5 of 9 qualifying rounds; top competitors advance to semis then the finale. **The exact rating-update formula and rank-seeding values are [TO DEFINE] — the single open input blocking the next build step (§11).**
 
 ### 4.7 Business model & economics [LOCKED]
 - Entry fee: ~$45/event (working; final pending vendor quotes).

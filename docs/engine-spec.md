@@ -169,7 +169,7 @@ Overrides are only permitted in states where they make sense (e.g. move/merge/sp
 
 - **Scoring**: an entry's pod score is the **straight average** of its judge scores (1 judge beginner/intermediate, 3 advanced). Placement = score descending; tiebreak **highest single-judge score, then earliest submission**.
 - **Rating**: everyone seeds at **50**; moves on **placement, measured only against same-rank podmates**; learning rate **K = 8 for a competitor's first 3 rounds, then 4**; clamped 0–100. Rating drives **pod formation within a rank bracket only** and never crosses ranks — a rank change is a real dojo promotion carried on `declared_rank`. In a collapsed mixed pod, a competitor's rating moves only on comparisons to same-rank podmates (a lone-rank competitor doesn't move). Formula + worked examples: `docs/scoring-and-rating.md`. Implemented and unit-tested: `functions/_shared/rating.ts`.
-- **Standings**: each competitor's season score is their **best 6 of 9** qualifying rounds.
+- **Standings**: each competitor's season score is their **best 5 of 9** qualifying rounds.
 - **Advancement**: top competitors by standings advance to the **semi-finals**, then the **grand finale** — the only stages with cash prize pools (~8% per-entry set-aside + sponsors).
 
 All constants live in `DEFAULT_RATING_CONFIG` and are tunable per season without code changes.

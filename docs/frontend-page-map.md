@@ -64,7 +64,7 @@ Last updated: 2026-08-06
 | **/control/divisions** | Divisions & pods for the round; who's where; under-floor/collapsed flags; overrides (move/merge/split). | `divisions, pods, entries` | Empty before classify. |
 | **/control/entries** | Validate entries, void bad submissions, watch video, see payment status. | `entries, payments, submission video` | Filter by status; empty = "No entries yet." |
 | **/control/judges** | Judge pool (cleared/active), per-video assignments, reassign, reopen incomplete pods. | `judges, judge_assignments` (**realtime**) | Flag under-judged videos. |
-| **/control/results** | Resolved scores, placements, rating deltas, season standings (best 6/9). | `results, skill_ratings, rating_history` (**realtime**) | Empty before resolve. |
+| **/control/results** | Resolved scores, placements, rating deltas, season standings (best 5/9). | `results, skill_ratings, rating_history` (**realtime**) | Empty before resolve. |
 | **/control/medals** | Medal ship list — one shipment per school, counts, statuses. | `medals, medal_shipments, schools` | Export/print. |
 | **/control/finance** | Entry-fee payments, school revenue-share payouts (10/20/30% tiers). | `payments, school_payouts` | Reconcile view. |
 | **/control/audit** | Every override/rollback (who/when/before/after). | `engine_audit` (**realtime**) | Read-only timeline. |
@@ -90,7 +90,7 @@ Last updated: 2026-08-06
 | **/me** Season home | Yin-yang imprint (season progress), current round status + deadline countdown, rating & standing snapshot, reveal entry. | `rounds, entries, results, medals, skill_ratings` (**realtime** on round state) | Loading: hero skeleton. Empty (pre-season): "Season opens [date]." |
 | **/me/compete** | Enter event(s), upload the performance video (Storage, signed), pay the entry fee (Stripe), track submitted → judging. | `entries` (write), Storage upload, `payments` | Deadline passed = read-only "closed." Upload progress + resumable. |
 | **/me/reveal/[roundId]** | The ceremonial results moment — segment fills with the medal, score + placement + rating movement. | `results, medals, rating_history` | Locked (pre-reveal-day) = countdown. |
-| **/me/journey** | Round-by-round history, season standing (best 6/9), advancement tracker, replay reveals. | `results, rating_history, skill_ratings` | Empty = "Your first round is coming." |
+| **/me/journey** | Round-by-round history, season standing (best 5/9), advancement tracker, replay reveals. | `results, rating_history, skill_ratings` | Empty = "Your first round is coming." |
 | **/me/profile** | Avatar + rank ring, rating gauge, medal shelf, badges, settings + guardian controls. | `competitors, skill_ratings, medals` | — |
 
 ## (d) Public results — SSR, SEO, shareable

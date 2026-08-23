@@ -517,7 +517,7 @@ create table if not exists rating_history (
   created_at    timestamptz not null default now()
 );
 
--- ---------- season_results (standings feed: best 6 of 9) ----------
+-- ---------- season_results (standings feed: best 5 of 9) ----------
 create table if not exists season_results (
   id            uuid primary key default gen_random_uuid(),
   season_id     uuid not null references seasons(id) on delete cascade,

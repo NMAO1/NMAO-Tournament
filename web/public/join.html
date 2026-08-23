@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NMAO for Schools</title>
+<meta name="description" content="Bring your martial arts school into the NMAO Tournament League. Students compete from your own mat, your school earns, and you can host your own in-house tournaments too." />
+<style>
+  :root{
+    --gold:#C89B3C; --gold-lt:#E9C15A; --gold-br:#F5D462; --gold-dk:#8a671f;
+    --ink:#ece7dc; --muted:#a99f8c; --muted2:#7c7362;
+    --bg0:#08070b; --bg1:#140e1f; --panel:#141019; --line:rgba(233,193,90,0.16);
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg0);color:var(--ink);font-family:var(--serif);-webkit-font-smoothing:antialiased;line-height:1.6;padding-bottom:80px;}
+  .wrap{max-width:480px;margin:0 auto;padding:0 22px;}
+  .spectrum{background:linear-gradient(100deg,#FF2E3B 0%,#C22DE0 34%,#A32BF7 60%,#3F6BFF 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .goldtext{background:linear-gradient(180deg,var(--gold-br) 0%,var(--gold-lt) 48%,var(--gold) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .eyebrow{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.34em;text-transform:uppercase;color:var(--gold-lt);}
+
+  /* HERO */
+  .hero{text-align:center;padding:52px 22px 46px;
+    background:radial-gradient(120% 70% at 50% 6%, rgba(90,50,130,0.34) 0%, rgba(20,14,31,0) 60%), var(--bg0);}
+  .hero .med{width:104px;height:104px;filter:drop-shadow(0 0 26px rgba(233,193,90,0.5));margin:0 auto 22px;}
+  .hero .name{font-family:var(--serif);font-weight:700;font-size:26px;line-height:1.1;letter-spacing:0.01em;}
+  .hero .tl{font-family:var(--serif);font-size:13px;letter-spacing:0.5em;text-transform:uppercase;color:var(--gold);margin-top:7px;padding-left:0.5em;}
+  .hero h1{font-family:var(--serif);font-size:33px;line-height:1.12;font-weight:700;margin:26px 0 14px;text-wrap:balance;}
+  .hero p{color:var(--muted);font-size:16px;max-width:22em;margin:0 auto;}
+  .hero .season{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:0.28em;text-transform:uppercase;color:var(--muted);margin-top:22px;}
+  .hero .season b{color:var(--gold-lt);}
+
+  .btn{display:inline-block;font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:0.02em;color:#141210;text-decoration:none;
+    background:linear-gradient(160deg,var(--gold-br),var(--gold-lt) 50%,var(--gold));border-radius:12px;padding:14px 26px;border:none;cursor:pointer;
+    box-shadow:0 6px 22px rgba(200,155,60,0.28);}
+  .btn[disabled]{opacity:0.6;cursor:default;}
+  .hero .btn{margin-top:26px;}
+  .btn-call{background:transparent;color:var(--gold-lt);border:1.5px solid var(--gold-dk);box-shadow:none;}
+  .or{font-family:var(--sans);font-size:12px;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted2);margin:16px 0 12px;}
+  .cred{font-family:var(--serif);font-style:italic;font-size:14px;color:var(--gold-lt);margin-top:16px;}
+
+  section{padding:44px 0;border-top:1px solid rgba(255,255,255,0.05);}
+  .sec-h{font-family:var(--serif);font-size:26px;font-weight:700;line-height:1.14;margin:12px 0 8px;text-wrap:balance;}
+  .sec-h em{font-style:italic;}
+  .lead{color:var(--muted);font-size:16px;margin-bottom:8px;}
+  .body p{color:var(--muted);font-size:15.5px;margin-top:12px;}
+  .body p b{color:var(--ink);font-weight:600;}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 17px;margin-top:12px;}
+  .card h3{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--ink);}
+  .card h3 .n{color:var(--gold-lt);margin-right:9px;}
+  .card p{color:var(--muted);font-size:14px;margin-top:4px;line-height:1.5;}
+
+  .earn{display:flex;gap:13px;align-items:flex-start;margin-top:16px;}
+  .earn .k{flex:none;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--gold-dk);display:flex;align-items:center;justify-content:center;}
+  .earn .k span{width:8px;height:8px;border-radius:50%;background:linear-gradient(160deg,var(--gold-br),var(--gold));}
+  .earn .t b{color:var(--gold-lt);font-weight:700;}
+  .earn .t{font-size:15.5px;line-height:1.4;}
+  .earn .t small{display:block;color:var(--muted2);font-size:12.5px;margin-top:3px;font-family:var(--sans);letter-spacing:0.02em;}
+
+  .stat{text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:18px;}
+  .stat .big{font-family:var(--serif);font-size:40px;font-weight:800;line-height:1;}
+  .stat .lbl{font-family:var(--sans);font-size:12px;letter-spacing:0.06em;color:var(--muted);margin-top:8px;}
+
+  .med-sec{text-align:center;}
+  .med-sec .med{width:150px;height:150px;margin:18px auto 0;filter:drop-shadow(0 0 22px rgba(90,50,130,0.4));}
+
+  /* signup */
+  #join{text-align:center;padding-bottom:52px;}
+  #join h2{font-family:var(--serif);font-size:30px;font-weight:700;margin:12px 0 8px;}
+  #join p{color:var(--muted);font-size:15.5px;max-width:24em;margin:0 auto 20px;}
+  .form{display:flex;flex-direction:column;gap:10px;max-width:20em;margin:0 auto;}
+  .form input{font-family:var(--sans);font-size:15px;padding:13px 15px;border-radius:11px;border:1px solid var(--line);background:#0e0b14;color:var(--ink);}
+  .form input::placeholder{color:var(--muted2);}
+  .hp{position:absolute!important;left:-9999px!important;width:1px!important;height:1px!important;opacity:0!important;}
+  .note{font-family:var(--sans);font-size:11px;color:var(--muted2);margin-top:12px;}
+  .ok{color:var(--gold-lt);font-family:var(--serif);font-size:17px;margin-top:6px;}
+  .err{font-family:var(--sans);font-size:13px;color:var(--gold-lt);margin-top:12px;}
+
+  .footer{text-align:center;font-family:var(--sans);font-size:11px;color:var(--muted2);padding:26px 22px 10px;letter-spacing:0.03em;}
+
+  /* sticky CTA */
+  .sticky{position:fixed;left:0;right:0;bottom:0;background:rgba(8,7,11,0.9);backdrop-filter:blur(8px);border-top:1px solid var(--line);
+    padding:12px 22px;display:flex;justify-content:center;z-index:20;}
+  .sticky .btn{width:100%;max-width:436px;text-align:center;}
+</style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="medsym" viewBox="0 0 340 340"><defs><radialGradient id="goldL" gradientUnits="userSpaceOnUse" cx="136" cy="124" r="138"><stop offset="0" stop-color="#FFF0BE"/><stop offset="0.5" stop-color="#E6B93F"/><stop offset="1" stop-color="#B0851F"/></radialGradient><radialGradient id="goldD" gradientUnits="userSpaceOnUse" cx="136" cy="124" r="138"><stop offset="0" stop-color="#8A6B1E"/><stop offset="0.5" stop-color="#5A3F0E"/><stop offset="1" stop-color="#33240A"/></radialGradient><radialGradient id="silverL" gradientUnits="userSpaceOnUse" cx="136" cy="124" r="138"><stop offset="0" stop-color="#F6F8FA"/><stop offset="0.5" stop-color="#C6CDD4"/><stop offset="1" stop-color="#949CA4"/></radialGradient><radialGradient id="silverD" gradientUnits="userSpaceOnUse" cx="136" cy="124" r="138"><stop offset="0" stop-color="#7A828A"/><stop offset="0.5" stop-color="#4C535A"/><stop offset="1" stop-color="#2E3338"/></radialGradient><radialGradient id="bronzeL" gradientUnits="userSpaceOnUse" cx="136" cy="124" r="138"><stop offset="0" stop-color="#F3C79A"/><stop offset="0.5" stop-color="#C57F35"/><stop offset="1" stop-color="#8A5620"/></radialGradient><radialGradient id="bronzeD" gradientUnits="userSpaceOnUse" cx="136" cy="124" r="138"><stop offset="0" stop-color="#6E4A20"/><stop offset="0.5" stop-color="#452C12"/><stop offset="1" stop-color="#28180A"/></radialGradient></defs><circle cx="170" cy="170" r="146" fill="none" stroke="#3a3320" stroke-width="9"/><circle cx="170" cy="170" r="146" fill="none" stroke="#5a4c2a" stroke-width="2"/><clipPath id="mc0"><path d="M170.0 118.0L170.0 107.2L170.0 96.5L170.0 85.8L170.0 75.0L170.0 64.2L170.0 53.5L170.0 42.8L170.0 32.0L183.5 32.7L196.9 34.7L210.1 37.9L222.8 42.5L235.1 48.3L246.7 55.3L257.5 63.3L267.6 72.4L260.0 80.0L252.4 87.6L244.8 95.2L237.2 102.8L229.6 110.4L222.0 118.0L214.4 125.6L206.8 133.2L203.0 129.8L198.9 126.8L194.5 124.1L189.9 122.0L185.1 120.2L180.1 119.0L175.1 118.3L170.0 118.0Z"/></clipPath><g clip-path="url(#mc0)"><circle cx="170" cy="170" r="138" fill="url(#goldL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#goldD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#5A3F0E"/><circle cx="170" cy="239.0" r="19.32" fill="#E6B93F"/></g><path d="M170.0 118.0L170.0 107.2L170.0 96.5L170.0 85.8L170.0 75.0L170.0 64.2L170.0 53.5L170.0 42.8L170.0 32.0L183.5 32.7L196.9 34.7L210.1 37.9L222.8 42.5L235.1 48.3L246.7 55.3L257.5 63.3L267.6 72.4L260.0 80.0L252.4 87.6L244.8 95.2L237.2 102.8L229.6 110.4L222.0 118.0L214.4 125.6L206.8 133.2L203.0 129.8L198.9 126.8L194.5 124.1L189.9 122.0L185.1 120.2L180.1 119.0L175.1 118.3L170.0 118.0Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mc1"><path d="M206.8 133.2L214.4 125.6L222.0 118.0L229.6 110.4L237.2 102.8L244.8 95.2L252.4 87.6L260.0 80.0L267.6 72.4L276.7 82.5L284.7 93.3L291.7 104.9L297.5 117.2L302.1 129.9L305.3 143.1L307.3 156.5L308.0 170.0L297.2 170.0L286.5 170.0L275.8 170.0L265.0 170.0L254.2 170.0L243.5 170.0L232.8 170.0L222.0 170.0L221.7 164.9L221.0 159.9L219.8 154.9L218.0 150.1L215.9 145.5L213.2 141.1L210.2 137.0L206.8 133.2Z"/></clipPath><g clip-path="url(#mc1)"><circle cx="170" cy="170" r="138" fill="url(#silverL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#silverD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#4C535A"/><circle cx="170" cy="239.0" r="19.32" fill="#C6CDD4"/></g><path d="M206.8 133.2L214.4 125.6L222.0 118.0L229.6 110.4L237.2 102.8L244.8 95.2L252.4 87.6L260.0 80.0L267.6 72.4L276.7 82.5L284.7 93.3L291.7 104.9L297.5 117.2L302.1 129.9L305.3 143.1L307.3 156.5L308.0 170.0L297.2 170.0L286.5 170.0L275.8 170.0L265.0 170.0L254.2 170.0L243.5 170.0L232.8 170.0L222.0 170.0L221.7 164.9L221.0 159.9L219.8 154.9L218.0 150.1L215.9 145.5L213.2 141.1L210.2 137.0L206.8 133.2Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mc2"><path d="M222.0 170.0L232.8 170.0L243.5 170.0L254.2 170.0L265.0 170.0L275.8 170.0L286.5 170.0L297.2 170.0L308.0 170.0L307.3 183.5L305.3 196.9L302.1 210.1L297.5 222.8L291.7 235.1L284.7 246.7L276.7 257.5L267.6 267.6L260.0 260.0L252.4 252.4L244.8 244.8L237.2 237.2L229.6 229.6L222.0 222.0L214.4 214.4L206.8 206.8L210.2 203.0L213.2 198.9L215.9 194.5L218.0 189.9L219.8 185.1L221.0 180.1L221.7 175.1L222.0 170.0Z"/></clipPath><g clip-path="url(#mc2)"><circle cx="170" cy="170" r="138" fill="url(#bronzeL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#bronzeD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#452C12"/><circle cx="170" cy="239.0" r="19.32" fill="#C57F35"/></g><path d="M222.0 170.0L232.8 170.0L243.5 170.0L254.2 170.0L265.0 170.0L275.8 170.0L286.5 170.0L297.2 170.0L308.0 170.0L307.3 183.5L305.3 196.9L302.1 210.1L297.5 222.8L291.7 235.1L284.7 246.7L276.7 257.5L267.6 267.6L260.0 260.0L252.4 252.4L244.8 244.8L237.2 237.2L229.6 229.6L222.0 222.0L214.4 214.4L206.8 206.8L210.2 203.0L213.2 198.9L215.9 194.5L218.0 189.9L219.8 185.1L221.0 180.1L221.7 175.1L222.0 170.0Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mc3"><path d="M206.8 206.8L214.4 214.4L222.0 222.0L229.6 229.6L237.2 237.2L244.8 244.8L252.4 252.4L260.0 260.0L267.6 267.6L257.5 276.7L246.7 284.7L235.1 291.7L222.8 297.5L210.1 302.1L196.9 305.3L183.5 307.3L170.0 308.0L170.0 297.2L170.0 286.5L170.0 275.8L170.0 265.0L170.0 254.2L170.0 243.5L170.0 232.8L170.0 222.0L175.1 221.7L180.1 221.0L185.1 219.8L189.9 218.0L194.5 215.9L198.9 213.2L203.0 210.2L206.8 206.8Z"/></clipPath><g clip-path="url(#mc3)"><circle cx="170" cy="170" r="138" fill="url(#goldL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#goldD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#5A3F0E"/><circle cx="170" cy="239.0" r="19.32" fill="#E6B93F"/></g><path d="M206.8 206.8L214.4 214.4L222.0 222.0L229.6 229.6L237.2 237.2L244.8 244.8L252.4 252.4L260.0 260.0L267.6 267.6L257.5 276.7L246.7 284.7L235.1 291.7L222.8 297.5L210.1 302.1L196.9 305.3L183.5 307.3L170.0 308.0L170.0 297.2L170.0 286.5L170.0 275.8L170.0 265.0L170.0 254.2L170.0 243.5L170.0 232.8L170.0 222.0L175.1 221.7L180.1 221.0L185.1 219.8L189.9 218.0L194.5 215.9L198.9 213.2L203.0 210.2L206.8 206.8Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mc4"><path d="M170.0 222.0L170.0 232.8L170.0 243.5L170.0 254.2L170.0 265.0L170.0 275.8L170.0 286.5L170.0 297.2L170.0 308.0L156.5 307.3L143.1 305.3L129.9 302.1L117.2 297.5L104.9 291.7L93.3 284.7L82.5 276.7L72.4 267.6L80.0 260.0L87.6 252.4L95.2 244.8L102.8 237.2L110.4 229.6L118.0 222.0L125.6 214.4L133.2 206.8L137.0 210.2L141.1 213.2L145.5 215.9L150.1 218.0L154.9 219.8L159.9 221.0L164.9 221.7L170.0 222.0Z"/></clipPath><g clip-path="url(#mc4)"><circle cx="170" cy="170" r="138" fill="url(#silverL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#silverD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#4C535A"/><circle cx="170" cy="239.0" r="19.32" fill="#C6CDD4"/></g><path d="M170.0 222.0L170.0 232.8L170.0 243.5L170.0 254.2L170.0 265.0L170.0 275.8L170.0 286.5L170.0 297.2L170.0 308.0L156.5 307.3L143.1 305.3L129.9 302.1L117.2 297.5L104.9 291.7L93.3 284.7L82.5 276.7L72.4 267.6L80.0 260.0L87.6 252.4L95.2 244.8L102.8 237.2L110.4 229.6L118.0 222.0L125.6 214.4L133.2 206.8L137.0 210.2L141.1 213.2L145.5 215.9L150.1 218.0L154.9 219.8L159.9 221.0L164.9 221.7L170.0 222.0Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mc5"><path d="M133.2 206.8L125.6 214.4L118.0 222.0L110.4 229.6L102.8 237.2L95.2 244.8L87.6 252.4L80.0 260.0L72.4 267.6L63.3 257.5L55.3 246.7L48.3 235.1L42.5 222.8L37.9 210.1L34.7 196.9L32.7 183.5L32.0 170.0L42.8 170.0L53.5 170.0L64.2 170.0L75.0 170.0L85.8 170.0L96.5 170.0L107.2 170.0L118.0 170.0L118.3 175.1L119.0 180.1L120.2 185.1L122.0 189.9L124.1 194.5L126.8 198.9L129.8 203.0L133.2 206.8Z"/></clipPath><g clip-path="url(#mc5)"><circle cx="170" cy="170" r="138" fill="url(#bronzeL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#bronzeD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#452C12"/><circle cx="170" cy="239.0" r="19.32" fill="#C57F35"/></g><path d="M133.2 206.8L125.6 214.4L118.0 222.0L110.4 229.6L102.8 237.2L95.2 244.8L87.6 252.4L80.0 260.0L72.4 267.6L63.3 257.5L55.3 246.7L48.3 235.1L42.5 222.8L37.9 210.1L34.7 196.9L32.7 183.5L32.0 170.0L42.8 170.0L53.5 170.0L64.2 170.0L75.0 170.0L85.8 170.0L96.5 170.0L107.2 170.0L118.0 170.0L118.3 175.1L119.0 180.1L120.2 185.1L122.0 189.9L124.1 194.5L126.8 198.9L129.8 203.0L133.2 206.8Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mc6"><path d="M118.0 170.0L107.2 170.0L96.5 170.0L85.8 170.0L75.0 170.0L64.2 170.0L53.5 170.0L42.8 170.0L32.0 170.0L32.7 156.5L34.7 143.1L37.9 129.9L42.5 117.2L48.3 104.9L55.3 93.3L63.3 82.5L72.4 72.4L80.0 80.0L87.6 87.6L95.2 95.2L102.8 102.8L110.4 110.4L118.0 118.0L125.6 125.6L133.2 133.2L129.8 137.0L126.8 141.1L124.1 145.5L122.0 150.1L120.2 154.9L119.0 159.9L118.3 164.9L118.0 170.0Z"/></clipPath><g clip-path="url(#mc6)"><circle cx="170" cy="170" r="138" fill="url(#goldL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#goldD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#5A3F0E"/><circle cx="170" cy="239.0" r="19.32" fill="#E6B93F"/></g><path d="M118.0 170.0L107.2 170.0L96.5 170.0L85.8 170.0L75.0 170.0L64.2 170.0L53.5 170.0L42.8 170.0L32.0 170.0L32.7 156.5L34.7 143.1L37.9 129.9L42.5 117.2L48.3 104.9L55.3 93.3L63.3 82.5L72.4 72.4L80.0 80.0L87.6 87.6L95.2 95.2L102.8 102.8L110.4 110.4L118.0 118.0L125.6 125.6L133.2 133.2L129.8 137.0L126.8 141.1L124.1 145.5L122.0 150.1L120.2 154.9L119.0 159.9L118.3 164.9L118.0 170.0Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mc7"><path d="M133.2 133.2L125.6 125.6L118.0 118.0L110.4 110.4L102.8 102.8L95.2 95.2L87.6 87.6L80.0 80.0L72.4 72.4L82.5 63.3L93.3 55.3L104.9 48.3L117.2 42.5L129.9 37.9L143.1 34.7L156.5 32.7L170.0 32.0L170.0 42.8L170.0 53.5L170.0 64.2L170.0 75.0L170.0 85.8L170.0 96.5L170.0 107.2L170.0 118.0L164.9 118.3L159.9 119.0L154.9 120.2L150.1 122.0L145.5 124.1L141.1 126.8L137.0 129.8L133.2 133.2Z"/></clipPath><g clip-path="url(#mc7)"><circle cx="170" cy="170" r="138" fill="url(#silverL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#silverD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#4C535A"/><circle cx="170" cy="239.0" r="19.32" fill="#C6CDD4"/></g><path d="M133.2 133.2L125.6 125.6L118.0 118.0L110.4 110.4L102.8 102.8L95.2 95.2L87.6 87.6L80.0 80.0L72.4 72.4L82.5 63.3L93.3 55.3L104.9 48.3L117.2 42.5L129.9 37.9L143.1 34.7L156.5 32.7L170.0 32.0L170.0 42.8L170.0 53.5L170.0 64.2L170.0 75.0L170.0 85.8L170.0 96.5L170.0 107.2L170.0 118.0L164.9 118.3L159.9 119.0L154.9 120.2L150.1 122.0L145.5 124.1L141.1 126.8L137.0 129.8L133.2 133.2Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/><clipPath id="mcC"><path d="M122 170 A48 48 0 1 0 218 170 A48 48 0 1 0 122 170 Z"/></clipPath><g clip-path="url(#mcC)"><circle cx="170" cy="170" r="138" fill="url(#goldL)"/><g transform="translate(340,0) scale(-1,1)"><path d="M170 32 A138 138 0 0 1 170 308 A69.0 69.0 0 0 1 170 170 A69.0 69.0 0 0 0 170 32 Z" fill="url(#goldD)"/></g><circle cx="170" cy="101.0" r="19.32" fill="#5A3F0E"/><circle cx="170" cy="239.0" r="19.32" fill="#E6B93F"/></g><path d="M122 170 A48 48 0 1 0 218 170 A48 48 0 1 0 122 170 Z" fill="none" stroke="#0b0b0d" stroke-width="1.2"/></symbol></svg>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="med"><svg viewBox="0 0 340 340" aria-label="Season medallion"><use href="#medsym"/></svg></div>
+    <div class="name spectrum">National Martial Arts<br/>Organization</div>
+    <div class="tl">Tournament League</div>
+    <h1>Where every school competes and <em class="goldtext">earns</em>.</h1>
+    <p>An interactive tournament showcasing forms and weapons from dojos around the United States.</p>
+    <a href="#join" class="btn">Bring your school in</a>
+    <div class="season">Season&nbsp;I&nbsp;·&nbsp;<b>Begins January 15, 2027</b></div>
+  </header>
+
+  <!-- WHY -->
+  <section><div class="wrap">
+    <div class="eyebrow">Why NMAO</div>
+    <h2 class="sec-h">A tournament built for students, schools, and teachers, <em class="goldtext">first</em>.</h2>
+    <div class="body">
+      <p>NMAO Tournament League exists to give students across the nation a stage. Every student, in every dojo, at every rank, deserves the chance to compete, to grow, and to be seen. Students compete each month by video from their own dojo, judged by experienced martial artists, building a season-long record of their growth.</p>
+      <p>This is more than a tournament. It is a community of dojos rising together. Students earn the spotlight, schools share in regular revenue and in the grand-finale cash prizes, and experienced instructors earn well-paying judging positions. We built it for you, <b>first</b>.</p>
+    </div>
+  </div></section>
+
+  <!-- HOW -->
+  <section><div class="wrap">
+    <div class="eyebrow">How it works</div>
+    <h2 class="sec-h">A season, run from your own mat.</h2>
+    <div class="card"><h3><span class="n">01</span>Compete from your own mat</h3><p>Film one form or weapons video on a phone, up to 2 angles for a clear view. That's the entry. One round a month.</p></div>
+    <div class="card"><h3><span class="n">02</span>Fair divisions</h3><p>Pods of no more than 15, sorted by age, rank, and rating, reshuffled each round for a fair chance every time.</p></div>
+    <div class="card"><h3><span class="n">03</span>Judged with honor</h3><p>Scored by experienced martial artists, paid well for their craft. Effort is honored as loudly as outcome.</p></div>
+    <div class="card"><h3><span class="n">04</span>Duel between rounds</h3><p>Between tournaments, competitors nationwide face off head to head, and the community votes on who prevails.</p></div>
+    <div class="card"><h3><span class="n">05</span>Nine rounds, one journey</h3><p>Nine monthly rounds lead to the semi-finals and a grand finale. Your best five rounds count, so a month you miss never breaks your season.</p></div>
+  </div></section>
+
+  <!-- WAYS TO RUN IT -->
+  <section><div class="wrap">
+    <div class="eyebrow">Bring it to your school</div>
+    <h2 class="sec-h">Three ways to run it.</h2>
+    <p class="lead">Start light, or build a program. Any school finds its fit.</p>
+    <div class="card"><h3>The Tournament Team</h3><p>A dedicated squad that competes every month. Deepest engagement, a competition-team identity, and the steadiest monthly revenue.</p></div>
+    <div class="card"><h3>Quarterly by Age</h3><p>One age group per season: January 7–9, April 10–13, July 14–17, October 18+. Each cohort gets its own moment, spread across the year.</p></div>
+    <div class="card"><h3>The Annual School Tournament</h3><p>Once a year, the whole school enters together. Lowest commitment, a signature yearly tradition.</p></div>
+  </div></section>
+
+  <!-- IN-HOUSE TOURNAMENTS -->
+  <section><div class="wrap">
+    <div class="eyebrow">Make it your own</div>
+    <h2 class="sec-h">Host your own tournaments, too.</h2>
+    <p class="lead">The same engine that runs the national season is yours to run in-house — your students, your event, your rules.</p>
+    <div class="card"><h3>Your entry, your prizes</h3><p>Open it free or charge for entry.</p></div>
+    <div class="card"><h3>Your rubric, or ours</h3><p>Score with NMAO's criteria or bring your own. The judging tools, video, and instant results are ready either way.</p></div>
+    <div class="card"><h3>Any event you can imagine</h3><p>Forms, weapons, hand mitt training, workout challenges — the choice is yours.</p></div>
+  </div></section>
+
+  <!-- ECONOMICS -->
+  <section><div class="wrap">
+    <div class="eyebrow">Your school</div>
+    <h2 class="sec-h">Your school competes, and <em class="goldtext">earns</em>.</h2>
+    <div class="stat"><div class="big goldtext">Up to 30%</div><div class="lbl">of every entry fee, back to your school, every month</div></div>
+    <div class="earn"><div class="k"><span></span></div><div class="t"><b>$10,000+ in season prizes.</b><small>Your school competes too, with a share of the grand-finale purse</small></div></div>
+    <div class="earn"><div class="k"><span></span></div><div class="t"><b>Your students on the national stage.</b><small>Ranked, rated, and earning the season medallion</small></div></div>
+    <div class="earn"><div class="k"><span></span></div><div class="t"><b>A recurring channel.</b><small>Engagement and revenue year-round, not one weekend a year</small></div></div>
+  </div></section>
+
+  <!-- MEDALLION -->
+  <section class="med-sec"><div class="wrap">
+    <div class="eyebrow">The keepsake</div>
+    <h2 class="sec-h">Earned one piece at a time.</h2>
+    <p class="lead">Every round earns a segment of the season medallion, in the metal your student placed. Nine pieces make the whole.</p>
+    <div class="med"><svg viewBox="0 0 340 340" aria-label="Season medallion"><use href="#medsym"/></svg></div>
+    <div class="card" style="text-align:left;margin-top:26px;">
+      <h3>Badges for the journey</h3>
+      <p>Placing earns medals, but progress earns badges. Every competitor is recognized for milestones, effort, and steady growth, so a student who did not place still leaves with something earned, and every reason to come back stronger.</p>
+    </div>
+  </div></section>
+
+  <!-- FAQ -->
+  <section><div class="wrap">
+    <div class="eyebrow">Questions</div>
+    <h2 class="sec-h">What instructors ask first.</h2>
+    <div class="card"><h3>What does it cost my school?</h3><p>Nothing to join. Students pay a small entry per round, and up to 30% of every entry comes back to your school each month.</p></div>
+    <div class="card"><h3>How much of my time does it take?</h3><p>Very little. Your students film one video a month from your mat. Judging, scoring, and divisions are handled for you.</p></div>
+    <div class="card"><h3>What do my students need?</h3><p>A phone and your mat. One form or weapons video, up to two angles. That's the entry.</p></div>
+    <div class="card"><h3>Do we have to compete every month?</h3><p>No. Your best five of nine rounds count, so a missed month never breaks a season, and you can host your own in-house events any time.</p></div>
+  </div></section>
+
+  <!-- JOIN -->
+  <section id="join"><div class="wrap">
+    <div class="eyebrow">Season I</div>
+    <h2>Bring your school in.</h2>
+    <p>Season I begins January 15, 2027. Give us a call and we'll set your school up personally, and walk you through everything.</p>
+    <a href="tel:+15163036972" class="btn btn-call">Call us · (516) 303-6972</a>
+    <p class="or">or leave your details and we'll reach out</p>
+    <form id="leadform" class="form" novalidate>
+      <input id="lf-school" name="school_name" type="text" placeholder="Your school's name" autocomplete="organization" required />
+      <input id="lf-email" name="email" type="email" placeholder="Your email" autocomplete="email" required />
+      <input id="lf-phone" name="phone" type="tel" placeholder="Phone (optional)" autocomplete="tel" />
+      <input id="lf-website" name="website" class="hp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <button class="btn" type="submit">Reserve my school's place</button>
+    </form>
+    <div id="thx" class="ok" style="display:none;">Thank you. We'll be in touch soon.</div>
+    <div id="err" class="err" style="display:none;">Something went wrong on our end. Please call us at (516) 303-6972.</div>
+    <p class="cred">Built by martial artists, for the martial arts community.</p>
+  </div></section>
+
+  <div class="footer">National Martial Arts Organization · NMAO Inc. · support@nmao.us</div>
+
+  <div class="sticky"><a href="#join" class="btn">Bring your school in</a></div>
+
+  <script>
+  (function () {
+    var ENDPOINT = "https://oxzuavpyoetchwebdejp.supabase.co/functions/v1/capture-school-lead";
+    var f = document.getElementById("leadform");
+    if (!f) return;
+    var btn = f.querySelector('button[type="submit"]');
+    var thx = document.getElementById("thx");
+    var err = document.getElementById("err");
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var school = document.getElementById("lf-school").value.trim();
+      var email = document.getElementById("lf-email").value.trim();
+      var phone = document.getElementById("lf-phone").value.trim();
+      var website = document.getElementById("lf-website").value; // honeypot
+      if (!school || !email) return;
+      err.style.display = "none";
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      fetch(ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ school_name: school, email: email, phone: phone, website: website })
+      })
+        .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
+        .then(function (d) {
+          if (d && d.ok) {
+            f.style.display = "none";
+            thx.style.display = "block";
+          } else {
+            throw new Error((d && d.error) || "failed");
+          }
+        })
+        .catch(function () {
+          btn.disabled = false;
+          btn.textContent = "Reserve my school's place";
+          err.style.display = "block";
+        });
+    });
+  })();
+  </script>
+
+</body>
+</html>

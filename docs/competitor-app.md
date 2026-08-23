@@ -22,7 +22,7 @@ Bottom tab bar, four tabs, with the reveal surfacing over the top when results d
 |---|---|
 | **Home (Season)** | The yin-yang hero, current round status + deadline countdown, and the entry point to the reveal. The heartbeat screen. |
 | **Compete** | Enter events for the current round, record/upload the video, pay the entry fee, and track submission → judging status. |
-| **Journey** | Per-round history (score, placement, medal, rating change), season standings (best 6 of 9), advancement tracker, and replayable reveals. |
+| **Journey** | Per-round history (score, placement, medal, rating change), season standings (best 5 of 9), advancement tracker, and replayable reveals. |
 | **Profile** | Avatar, rank, stats, medal shelf, badges/milestones, and settings (guardian-controlled). |
 
 ## 4. Screens & flows
@@ -62,11 +62,11 @@ This is the part worth over-engineering. Principles and ideas:
 
 **Share (safely).** At the end, an optional **shareable card** (their yin-yang progress + medal). For minors this is **off by default and guardian-gated**, and only ever shares the artifact — never the raw video.
 
-**Wellbeing guardrails.** The standings already forgive missed months (best 6 of 9), so the app **never shames a missed round**. Streaks and milestones are framed as encouragement, not pressure. No dark-pattern urgency aimed at children.
+**Wellbeing guardrails.** The standings already forgive missed months (best 5 of 9), so the app **never shames a missed round**. Streaks and milestones are framed as encouragement, not pressure. No dark-pattern urgency aimed at children.
 
 ## 7. Stats, progress & motivation
 
-Rating gauge (0–100), medal shelf, division standing (best 6 of 9), advancement tracker, streak of rounds competed, and **badges/milestones** (first submission, first medal, first gold, "completed the yin-yang," advanced to semis). Motivation is intrinsic and collectible — the yin-yang is the pull.
+Rating gauge (0–100), medal shelf, division standing (best 5 of 9), advancement tracker, streak of rounds competed, and **badges/milestones** (first submission, first medal, first gold, "completed the yin-yang," advanced to semis). Motivation is intrinsic and collectible — the yin-yang is the pull.
 
 ## 8. Tech & data
 

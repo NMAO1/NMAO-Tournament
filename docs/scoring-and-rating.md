@@ -109,7 +109,7 @@ Bg1's rating moves **only** on the comparison to Bg2 (the other beginner) — In
 
 ## 6. What rating does *not* decide
 
-Rating handles **matchmaking** (which pod you're in). It does **not** decide who advances. **Advancement to the semi-finals and grand finale uses season standings — your best 6 of 9 qualifying rounds** — which is a separate tally. Rating and standings are related (both reward doing well) but are computed independently.
+Rating handles **matchmaking** (which pod you're in). It does **not** decide who advances. **Advancement to the semi-finals and grand finale uses season standings — your best 5 of 9 qualifying rounds** — which is a separate tally. Rating and standings are related (both reward doing well) but are computed independently.
 
 ---
 

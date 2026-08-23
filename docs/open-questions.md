@@ -44,7 +44,7 @@ Last updated: 2026-08-06
 
 **C3. Entry fee.** DECISION. **$45.**
 
-**C4. Standings & advancement.** DECISION. Calendar: submission deadline the **15th of each month starting January**; **7 days** judging; medals shipped **within 1 week** after. Season = **9 qualifying rounds** + **1 month semi-finals** + **1 month grand finale** + **1 month off** (12 months). Standings = **best 6 of 9**. Advancement (per division): **top 25%** to semis (min 3, max 8), **top 3** to the finale — counts stored in config so they're tunable once real signup numbers are known.
+**C4. Standings & advancement.** DECISION. Calendar: submission deadline the **15th of each month starting January**; **7 days** judging; medals shipped **within 1 week** after. Season = **9 qualifying rounds** + **1 month semi-finals** + **1 month grand finale** + **1 month off** (12 months). Standings = **best 5 of 9**. Advancement (per division): **top 25%** to semis (min 3, max 8), **top 3** to the finale — counts stored in config so they're tunable once real signup numbers are known.
 
 ---
 

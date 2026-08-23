@@ -125,7 +125,7 @@ Full Q&A in `docs/open-questions.md`. Engine/product locks:
 - **Four apps** to build: school, competitor, judge, viewer. Operator **mission-control** = a real multi-user web app.
 - **Events (Season 1):** traditional_forms, open_forms, traditional_weapons, open_weapons (add more as participation grows).
 - **Age brackets:** 7-9, 10-12, 13-15, 16-17, 18+; min age 7.
-- **Calendar:** monthly submission deadline the **15th**, starting January. 7-day judging window; medals shipped within 1 week after. Season = 9 qualifying rounds + 1 month semi-finals + 1 month grand finale + 1 month off (12 months). Standings = best 6 of 9. *(Advancement counts still open.)*
+- **Calendar:** monthly submission deadline the **15th**, starting January. 7-day judging window; medals shipped within 1 week after. Season = 9 qualifying rounds + 1 month semi-finals + 1 month grand finale + 1 month off (12 months). Standings = best 5 of 9. *(Advancement counts still open.)*
 - **Scoring — CHANGED:** judges score **per criterion** using the Traditional/Open weight profiles (`rubric_weights`); the per-judge score = weighted sum of criteria. This supersedes the single-0-100-per-judge lock. `resolvePod`/placement/rating are unchanged; needs per-criterion capture (`submission_scores`) re-added + judge-app fields. (Confirm scale + 3-judge averaging.)
 - **Rating → rank:** member-platform rank auto-seeds `declared_rank`; add a **school-configurable belt→tier mapping** (beginner/intermediate/advanced/black belt) since belt systems differ by style.
 - **Identity:** self sign-up for school/guardian/competitor; **judges invited** by a tournament admin. School app uses a `school_members(school_id, auth_user_id, role)` table (owner + assistant instructors).
