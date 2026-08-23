@@ -7,7 +7,7 @@ import { listSeasons, getInvite, onboardCompetitor, type Season, type InvitePref
 
 const CONSENTS: { key: string; label: string; link?: { text: string; url: string }; after?: string }[] = [
   { key: "media_release", label: "I consent to my competitor's forms being recorded and shown for judging and community voting." },
-  { key: "rules", label: "I have read and agree to the competition rules and code of conduct, and understand NMAO has no tolerance for objectionable content or abusive behavior — such content and the accounts responsible are removed." },
+  { key: "rules", label: "I have read and agree to the ", link: { text: "Competition Rules & Code of Conduct", url: "https://school.nmao.us/rules.html" }, after: ", and understand NMAO has no tolerance for objectionable content or abusive behavior — such content and the accounts responsible are removed." },
   { key: "terms", label: "I agree to the ", link: { text: "Privacy Policy", url: "https://school.nmao.us/privacy.html" }, after: "." },
 ];
 const RANK_LABEL: Record<string, string> = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced", black_belt: "Black Belt" };

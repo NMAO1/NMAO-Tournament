@@ -71,7 +71,7 @@
     </ul>
 
     <h3>Competition video</h3>
-    <p>Competition videos are hosted with our video subprocessor (Vimeo) as private / unlisted content that is not publicly discoverable. Videos are accessible within the Service to the competitor and their parent/guardian, the judges assigned to score that entry, the competitor's school, and NMAO staff. We describe how long we keep videos, and how they may be used, under <strong>Data Retention</strong> and <strong>Children's Privacy</strong> below.</p>
+    <p>Competition videos are stored as private content in our secure cloud storage (provided by Supabase) and are not publicly discoverable; access within the Service requires a signed, time-limited link. Videos are accessible to the competitor and their parent/guardian, the judges assigned to score that entry, the competitor's school, and NMAO staff. When a competitor takes part in a peer &ldquo;duel&rdquo; (see <strong>In community &ldquo;duels&rdquo;</strong> below), that duel video is also shown to other competitors who vote on it. We describe how long we keep videos, and how they may be used, under <strong>Data Retention</strong> and <strong>Children's Privacy</strong> below.</p>
 
     <h3>Payment information</h3>
     <p>Entry fees and related payments are processed by our payment provider (Stripe). We do not collect or store full payment-card numbers on our servers; that information is handled by Stripe under its own security and privacy practices. We retain limited payment records (such as amount, date, and a payment reference) for accounting, tax, and dispute-resolution purposes.</p>
@@ -101,13 +101,15 @@
     <h3>With judges</h3>
     <p>To score an entry, an assigned judge is given access to that entry's video and the information needed to judge it. Judges are excluded from scoring competitors from their own school, and are bound by confidentiality expectations.</p>
 
+    <h3>In community &ldquo;duels&rdquo;</h3>
+    <p>The Service includes an optional feature called a &ldquo;duel,&rdquo; in which two competitors' short videos are shown head-to-head and other competitors vote on which they prefer. Duel videos are private/unlisted, are shown only to signed-in competitors within the Service, exclude anyone a competitor has blocked, and can be reported and removed. A competitor takes part in duels only where the parent/guardian (or an adult competitor) has agreed to community voting in the applicable consent.</p>
+
     <h3>With service providers (subprocessors)</h3>
     <p>We share information with vendors that help us operate the Service, only as needed to perform their functions:</p>
     <table>
       <tr><th>Provider</th><th>Purpose</th></tr>
-      <tr><td>Supabase</td><td>Database, authentication, and application hosting</td></tr>
+      <tr><td>Supabase</td><td>Database, authentication, application hosting, and private storage of competition videos</td></tr>
       <tr><td>Stripe</td><td>Entry-fee payments and school payouts</td></tr>
-      <tr><td>Vimeo</td><td>Private hosting of competition videos</td></tr>
       <tr><td>Email / SMS providers</td><td>Account, deadline, and results notifications</td></tr>
     </table>
 
@@ -120,7 +122,7 @@
     <p>The Service may display <strong>sponsor content</strong> (for example, a sponsor's video or logo) selected by the division or event you are viewing — not by tracking you across apps or websites — and we measure only <strong>aggregate</strong> engagement (such as total views) for a sponsor's reporting. <strong>We do not sell personal information, and we do not use children's information for behavioral advertising.</strong></p>
 
     <h2>Children's Privacy (COPPA)</h2>
-    <p>The Service is designed for use by children as young as 7, and we comply with the Children's Online Privacy Protection Act (COPPA). We collect personal information from a child — including the child's competition video and the information listed above — only after obtaining <strong>verifiable consent from the child's parent or legal guardian</strong>. That consent is obtained through the NMAO Parental Consent &amp; Video Release, which the guardian reviews and signs before the child competes.</p>
+    <p>The Service is designed for use by children as young as 7, and we comply with the Children's Online Privacy Protection Act (COPPA). We collect personal information from a child — including the child's competition video and the information listed above — only after obtaining <strong>verifiable consent from the child's parent or legal guardian</strong>. That consent is captured through NMAO's Parental Consent &amp; Video Release, which the parent/guardian must complete before the child competes; for school-run events, participating families also sign the release directly.</p>
     <p>A parent/guardian may, at any time:</p>
     <ul>
       <li>review the personal information and videos we have collected about their child;</li>
@@ -131,7 +133,7 @@
 
     <h2>Data Retention</h2>
     <p>We retain account and competition information for as long as an account is active and as needed to operate the Service, and afterward as needed to comply with legal, tax, and accounting obligations and to resolve disputes.</p>
-    <p><strong>Competition videos.</strong> With the consent captured in the Parental Consent &amp; Video Release, competition videos are retained on an ongoing (indefinite) basis so that competitors and their families can look back on their growth over the seasons, and so we may use them for promotional material as described above. Videos are kept private and are used only to operate the tournament and for promotional material — for no other purpose. A parent/guardian (or adult competitor) may request deletion of their videos at any time by emailing <a href="mailto:support@nmao.us">support@nmao.us</a>, and we honor such requests. We also delete information collected from anyone who does not complete the required consent.</p>
+    <p><strong>Competition videos.</strong> Competition videos are retained for the duration of the competitor's participation and for up to <strong>12 months</strong> afterward, after which they are deleted — unless (a) the parent/guardian (or adult competitor) requests earlier deletion, or (b) the parent/guardian (or adult competitor) has <strong>separately opted in</strong> to promotional use, in which case a video approved for promotion may be kept for that purpose until the opt-in is withdrawn. Videos are kept private and are used only to operate the tournament (and, where separately opted in, for promotional material) — for no other purpose. A parent/guardian (or adult competitor) may request deletion of their videos at any time by emailing <a href="mailto:support@nmao.us">support@nmao.us</a>, and we honor such requests. We also delete information collected from anyone who does not complete the required consent.</p>
 
     <h2>Your Rights and Choices</h2>
     <p>Depending on where you live, you may have rights to access, correct, delete, or obtain a copy of your personal information, and to object to or restrict certain processing. To exercise these rights, contact your school or email <a href="mailto:support@nmao.us">support@nmao.us</a>. We may need to verify your identity, and some information must be retained for legal or operational reasons.</p>
@@ -155,6 +157,8 @@
     <p>Questions about this Policy or your information:</p>
     <p>
       NMAO Inc.<br/>
+      376 S Bayview Ave., Freeport, NY 11520<br/>
+      Phone: (516) 303-6972<br/>
       Email: <a href="mailto:support@nmao.us">support@nmao.us</a>
     </p>
   </main>

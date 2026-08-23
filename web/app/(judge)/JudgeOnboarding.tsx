@@ -81,7 +81,7 @@ export default function JudgeOnboarding({ onActive }: { onActive: () => void }) 
 
   async function accept(kind: DocKind) {
     setBusy(kind); setErr("");
-    const j = await call("accept-judge-terms", { [DOCS[kind].field === "ic" ? "ic" : DOCS[kind].field === "creed" ? "creed" : "bg_consent"]: true });
+    const j = await call("accept-judge-terms", { [DOCS[kind].field === "ic" ? "ic" : DOCS[kind].field === "creed" ? "creed" : "bg_consent"]: true, terms_version: LEGAL_FINAL ? "1.0" : "draft-2026-08" });
     setBusy(""); setDoc(null);
     if (!j?.ok) return setErr(j?.error || "Could not save.");
     setCl(j.checklist as Checklist);

@@ -48,6 +48,11 @@ Deno.serve(async (req) => {
     if (b.ic) patch.ic_agreement_accepted_at = now;
     if (b.creed) patch.creed_accepted_at = now;
     if (b.bg_consent) patch.bg_consent_at = now;
+    // Record WHICH version of the terms was acknowledged. While the agreements are
+    // provisional the client sends "draft-*", so the record honestly reflects a
+    // draft acknowledgment (not a binding acceptance) and judges can be re-prompted
+    // when final terms ship.
+    if (Object.keys(patch).length && b.terms_version) patch.terms_version = String(b.terms_version).slice(0, 40);
     if (Object.keys(patch).length) await svc.from("judges").update(patch).eq("id", judgeId);
 
     // Re-read and (maybe) activate.
