@@ -6,8 +6,8 @@ import { NextResponse, type NextRequest } from "next/server";
 //   judge.nmao.us/      ->  /judge      (judge app; /login and /apply are already root-level)
 //   sponsor.nmao.us/    ->  /sponsor    (public sponsor signup; /sponsor/return is root-level)
 //   join.nmao.us/       ->  /join.html  (public school marketing landing, static)
-//   compete.nmao.us/    ->  /compete.html (public competitor marketing landing, static;
-//                          only the bare root — /invite deep-links pass through untouched)
+//   play.nmao.us/       ->  /compete.html (public competitor marketing landing, static)
+// (compete.nmao.us is a SEPARATE GitHub Pages host for the app's deep links — not us.)
 // Any other host (localhost, the raw *.vercel.app) is left untouched, so local
 // dev and preview URLs keep working with the normal /school + /judge paths.
 export function middleware(req: NextRequest) {
@@ -42,9 +42,8 @@ export function middleware(req: NextRequest) {
       url.pathname = "/join.html";
       return NextResponse.rewrite(url);
     }
-  } else if (host.startsWith("compete.")) {
-    // Bare root -> static competitor landing. Everything else (esp. /invite
-    // deep-links into the app) passes through untouched.
+  } else if (host.startsWith("league.")) {
+    // Bare root -> static competitor landing (/rubric.html and other files serve directly).
     if (pathname === "/") {
       const url = req.nextUrl.clone();
       url.pathname = "/compete.html";
