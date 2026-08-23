@@ -50,16 +50,26 @@ Deno.serve(async (req) => {
   // Activate an entitlement + mark any round entries it staged as paid.
   async function activateEntitlement(entitlementId: string) {
     await svc.from("entry_entitlements").update({ status: "active", updated_at: now() }).eq("id", entitlementId).neq("status", "canceled").throwOnError();
-    await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("entitlement_id", entitlementId).neq("payment_status", "paid").throwOnError();
+    // Only pay entries if the entitlement is ACTIVE now. A canceled (refunded /
+    // disputed) entitlement stays canceled (guard above) and must NOT have its
+    // entries re-paid by a webhook redelivery or out-of-order event.
+    const { data: ent } = await svc.from("entry_entitlements").select("status").eq("id", entitlementId).maybeSingle();
+    if ((ent as any)?.status === "active") {
+      await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("entitlement_id", entitlementId).neq("payment_status", "paid").throwOnError();
+    }
   }
-  // Refund / chargeback: revoke the entitlement bought by this PaymentIntent and
-  // un-pay its entries, so paid access can't survive a refund or won dispute.
+  // Refund / chargeback: revoke access bought by this PaymentIntent — both the
+  // entitlement-scoped purchase (cancel entitlement + un-pay its entries) AND a
+  // flat single-entry charge (the entry records the PI directly).
   async function revokeByPaymentIntent(pi: string) {
     const { data: ents } = await svc.from("entry_entitlements").select("id").eq("stripe_payment_intent_id", pi).throwOnError();
     for (const e of (ents ?? []) as any[]) {
       await svc.from("entry_entitlements").update({ status: "canceled", canceled_at: now(), updated_at: now() }).eq("id", e.id).throwOnError();
       await svc.from("entries").update({ payment_status: "unpaid", paid_at: null }).eq("entitlement_id", e.id).throwOnError();
     }
+    // Flat single-entry charges (create-entry-checkout): the entry itself carries
+    // the PaymentIntent — un-pay it so a refunded single entry can't stay live.
+    await svc.from("entries").update({ payment_status: "unpaid", paid_at: null }).eq("payment_intent_id", pi).eq("payment_status", "paid").throwOnError();
     return (ents ?? []).length;
   }
 
@@ -68,9 +78,10 @@ Deno.serve(async (req) => {
       const pi = event.data.object;
       // New model: entitlement-scoped payment (à la carte / full / monthly first invoice).
       if (pi.metadata?.entitlement_id) await activateEntitlement(pi.metadata.entitlement_id);
-      // Legacy: single-entry PI.
+      // Flat single-entry PI. Record the PaymentIntent on the entry so a later
+      // refund/dispute can find and un-pay exactly this entry.
       if (pi.metadata?.entry_id) {
-        await svc.from("entries").update({ payment_status: "paid", paid_at: now() }).eq("id", pi.metadata.entry_id).throwOnError();
+        await svc.from("entries").update({ payment_status: "paid", paid_at: now(), payment_intent_id: pi.id }).eq("id", pi.metadata.entry_id).throwOnError();
       }
     } else if (event.type === "checkout.session.completed") {
       // Hosted Checkout finished — link Stripe refs + activate the entitlement.
@@ -132,11 +143,17 @@ Deno.serve(async (req) => {
         await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).throwOnError();
       }
     } else if (event.type === "charge.refunded") {
-      // A charge was (fully or partially) refunded — revoke the access it bought.
+      // Only a FULL refund revokes access. A partial refund (e.g. a small goodwill
+      // credit on a $350 season pass) must NOT cancel the pass or un-pay claimed
+      // entries. charge.refunded fires for partials too, so check the amounts.
       const ch = event.data.object;
-      if (ch.payment_intent) await revokeByPaymentIntent(String(ch.payment_intent));
-      // a sponsor whose charge is refunded drops out of rotation
-      if (ch.customer) await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_customer_id", ch.customer).throwOnError();
+      const fullyRefunded = ch.refunded === true ||
+        (typeof ch.amount_refunded === "number" && typeof ch.amount === "number" && ch.amount_refunded >= ch.amount);
+      if (fullyRefunded) {
+        if (ch.payment_intent) await revokeByPaymentIntent(String(ch.payment_intent));
+        // a sponsor whose charge is fully refunded drops out of rotation
+        if (ch.customer) await svc.from("sponsors").update({ status: "lapsed", updated_at: now() }).eq("stripe_customer_id", ch.customer).throwOnError();
+      }
     } else if (event.type === "charge.dispute.created") {
       // Chargeback opened — pull access immediately (don't wait for the outcome).
       const d = event.data.object;

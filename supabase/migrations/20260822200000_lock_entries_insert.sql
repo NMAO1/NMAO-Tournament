@@ -1,0 +1,20 @@
+-- =====================================================================
+-- SECURITY: close the forged-paid-entry hole on public.entries.
+--
+-- The entry_insert RLS policy allowed any authenticated competitor/guardian to
+-- POST /rest/v1/entries with a client-chosen payment_status='paid' (plus
+-- age_bracket / declared_rank / rating_at_entry). That produced a FREE paid
+-- entry that also unlocked duel voting — nmao.competitor_can_vote trusts
+-- payment_status='paid' — nullifying both the credit paywall and the
+-- entered-voter gate (migration 20260822160000).
+--
+-- No client code inserts entries directly (verified repo-wide: the app only
+-- SELECTs entries; every write is a service-role Edge Function —
+-- create-entry-checkout / submit-entry / register-entry — or the SECURITY
+-- DEFINER claim_round_entry, all of which bypass RLS). entries also has no
+-- UPDATE or DELETE policy, so there is no other client path to flip
+-- payment_status afterward. Removing the INSERT policy therefore blocks the
+-- forgery with zero legitimate impact: authenticated clients can read their
+-- entries but can no longer create them directly.
+-- =====================================================================
+drop policy if exists entry_insert on entries;
