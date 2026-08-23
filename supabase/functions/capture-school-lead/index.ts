@@ -48,6 +48,9 @@ Deno.serve(async (req) => {
   const school_name = clip(String(body.school_name ?? "").trim(), 200);
   const email = clip(String(body.email ?? "").trim(), 200);
   const phone = clip(String(body.phone ?? "").trim(), 60) || null;
+  // Attribution: allow a known set of sources; anything else falls back to the school page.
+  const SOURCES = new Set(["join.nmao.us", "compete-nomination"]);
+  const source = SOURCES.has(String(body.source ?? "")) ? String(body.source) : "join.nmao.us";
 
   if (!school_name) return json({ ok: false, error: "School name is required." }, 400);
   if (!EMAIL_RE.test(email)) return json({ ok: false, error: "A valid email is required." }, 400);
@@ -57,7 +60,7 @@ Deno.serve(async (req) => {
   const sb = createClient(URL_, SERVICE, { auth: { persistSession: false } });
   const { error } = await sb
     .from("school_leads")
-    .insert({ school_name, email, phone, source: "join.nmao.us", user_agent });
+    .insert({ school_name, email, phone, source, user_agent });
 
   if (error) {
     console.error("school_leads insert failed", error.message);
