@@ -217,6 +217,7 @@ function renderJudges(list){
       <td class="rowbtns">
         ${canClear?`<button class="btn sm" data-act="clear_bg" data-id="${j.id}">Mark BG cleared</button>`:''}
         ${canLink?`<button class="btn sm" data-act="relink" data-id="${j.id}">Setup link</button>`:''}
+        ${(!j.payouts_enabled && j.status!=='rejected')?`<button class="btn sm" data-act="mark_payouts_test" data-id="${j.id}">Payouts (test)</button>`:''}
       </td></tr>`;
   }).join('');
 }
@@ -248,6 +249,9 @@ document.addEventListener('click', async (e) => {
     } else if(act==='relink'){
       const j = await ef('approve-judge', { judge_id:id }); if(!j.ok) throw new Error(j.error);
       toast('Fresh setup link generated.','ok'); if(j.setup_link) showLink(j.setup_link);
+    } else if(act==='mark_payouts_test'){
+      const j = await ef('approve-judge', { judge_id:id, action:'mark_payouts_test' }); if(!j.ok) throw new Error(j.error);
+      toast('Payouts marked ready (test)'+(j.judge_status==='active'?' — judge is now active.':'.'),'ok'); await load();
     }
   }catch(err){ toast(err.message||'Action failed.','err'); }
   finally{ btn.disabled=false; }

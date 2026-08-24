@@ -74,6 +74,18 @@ Deno.serve(async (req) => {
       return json({ ok: true, judge_status: jj?.status ?? "unknown" });
     }
 
+    // TEST-ONLY override: mark payouts enabled without real Stripe onboarding, so
+    // the judging flow can be exercised while the platform's transfers capability
+    // is pending Stripe approval. Activates the judge if everything else is set.
+    if (String(b.action || "") === "mark_payouts_test") {
+      await svc.from("judges").update({ payouts_enabled: true }).eq("id", judgeId);
+      const { data: j } = await svc.from("judges").select("status, background_check_status, ic_agreement_accepted_at, creed_accepted_at, payouts_enabled").eq("id", judgeId).single();
+      const jj = j as any;
+      const ready = jj && jj.status !== "rejected" && jj.background_check_status === "cleared" && !!jj.ic_agreement_accepted_at && !!jj.creed_accepted_at && !!jj.payouts_enabled;
+      if (ready && jj.status !== "active") { await svc.from("judges").update({ status: "active" }).eq("id", judgeId); return json({ ok: true, payouts_enabled: true, judge_status: "active" }); }
+      return json({ ok: true, payouts_enabled: true, judge_status: jj?.status ?? "unknown" });
+    }
+
     const email = (judge as any).email as string;
     if (!email) return json({ ok: false, error: "This judge has no email on file." }, 400);
 
