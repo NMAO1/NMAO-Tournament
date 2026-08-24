@@ -193,10 +193,11 @@ export default function ScoreCarousel() {
 
   const isSubmitted = cur.state === "submitted";
   const justFlashed = flash === cur.entry_id;
+  const podComplete = assignments.length > 0 && submittedCount === assignments.length;
 
   return (
     <Shell>
-      <style>{`input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield}
+      <style>{`input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}input[type=number]{-moz-appearance:textfield;font-size:16px}
         @keyframes slideNext{from{opacity:0;transform:translateX(46px)}to{opacity:1;transform:none}}
         @keyframes slidePrev{from{opacity:0;transform:translateX(-46px)}to{opacity:1;transform:none}}`}</style>
 
@@ -207,6 +208,14 @@ export default function ScoreCarousel() {
           <span style={{ color: neutrals.muted2 }}> · {submittedCount} scored</span>
         </div>
       </div>
+
+      {podComplete && (
+        <div style={{ background: "rgba(93,202,165,0.12)", border: `1px solid ${status.success}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14, textAlign: "center" }}>
+          <div style={{ color: status.success, fontWeight: 700, fontSize: 16 }}>✓ Pod complete</div>
+          <div style={{ color: neutrals.muted, fontSize: 13, marginTop: 4 }}>All {assignments.length} entries in this pod are scored.</div>
+          <button onClick={() => router.push("/judge")} style={{ marginTop: 12, padding: "11px 22px", borderRadius: 10, border: "none", fontWeight: 700, fontSize: 15, background: status.success, color: "#0b0b0f", cursor: "pointer" }}>Back to queue</button>
+        </div>
+      )}
 
       <div style={{ display: "flex", alignItems: "stretch", gap: 6 }}>
         <Arrow dir="prev" onClick={() => go(-1)} disabled={idx === 0} />
@@ -301,7 +310,7 @@ function Arrow({ dir, onClick, disabled }: { dir: "next" | "prev"; onClick: () =
 }
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main style={{ minHeight: "100vh", background: neutrals.bg, color: neutrals.text, fontFamily: "Inter, system-ui, sans-serif" }}>
+    <main style={{ minHeight: "100dvh", background: neutrals.bg, color: neutrals.text, fontFamily: "Inter, system-ui, sans-serif" }}>
       <div style={{ maxWidth: 1040, margin: "0 auto", padding: "18px 12px 40px" }}>
         <div style={{ height: 3, width: 96, borderRadius: 99, background: spectrum, marginBottom: 12 }} />
         {children}
