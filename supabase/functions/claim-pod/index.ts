@@ -83,7 +83,11 @@ Deno.serve(async (req) => {
     }
 
     const role = ((pod as any).judge_count ?? 1) > 1 ? "panel" : "sole";
-    const insertRows = rows.map((e) => ({ pod_id: podId, entry_id: e.id, judge_id: judgeId, role, state: "assigned" }));
+    // claimed_at stamps the claim so an unfinished pod auto-returns to the pool
+    // after the TTL (app_settings.judge_claim_ttl_hours, default 24h) via
+    // nmao.release_stale_claims().
+    const claimedAt = new Date().toISOString();
+    const insertRows = rows.map((e) => ({ pod_id: podId, entry_id: e.id, judge_id: judgeId, role, state: "assigned", claimed_at: claimedAt }));
     const { error: insErr } = await svc.from("judge_assignments").insert(insertRows);
     if (insErr) { console.error("claim insert:", insErr); return json({ ok: false, error: "Could not claim — it may have just filled." }, 409); }
 
