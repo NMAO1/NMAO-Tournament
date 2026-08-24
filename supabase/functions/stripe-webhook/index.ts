@@ -70,7 +70,64 @@ Deno.serve(async (req) => {
     // Flat single-entry charges (create-entry-checkout): the entry itself carries
     // the PaymentIntent — un-pay it so a refunded single entry can't stay live.
     await svc.from("entries").update({ payment_status: "unpaid", paid_at: null }).eq("payment_intent_id", pi).eq("payment_status", "paid").throwOnError();
+    // Reverse any school payout(s) sent from this charge (refund / chargeback).
+    const { data: refPayouts } = await svc.from("school_payouts").select("id, stripe_transfer_id").eq("payment_intent_id", pi).eq("status", "paid");
+    for (const p of (refPayouts ?? []) as any[]) {
+      if (!p.stripe_transfer_id) continue;
+      try {
+        await stripe.transfers.createReversal(p.stripe_transfer_id, {}, { idempotencyKey: "reverse-" + p.stripe_transfer_id });
+        await svc.from("school_payouts").update({ status: "reversed" }).eq("id", p.id);
+      } catch (re: any) { console.error("school transfer reversal failed", p.stripe_transfer_id, re?.message || re); }
+    }
     return (ents ?? []).length;
+  }
+
+  // Instant school payout: on a paid entry, transfer the school's share (config
+  // school_share_pct, default 30%) from THIS charge to the school's connected
+  // account. Idempotent per entry; never throws (a failure leaves it 'pending').
+  async function schoolSharePct(): Promise<number> {
+    const { data } = await svc.from("app_settings").select("value").eq("key", "school_share_pct").maybeSingle();
+    const v = Number((data as any)?.value);
+    return Number.isFinite(v) && v >= 0 && v <= 1 ? v : 0.30;
+  }
+  async function payoutSchoolForEntry(entryId: string, pi: any) {
+    try {
+      const { data: entry } = await svc.from("entries").select("competitor_id").eq("id", entryId).maybeSingle();
+      const competitorId = (entry as any)?.competitor_id;
+      if (!competitorId) return;
+      const { data: comp } = await svc.from("competitors").select("school_id").eq("id", competitorId).maybeSingle();
+      const schoolId = (comp as any)?.school_id;
+      if (!schoolId) return;
+      const { data: school } = await svc.from("schools").select("stripe_connect_account_id").eq("id", schoolId).maybeSingle();
+      const acct = (school as any)?.stripe_connect_account_id as string | null;
+
+      const base = Number(pi.amount_received ?? pi.amount ?? 0);
+      if (!base) return;
+      const share = Math.round(base * (await schoolSharePct()));
+      if (share <= 0) return;
+
+      // Claim exactly one payout row per entry (ignore if it already exists).
+      await svc.from("school_payouts").upsert(
+        { school_id: schoolId, competitor_id: competitorId, entry_id: entryId, payment_intent_id: pi.id, amount_cents: share, status: "pending" },
+        { onConflict: "entry_id", ignoreDuplicates: true });
+      const { data: row } = await svc.from("school_payouts").select("id, status, stripe_transfer_id").eq("entry_id", entryId).maybeSingle();
+      if (!row) return;
+      if ((row as any).status === "paid" || (row as any).status === "reversed" || (row as any).stripe_transfer_id) return;
+      if (!acct) { console.log("school payout accrued (no connected account)", { schoolId, entryId, share }); return; }
+
+      const chargeId = typeof pi.latest_charge === "string" ? pi.latest_charge : pi.latest_charge?.id;
+      try {
+        const transfer = await stripe.transfers.create(
+          { amount: share, currency: "usd", destination: acct, ...(chargeId ? { source_transaction: chargeId } : {}),
+            metadata: { entry_id: entryId, school_id: schoolId, payment_intent: pi.id } },
+          { idempotencyKey: "school-payout-" + entryId });
+        await svc.from("school_payouts").update({ status: "paid", stripe_transfer_id: transfer.id }).eq("id", (row as any).id);
+      } catch (te: any) {
+        console.error("school transfer failed -> left pending", entryId, te?.message || te);
+      }
+    } catch (e: any) {
+      console.error("payoutSchoolForEntry error (non-fatal)", entryId, e?.message || e);
+    }
   }
 
   try {
@@ -82,6 +139,7 @@ Deno.serve(async (req) => {
       // refund/dispute can find and un-pay exactly this entry.
       if (pi.metadata?.entry_id) {
         await svc.from("entries").update({ payment_status: "paid", paid_at: now(), payment_intent_id: pi.id }).eq("id", pi.metadata.entry_id).throwOnError();
+        await payoutSchoolForEntry(pi.metadata.entry_id, pi);
       }
     } else if (event.type === "checkout.session.completed") {
       // Hosted Checkout finished — link Stripe refs + activate the entitlement.
