@@ -2,14 +2,16 @@
 // EDGE FUNCTION: notify-judges  (Staff — email judges there's work / reminders)
 // Sends email via Resend (reuses the membership account's key + verified domain).
 //   kind='new_pods'  -> tell active+cleared judges a round has videos to judge
+//   kind='heads_up'  -> advance notice: judging opens in ~{hours_until}h (get ready)
 //   kind='deadline'  -> remind judges holding UNSUBMITTED claimed pods (near close)
 // Judge app is web, so email is the channel. Idempotent-ish: caller decides when.
 //
-// AUTH: Verify JWT = ON. Caller must be NMAO staff (or service role for cron).
+// AUTH: Verify JWT = OFF (self-guarded). Caller must be NMAO staff (JWT),
+//       the service role, OR present a matching x-cron-secret (for pg_cron).
 // Env: RESEND_API_KEY, EMAIL_FROM (e.g. "NMAO Tournament <judges@mail.nmao.us>"),
-//      JUDGE_URL (default https://judge.nmao.us).
-// POST { kind?, round_id? } -> { ok, sent, failed, skipped, kind }
-// Deploy: name = notify-judges, Verify JWT ON.
+//      JUDGE_URL (default https://judge.nmao.us), CRON_SECRET (cron auth).
+// POST { kind?, round_id?, hours_until? } -> { ok, sent, failed, skipped, kind }
+// Deploy: name = notify-judges, **Verify JWT OFF** (deploy --no-verify-jwt).
 // =====================================================================
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -20,10 +22,11 @@ const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
 const RESEND = Deno.env.get("RESEND_API_KEY");
 const FROM = Deno.env.get("EMAIL_FROM") || "NMAO Tournament <noreply@nmao.us>";
 const JUDGE_URL = (Deno.env.get("JUDGE_URL") || "https://judge.nmao.us").replace(/\/$/, "");
+const CRON = Deno.env.get("CRON_SECRET");
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const json = (o: unknown, status = 200) => new Response(JSON.stringify(o), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -55,9 +58,10 @@ Deno.serve(async (req) => {
   if (!RESEND) return json({ ok: false, error: "Email not configured (RESEND_API_KEY missing)." }, 500);
 
   const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  const cronHdr = req.headers.get("x-cron-secret") || "";
   const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
-  // staff or service-role (cron)
-  let ok = bearer && bearer === SERVICE;
+  // pg_cron (x-cron-secret), service-role, or a signed-in staff user.
+  let ok = (!!CRON && cronHdr === CRON) || (!!bearer && bearer === SERVICE);
   if (!ok) {
     if (!bearer) return json({ ok: false, error: "Sign in required." }, 401);
     const authClient = createClient(URL_, ANON, { global: { headers: { Authorization: "Bearer " + bearer } }, auth: { persistSession: false } });
@@ -86,6 +90,22 @@ Deno.serve(async (req) => {
           "Open the judging queue →",
         );
         (await sendEmail(j.email, "New videos to judge — NMAO Tournament", html)) ? sent++ : failed++;
+      }
+    } else if (kind === "heads_up") {
+      // Advance notice — judging opens in ~N hours. Same audience as new_pods.
+      const hrs = Math.max(1, Math.round(Number(body.hours_until) || 24));
+      const whenPhrase = hrs >= 20 && hrs <= 30 ? "tomorrow" : `in about ${hrs} hours`;
+      const { data: judges } = await svc.from("judges")
+        .select("id, first_name, email")
+        .eq("status", "active").eq("background_check_status", "cleared").not("email", "is", null);
+      for (const j of (judges ?? []) as any[]) {
+        if (!j.email) { skipped++; continue; }
+        const html = shell(
+          `Judging opens ${whenPhrase}, ${j.first_name || "Judge"}`,
+          `Submissions have closed and judging opens ${whenPhrase} — pods will be available to claim and score. Log in and be ready; you're paid per video you complete.`,
+          "Get ready →",
+        );
+        (await sendEmail(j.email, `Judging opens ${whenPhrase} — NMAO Tournament`, html)) ? sent++ : failed++;
       }
     } else if (kind === "deadline") {
       // Judges holding claimed-but-unsubmitted assignments (nudge before close).
