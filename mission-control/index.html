@@ -1,540 +1,746 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>NMAO — Mission Control (dry run)</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO Mission Control — Operator Console</title>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  // Tournament project (SEPARATE from the membership platform). Anon key is public +
+  // RLS-guarded — paste it from Dashboard → Settings → API for project oxzuavpyoetchwebdejp.
+  const SUPABASE_URL = 'https://oxzuavpyoetchwebdejp.supabase.co';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94enVhdnB5b2V0Y2h3ZWJkZWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgyNjUsImV4cCI6MjEwMTU0NDI2NX0.SEBXeo_FqsyqV8xS5dwaGymXI6mYPy8-9uMAgaX4fhg';
+  window.__mc = { createClient, SUPABASE_URL, ANON };
+</script>
 <style>
   :root{
-    --bg:#0e1116; --panel:#161b22; --panel2:#1c232d; --line:#2a3340;
-    --ink:#e6edf3; --dim:#8b98a5; --accent:#5db2ff; --accent2:#7ee787;
-    --warn:#ffb454; --bad:#ff6b6b; --gold:#e5c76b; --silver:#c7ccd1; --bronze:#cd8b62;
-    --radius:10px;
+    --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b;
+    --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
+    --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22;
+    --ruby:#FF2E3B; --amethyst:#A32BF7; --sapphire:#1F7BFF;
+    --success:#5DCAA5; --danger:#E07070; --amber:#E6B93F;
+    --spectrum:linear-gradient(180deg,#1F7BFF 0%,#A32BF7 50%,#FF2E3B 100%);
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-  header{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
-  header h1{font-size:15px;margin:0;letter-spacing:.3px;font-weight:600}
-  header .sub{color:var(--dim);font-size:12px}
-  .badge{margin-left:auto;padding:5px 12px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-weight:600;font-size:12px}
-  .badge b{color:var(--accent)}
-  .wrap{display:grid;grid-template-columns:300px 1fr;gap:0;min-height:calc(100vh - 52px)}
-  aside{border-right:1px solid var(--line);background:var(--panel);padding:16px;overflow:auto}
-  main{padding:18px 22px;overflow:auto}
-  h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin:0 0 10px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px}
-  label{display:block;font-size:12px;color:var(--dim);margin:10px 0 4px}
-  input,select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:7px 9px;font-size:13px}
-  .row{display:flex;gap:8px}
-  .row>div{flex:1}
-  button{cursor:pointer;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600}
-  button:hover{border-color:var(--accent)}
-  button.primary{background:var(--accent);color:#06243c;border-color:var(--accent)}
-  button.ghost{background:transparent}
-  button:disabled{opacity:.4;cursor:not-allowed}
-  button.primary:disabled{background:var(--panel2);color:var(--dim)}
-  .pipeline{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-  .step{padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--panel);font-size:11px;color:var(--dim);white-space:nowrap}
-  .step.done{color:var(--accent2);border-color:#26482f;background:#132018}
-  .step.current{color:#06243c;background:var(--accent);border-color:var(--accent);font-weight:700}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-  .pod{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-  .pod h3{margin:0;font-size:12px;padding:9px 12px;background:var(--panel2);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
-  .pod h3 .tag{margin-left:auto;font-size:10px;color:var(--dim);font-weight:600}
-  .pod table{width:100%;border-collapse:collapse;font-size:12px}
-  .pod td{padding:5px 12px;border-bottom:1px solid #212934}
-  .pod tr:last-child td{border-bottom:none}
-  .muted{color:var(--dim)}
-  .pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid var(--line)}
-  .pill.beg{color:#9db4c9} .pill.int{color:#b9a0e0} .pill.adv{color:var(--warn)}
-  .flag{background:#2a1d12;border:1px solid #4a3418;color:var(--warn);padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:12px}
-  table.data{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-  table.data th{text-align:left;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:9px 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
-  table.data td{padding:7px 12px;border-bottom:1px solid #212934}
-  .delta.up{color:var(--accent2)} .delta.down{color:var(--bad)}
-  .medal{font-size:11px;font-weight:700}
-  .medal.gold{color:var(--gold)} .medal.silver{color:var(--silver)} .medal.bronze{color:var(--bronze)} .medal.participation{color:var(--dim)}
-  .audit{font-size:12px;max-height:180px;overflow:auto}
-  .audit div{padding:4px 0;border-bottom:1px solid #212934;color:var(--dim)}
-  .kpis{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:6px}
-  .kpi{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 14px}
-  .kpi b{display:block;font-size:20px;color:var(--ink)} .kpi span{font-size:11px;color:var(--dim)}
-  .hint{color:var(--dim);font-size:12px;margin:2px 0 10px}
-  .tabs{display:flex;gap:6px;margin-bottom:12px}
-  .tab{padding:6px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--dim);cursor:pointer;font-size:12px;font-weight:600}
-  .tab.active{color:var(--ink);border-color:var(--accent)}
-  .sim{background:#0f1c24;border:1px solid #1d3a4a;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:13px}
-  .sim b{color:var(--accent)}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#141220 0%,var(--bg) 60%);color:var(--text);
+       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;padding:22px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  a{color:inherit}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer}
+  .btn:hover{border-color:#3a3a40}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
+  .btn.danger{border-color:#4a2b2b;color:#E9A0A0;background:#1c1414}
+  .demobar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0 2px;padding:11px 15px;border-radius:12px;
+    border:1px solid var(--gold-deep);background:linear-gradient(100deg,rgba(230,185,63,.12),rgba(163,43,247,.06));}
+  .demobar .demo-tag{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#141210;
+    background:linear-gradient(160deg,var(--gold-soft),var(--gold) 60%,var(--gold-deep));padding:4px 10px;border-radius:99px}
+  .demobar .demo-msg{font-size:12.5px;color:var(--muted)}
+  .demobar .demo-msg b{color:var(--text)}
+  .demobar .demo-actions{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+  .badge{font-size:12px;font-weight:600;padding:4px 11px;border-radius:99px}
+  .hide{display:none!important}
+  input,select{font-family:inherit}
+
+  /* login */
+  .login{max-width:360px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .login h1{font-size:18px;margin:0 0 4px}
+  .login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .login label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+  .login input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+  .login .btn{width:100%;margin-top:16px;justify-content:center;text-align:center}
+  .msg{font-size:12.5px;margin-top:10px;min-height:16px}
+  .msg.err{color:var(--danger)} .msg.ok{color:var(--success)}
+
+  /* header */
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F5F0E8 0 50%,#141210 0 100%);border:1px solid var(--gold)}
+  .brand h1{font-size:16px;margin:0;letter-spacing:.02em}
+  .brand small{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .selectors{display:flex;align-items:center;gap:8px}
+  .sel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:7px 11px;font-size:13px;color:var(--text)}
+  .state-badge{background:linear-gradient(160deg,#2a2f4a,#171a2b);border:1px solid #33406e;color:#bcd0ff}
+
+  .kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:18px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:11px 12px}
+  .kpi .l{font-size:11px;color:var(--muted)} .kpi .v{font-size:22px;font-weight:600;margin-top:2px}
+  .kpi .v small{font-size:12px;color:var(--muted);font-weight:400}
+
+  .grid{display:grid;grid-template-columns:1fr 328px;gap:16px;align-items:start}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px}
+  .card > .hd{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd h2{font-size:14px;margin:0} .hd .sub{font-size:12px;color:var(--muted)}
+
+  .pipeline{position:relative;padding:8px 16px 14px 16px}
+  .pipeline::before{content:"";position:absolute;left:31px;top:22px;bottom:60px;width:2px;background:var(--spectrum);opacity:.5;border-radius:2px}
+  .stage{position:relative;display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:start;padding:13px 0;border-bottom:1px solid #202024}
+  .stage:last-child{border-bottom:none}
+  .dot{width:16px;height:16px;border-radius:50%;margin-top:2px;border:2px solid var(--panel);z-index:1;background:var(--muted2)}
+  .dot.done{background:var(--success)}
+  .dot.run{background:var(--amber);box-shadow:0 0 0 4px rgba(230,185,63,.18);animation:pulse 1.4s infinite}
+  .dot.next{background:var(--gold);box-shadow:0 0 0 4px rgba(230,185,63,.14)}
+  .dot.error{background:var(--danger);box-shadow:0 0 0 4px rgba(224,112,112,.18)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(230,185,63,.28)}50%{box-shadow:0 0 0 6px rgba(230,185,63,.08)}}
+  .st-title{font-size:14px;font-weight:600}
+  .st-sub{font-size:12.5px;color:var(--muted);margin-top:2px} .st-sub b{color:var(--text);font-weight:600}
+  .st-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;white-space:nowrap}
+  .time{font-size:11px;color:var(--muted2)}
+  .s-done{color:var(--success)} .s-run{color:var(--amber)} .s-next{color:var(--gold)} .s-idle{color:var(--muted2)} .s-error{color:var(--danger)}
+  .status-pill{font-size:11px;font-weight:600;padding:2px 9px;border-radius:99px;border:1px solid var(--line)}
+
+  .rail{display:flex;flex-direction:column;gap:14px}
+  .list{padding:6px 14px 12px}
+  .row{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #202024;font-size:12.5px}
+  .row:last-child{border-bottom:none}
+  .allclear{display:flex;align-items:center;gap:8px;color:var(--success);font-size:13px;padding:12px 14px}
+  .flag{display:flex;gap:8px;color:var(--danger);font-size:12.5px;padding:8px 14px;border-bottom:1px solid #202024}
+  .muted{color:var(--muted)} .tiny{font-size:11px;color:var(--muted2)}
+  .guard{font-size:12px;color:var(--muted);padding:2px 14px 10px;line-height:1.6;margin:0}
+  .log .row .t{color:var(--muted2);min-width:52px}
+  .tier{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .foot{margin-top:16px;color:var(--muted2);font-size:11.5px;text-align:center}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);
+         border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px}
+  .toast.err{border-color:#4a2b2b;color:#E9A0A0} .toast.ok{border-color:#2b4a3a;color:#a9f0c1}
 </style>
 </head>
 <body>
-<header>
-  <h1>NMAO · Mission Control</h1>
-  <span class="sub">operator dry run — seeded data, real engine</span>
-  <span class="badge">Round state: <b id="stateBadge">open</b></span>
-</header>
-
 <div class="wrap">
-  <aside>
-    <div class="card">
-      <h2>Seed round</h2>
-      <label>Competitors</label>
-      <input id="numComp" type="number" value="120" min="6" max="800" />
-      <div class="row">
-        <div><label>Schools</label><input id="numSchool" type="number" value="10" min="2" max="40" /></div>
-        <div><label>Judges</label><input id="numJudge" type="number" value="14" min="1" max="80" /></div>
+
+  <!-- LOGIN -->
+  <div class="login" id="loginCard">
+    <h1 class="serif">Mission Control</h1>
+    <p>Sign in with your NMAO staff account.</p>
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" />
+    <div id="pwWrap"><label>Password</label><input id="password" type="password" autocomplete="current-password" /></div>
+    <div id="codeWrap" class="hide"><label>6-digit code (emailed)</label><input id="code" inputmode="numeric" maxlength="6" /></div>
+    <button class="btn gold" id="loginBtn">Sign in</button>
+    <button class="btn" id="codeToggle" style="width:100%;margin-top:8px">Email me a code instead</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- CONSOLE -->
+  <div id="console" class="hide">
+    <header>
+      <div class="brand"><span class="yy"></span>
+        <div><h1 class="serif">NMAO Mission Control</h1><small>Operator Console</small></div></div>
+      <div class="selectors">
+        <select class="sel" id="roundSel"></select>
+        <span class="badge state-badge" id="stateBadge">—</span>
+        <button class="btn" id="fillBtn" title="Backfill any pods still short of judges (deadline safety-net)">Fill unclaimed</button>
+        <button class="btn" id="seedBtn" title="Create a fresh synthetic demo round to showcase the full pipeline end-to-end">✨ Seed demo</button>
+        <button class="btn" id="resetAppBtn" title="Reset the Compete-app dueling demo (competitor showcase): the monthly reveal replays, the bell alerts return, and every vote-queue duel reappears">🔄 Reset app demo</button>
+        <button class="btn" id="printMedalsBtn" title="Printable per-school packing &amp; shipping list — medal counts by type, the competitor receiving each medal, and the school's shipping address">🖨 Packing list</button>
+        <button class="btn" id="refreshBtn">Refresh</button>
+        <a class="btn" href="./config.html" title="Manage events, age brackets, and pod settings">Config</a>
+        <a class="btn" href="./judges.html" title="Review judge applications and onboarding">Judges</a>
+        <a class="btn" href="./sponsors.html" title="Manage sponsors, ads, store products, and house ads">Sponsors</a>
+        <a class="btn" href="./test.html" title="Practice the pipeline on fake, seeded data — no real effect">Sandbox</a>
+        <button class="btn" id="signoutBtn">Sign out</button>
       </div>
-      <label>Seed (deterministic)</label>
-      <input id="seed" type="number" value="42" />
-      <div class="controls"><button class="primary" id="btnSeed">Generate entries</button></div>
-      <div class="hint" id="seedInfo">—</div>
+    </header>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div id="demoBar" class="hide"></div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="hd"><h2 class="serif">Round pipeline</h2><div class="sub" id="pipeSub"></div></div>
+        <div class="pipeline" id="pipeline"></div>
+      </div>
+      <div class="rail" id="rail"></div>
     </div>
 
-    <div class="card">
-      <h2>Division scheme</h2>
-      <label>Events (comma sep, never merge)</label>
-      <input id="scEvents" value="forms, weapons" />
-      <label>Rank tiers</label>
-      <input id="scRanks" value="beginner, intermediate, advanced" />
-      <label>Age brackets</label>
-      <input id="scAges" value="7-9, 10-12, 13-15, 16-17, 18+" />
-      <div class="row">
-        <div><label>Pod cap</label><input id="scCap" type="number" value="20" /></div>
-        <div><label>Split at</label><input id="scSplit" type="number" value="22" /></div>
-      </div>
-      <div class="row">
-        <div><label>Pod floor</label><input id="scFloor" type="number" value="6" /></div>
-        <div><label>Collapse order</label>
-          <select id="scOrder"><option value="rank,age">rank → age</option><option value="age,rank">age → rank</option></select>
-        </div>
-      </div>
-      <div class="controls"><button id="btnSim">Simulate</button></div>
-    </div>
-
-    <div class="card">
-      <h2>Override tools</h2>
-      <div class="hint">Available in podded/judging. Each writes to the audit log.</div>
-      <div class="controls" style="flex-direction:column;align-items:stretch">
-        <button id="ovVoid" class="ghost">Void a random entry</button>
-        <button id="ovReassign" class="ghost">Reassign a judge</button>
-      </div>
-    </div>
-  </aside>
-
-  <main>
-    <div class="card">
-      <div class="pipeline" id="pipeline"></div>
-      <div class="controls">
-        <button class="primary" id="btnAdvance">Advance ▶</button>
-        <button id="btnRollback">◀ Roll back</button>
-        <button id="btnRunAll" class="ghost">Run to finalized ⏭</button>
-        <span class="muted" id="guardMsg" style="align-self:center"></span>
-      </div>
-      <div class="kpis" id="kpis"></div>
-    </div>
-
-    <div id="simBox"></div>
-    <div id="flags"></div>
-    <div id="board"></div>
-
-    <div class="card">
-      <h2>Audit log</h2>
-      <div class="audit" id="audit"><div class="muted">No overrides yet.</div></div>
-    </div>
-  </main>
+    <div class="foot">Steps call <code>round-controller</code> on the tournament project; statuses read <code>round_step_runs</code> (realtime). Tournament suite — separate product from the membership platform.</div>
+  </div>
 </div>
 
-<script>
-// ===ENGINE START=== (ported from supabase/functions/_shared/* — kept in sync)
-const ENGINE = (function () {
-  // ---- deterministic RNG (mulberry32) ----
-  function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
-  function round2(n){return Math.round((n+Number.EPSILON)*100)/100;}
-
-  // ---- divisioning ----
-  function ageAxis(s){const a=s.axes.find(x=>x.key==='age');return a?a.brackets.map(b=>b.key):[];}
-  function rankAxis(s){const r=s.axes.find(x=>x.key==='rank');return r?r.tiers:[];}
-  function axisMergeable(s,k){const x=s.axes.find(a=>a.key===k);return !!(x&&x.mergeable);}
-  function classify(entries,s){
-    const ages=ageAxis(s),ranks=rankAxis(s),map=new Map();
-    for(const e of entries){
-      const ai=ages.indexOf(e.ageBracket),ri=ranks.indexOf(e.rank);
-      const key=e.event+'|'+e.ageBracket+'|'+e.rank;
-      let d=map.get(key);
-      if(!d){d={key,event:e.event,ageKey:e.ageBracket,rankKey:e.rank,isCollapsed:false,collapsedFrom:[key],cells:[ai+','+ri],entries:[]};map.set(key,d);}
-      d.entries.push(e);
-    }
-    return [...map.values()];
-  }
-  function cellCoords(c){const p=c.split(',').map(Number);return [p[0],p[1]];}
-  function adjacent(d1,d2,axis){
-    if(d1.event!==d2.event)return false;
-    for(const c1 of d1.cells){const[a1,r1]=cellCoords(c1);for(const c2 of d2.cells){const[a2,r2]=cellCoords(c2);
-      if(axis==='rank'&&a1===a2&&Math.abs(r1-r2)===1)return true;
-      if(axis==='age'&&r1===r2&&Math.abs(a1-a2)===1)return true;}}
-    return false;
-  }
-  function stableKey(d){return d.event+'|'+[...d.cells].sort().join('&');}
-  function collapse(divisions,s){
-    const floor=s.podFloor;
-    let work=divisions.map(d=>({event:d.event,cells:new Set(d.cells),entries:[...d.entries],collapsedFrom:new Set(d.collapsedFrom),unmergeable:false}));
-    while(true){
-      const under=work.filter(d=>d.entries.length<floor&&!d.unmergeable).sort((a,b)=>a.entries.length-b.entries.length||stableKey(a).localeCompare(stableKey(b)));
-      if(under.length===0)break;
-      const D=under[0];let cand=null;
-      for(const axis of s.collapseOrder){if(!axisMergeable(s,axis))continue;
-        const cs=work.filter(o=>o!==D&&adjacent(D,o,axis)).sort((a,b)=>a.entries.length-b.entries.length||stableKey(a).localeCompare(stableKey(b)));
-        if(cs.length){cand=cs[0];break;}}
-      if(!cand){D.unmergeable=true;continue;}
-      for(const c of D.cells)cand.cells.add(c);for(const b of D.collapsedFrom)cand.collapsedFrom.add(b);
-      cand.entries.push(...D.entries);work=work.filter(d=>d!==D);
-    }
-    const ages=ageAxis(s),ranks=rankAxis(s);
-    return work.map(d=>{
-      const cells=[...d.cells];
-      const ak=[...new Set(cells.map(c=>ages[cellCoords(c)[0]]).filter(Boolean))];
-      const rk=[...new Set(cells.map(c=>ranks[cellCoords(c)[1]]).filter(Boolean))];
-      const cf=[...d.collapsedFrom].sort();
-      return {key:stableKey(d),event:d.event,ageKey:ak.join('+'),rankKey:rk.join('+'),isCollapsed:cf.length>1,collapsedFrom:cf,cells,entries:d.entries,underFloorUnmergeable:(d.unmergeable&&d.entries.length<floor)?true:undefined};
-    });
-  }
-  function splitSizes(n,k){const base=Math.floor(n/k),rem=n%k;return Array.from({length:k},(_,i)=>base+(i<rem?1:0));}
-  function formPods(division,s){
-    const sorted=[...division.entries].sort((a,b)=>b.rating-a.rating);
-    const n=sorted.length;const numPods=n<s.podSplitThreshold?1:Math.ceil(n/s.podCap);
-    const sizes=splitSizes(n,numPods);const judgeCount=division.rankKey.split('+').includes('advanced')?3:1;
-    const pods=[];let idx=0;
-    for(let seq=0;seq<numPods;seq++){pods.push({divisionKey:division.key,seq:seq+1,judgeCount,entries:sorted.slice(idx,idx+sizes[seq])});idx+=sizes[seq];}
-    return pods;
-  }
-  function runDivisioning(entries,s){
-    const base=classify(entries,s);const divisions=collapse(base,s);const pods=divisions.flatMap(d=>formPods(d,s));
-    const flags=[];for(const d of divisions){if(d.underFloorUnmergeable)flags.push('Division '+d.event+'/'+d.ageKey+'/'+d.rankKey+' has '+d.entries.length+' entries and cannot collapse further (no legal neighbor).');}
-    return {divisions,pods,flags};
-  }
-
-  // ---- judging ----
-  function assignJudges(videos,judges){
-    const load=new Map(judges.map(j=>[j.judgeId,0]));const assignments=[];const flags=[];
-    const vids=[...videos].sort((a,b)=>a.entryId.localeCompare(b.entryId));
-    for(const v of vids){
-      const eligible=judges.filter(j=>j.schoolId!==v.competitorSchoolId);
-      if(eligible.length<v.judgeCount)flags.push('Entry '+v.entryId+' needs '+v.judgeCount+' judge(s) but only '+eligible.length+' non-conflicted available.');
-      const picked=[...eligible].sort((a,b)=>(load.get(a.judgeId)-load.get(b.judgeId))||a.judgeId.localeCompare(b.judgeId)).slice(0,v.judgeCount);
-      const role=v.judgeCount>1?'panel':'sole';
-      for(const j of picked){assignments.push({entryId:v.entryId,judgeId:j.judgeId,role});load.set(j.judgeId,load.get(j.judgeId)+1);}
-    }
-    return {assignments,flags};
-  }
-
-  // ---- scoring / resolve (0-100 judge scores) ----
-  function podScore(a){return round2(a.reduce((x,y)=>x+y,0)/a.length);}
-  // entries: {entryId, competitorId, rank, judgeScores, submittedAt}
-  function resolvePod(entries){
-    const scored=entries.map(e=>({entryId:e.entryId,competitorId:e.competitorId,rank:e.rank,score:podScore(e.judgeScores),highSingle:Math.max(...e.judgeScores),submittedAt:e.submittedAt}));
-    scored.sort((a,b)=>b.score-a.score||b.highSingle-a.highSingle||a.submittedAt-b.submittedAt||a.entryId.localeCompare(b.entryId));
-    return scored.map((s,i)=>({...s,placement:i+1}));
-  }
-
-  // ---- rating (LOCKED: seed 50, same-rank only, K 8->4, clamp 0-100) ----
-  const RCFG={seed:50,D:40,kProvisional:8,kSteady:4,provisionalRounds:3,ratingMin:0,ratingMax:100};
-  function seedRating(_rank,cfg=RCFG){return cfg.seed;}
-  // results: resolvePod output; states: {competitorId:{rating,roundsPlayed}}
-  function updateRatings(results,states,cfg=RCFG){
-    const stateOf=id=>states[id]||{rating:cfg.seed,roundsPlayed:0};
-    const out={};
-    for(const me of results){const my=stateOf(me.competitorId);const Ri=my.rating;
-      const opps=results.filter(o=>o.competitorId!==me.competitorId&&o.rank===me.rank);
-      const k=my.roundsPlayed<cfg.provisionalRounds?cfg.kProvisional:cfg.kSteady;let delta=0;
-      if(opps.length>0){let raw=0;for(const opp of opps){const Rj=stateOf(opp.competitorId).rating;
-        const E=1/(1+Math.pow(10,(Rj-Ri)/cfg.D));const A=me.placement<opp.placement?1:me.placement>opp.placement?0:0.5;raw+=A-E;}
-        delta=(k/opps.length)*raw;}
-      const after=Math.max(cfg.ratingMin,Math.min(cfg.ratingMax,Ri+delta));
-      out[me.competitorId]={before:Ri,delta:round2(after-Ri),after:round2(after),opponents:opps.length,k};}
-    return out;
-  }
-
-  // ---- distribute ----
-  const PLACE={1:'gold',2:'silver',3:'bronze'};
-  function buildShipList(results,schools){
-    const bySchool=new Map();
-    for(const r of results){const medals=['participation'];if(PLACE[r.placement])medals.push(PLACE[r.placement]);
-      const item={competitorId:r.competitorId,competitorName:r.competitorName,event:r.event,placement:r.placement,medals};
-      if(!bySchool.has(r.schoolId))bySchool.set(r.schoolId,[]);bySchool.get(r.schoolId).push(item);}
-    const shipments=[...bySchool.keys()].sort().map(sid=>{
-      const items=bySchool.get(sid).sort((a,b)=>a.competitorName.localeCompare(b.competitorName)||a.event.localeCompare(b.event));
-      const meta=schools[sid]||{name:sid};const itemCount=items.reduce((s,it)=>s+it.medals.length,0);
-      return {schoolId:sid,schoolName:meta.name,itemCount,items};});
-    const totalMedals=shipments.reduce((s,sh)=>s+sh.itemCount,0);
-    return {shipments,totalMedals};
-  }
-
-  // ---- state machine ----
-  const STATES=['open','collecting','closed','classified','collapsed','podded','judging','resolving','distributed','finalized'];
-  function nextState(s){const i=STATES.indexOf(s);return i>=0&&i<STATES.length-1?STATES[i+1]:null;}
-
-  return {rng,classify,collapse,formPods,runDivisioning,assignJudges,podScore,resolvePod,seedRating,updateRatings,buildShipList,STATES,nextState,RCFG};
-})();
-// ===ENGINE END===
-
-// ---------------- application state ----------------
-const S = { entries:[], judges:[], schools:{}, scheme:null, state:'open',
-  divisions:[], pods:[], assignments:[], scores:{}, results:[], shipList:null, flags:[], audit:[] };
-
+<script type="module">
+const { createClient, SUPABASE_URL, ANON } = window.__mc;
+const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
 const $ = id => document.getElementById(id);
-const NAMES_A=['Ash','Bo','Cy','Dae','Emi','Fen','Gia','Han','Ivy','Jae','Kit','Lux','Mei','Nao','Oz','Pia','Qi','Rin','Sol','Tao','Uma','Vic','Wen','Xin','Yara','Zed'];
-const NAMES_B=['Lee','Kim','Ng','Park','Cruz','Diaz','Ito','Fox','Roy','Vale','Mora','Shah','Reed','Blum','Cole','Frye'];
+let ROUND = null;          // current round id
+let STATE = {};            // loaded data for the current round
+let channel = null;
 
-function parseScheme(){
-  const events=$('scEvents').value.split(',').map(x=>x.trim()).filter(Boolean);
-  const ranks=$('scRanks').value.split(',').map(x=>x.trim()).filter(Boolean);
-  const ages=$('scAges').value.split(',').map(x=>x.trim()).filter(Boolean);
-  return {axes:[
-    {key:'age',type:'bracket',active:true,mergeable:true,brackets:ages.map((k,i)=>({key:k,min:i,max:i}))},
-    {key:'rank',type:'tier',active:true,mergeable:true,tiers:ranks},
-    {key:'event',type:'category',active:true,mergeable:false,values:events},
-  ],podCap:+$('scCap').value,podSplitThreshold:+$('scSplit').value,podFloor:+$('scFloor').value,
-   collapseOrder:$('scOrder').value.split(',')};
+// ---------- auth ----------
+let codeMode = false;
+$('codeToggle').onclick = async () => {
+  const email = $('email').value.trim();
+  if (codeMode) { codeMode = false; $('pwWrap').classList.remove('hide'); $('codeWrap').classList.add('hide'); $('codeToggle').textContent = 'Email me a code instead'; $('loginBtn').textContent = 'Sign in'; return; }
+  if (!email) return setMsg('loginMsg','Enter your email first.','err');
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+  if (error) return setMsg('loginMsg', error.message, 'err');
+  codeMode = true; $('pwWrap').classList.add('hide'); $('codeWrap').classList.remove('hide');
+  $('codeToggle').textContent = 'Use password instead'; $('loginBtn').textContent = 'Verify code';
+  setMsg('loginMsg','Code sent — check your email.','ok');
+};
+$('loginBtn').onclick = async () => {
+  const email = $('email').value.trim();
+  $('loginBtn').disabled = true;
+  try {
+    if (codeMode) {
+      const { error } = await sb.auth.verifyOtp({ email, token: $('code').value.trim(), type:'email' }); if (error) throw error;
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password: $('password').value }); if (error) throw error;
+    }
+    await afterLogin();
+  } catch(e){ setMsg('loginMsg', e.message || 'Sign-in failed.', 'err'); }
+  finally { $('loginBtn').disabled = false; }
+};
+$('signoutBtn').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function afterLogin(){
+  // Confirm the signed-in user is staff (round-controller enforces this too).
+  const { data:{ user } } = await sb.auth.getUser();
+  if (!user) return setMsg('loginMsg','Session expired — sign in again.','err');
+  const { data: staff } = await sb.from('staff').select('id').eq('auth_user_id', user.id).maybeSingle();
+  if (!staff) return setMsg('loginMsg','This account is not NMAO staff.','err');
+  $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
+  await loadRounds();
 }
 
-function seedRound(){
-  const rand=ENGINE.rng(+$('seed').value||1);
-  const nc=+$('numComp').value, ns=+$('numSchool').value, nj=+$('numJudge').value;
-  const sc=parseScheme();
-  const events=sc.axes[2].values, ranks=sc.axes[1].tiers, ages=sc.axes[0].brackets.map(b=>b.key);
-  const rankWeights=[0.5,0.32,0.18]; // beginner heavy
-  S.schools={}; for(let i=0;i<ns;i++){const id='sch'+i;S.schools[id]={name:'Dojo '+String.fromCharCode(65+(i%26))+(i>=26?Math.floor(i/26):'')};}
-  const schoolIds=Object.keys(S.schools);
-  S.judges=Array.from({length:nj},(_,i)=>({judgeId:'jud'+i,schoolId:schoolIds[Math.floor(rand()*schoolIds.length)]}));
-  const pick=(arr)=>arr[Math.floor(rand()*arr.length)];
-  const wpick=(arr,w)=>{let r=rand(),c=0;for(let i=0;i<arr.length;i++){c+=w[i]||0;if(r<=c)return arr[i];}return arr[arr.length-1];};
-  S.entries=Array.from({length:nc},(_,i)=>{
-    const rank=ranks.length===3?wpick(ranks,rankWeights):pick(ranks);
-    const schoolId=schoolIds[Math.floor(rand()*schoolIds.length)];
-    // hidden true skill drives judge scores (0-100); rating is the locked 0-100 number seeded ~50.
-    const skillBase={beginner:55,intermediate:65,advanced:75}[rank]||60;
-    const skill=Math.max(0,Math.min(100,skillBase+(rand()*40-20)));
-    const rating=Math.max(0,Math.min(100,50+(rand()*24-12))); // mid-season spread around the seed of 50
-    return {id:'e'+i,event:pick(events),ageBracket:pick(ages),rank,rating:Math.round(rating*10)/10,
-      competitorId:'c'+i,competitorName:pick(NAMES_A)+' '+pick(NAMES_B),schoolId,skill,priorRounds:Math.floor(rand()*5),
-      submittedAt:1000+Math.floor(rand()*100000),status:'valid'};
-  });
-  Object.assign(S,{state:'open',divisions:[],pods:[],assignments:[],scores:{},results:[],shipList:null,flags:[],audit:[]});
-  $('seedInfo').textContent = nc+' competitors · '+ns+' schools · '+nj+' judges';
+// ---------- round selector ----------
+async function loadRounds(preferId){
+  const { data } = await sb.from('rounds').select('id, seq, state, season_id, seasons(name)').order('seq', { ascending:false });
+  const rounds = data || [];
+  $('roundSel').innerHTML = rounds.map(r => (r.seq >= 900)
+    ? `<option value="${r.id}">🧪 DEMO · Round ${r.seq} (${r.state})</option>`
+    : `<option value="${r.id}">${(r.seasons?.name || 'Season')} · Round ${r.seq} (${r.state})</option>`).join('') || '<option>No rounds</option>';
+  if (rounds.length) { ROUND = preferId && rounds.some(r=>r.id===preferId) ? preferId : rounds[0].id; $('roundSel').value = ROUND; await selectRound(ROUND); }
+}
+$('roundSel').onchange = e => selectRound(e.target.value);
+$('refreshBtn').onclick = () => ROUND && loadRound(ROUND);
+$('fillBtn').onclick = () => ROUND && fillUnclaimed();
+$('seedBtn').onclick = seedDemo;
+$('resetAppBtn').onclick = resetAppDemo;
+$('printMedalsBtn').onclick = printPackingList;
+
+// Hybrid safety-net: backfill pods still short of judges after the claim window.
+async function fillUnclaimed(){
+  toast('Filling unclaimed pods…');
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const r = await fetch(SUPABASE_URL + '/functions/v1/fill-unclaimed-pods', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', apikey: ANON, Authorization:'Bearer '+(session?.access_token||ANON) },
+      body: JSON.stringify({ round_id: ROUND }) });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || 'failed');
+    const res = (d.rounds && d.rounds[0]) || {};
+    const added = (res.filled||[]).reduce((s,f)=>s+(f.added||0),0);
+    const short = (res.shortfalls||[]).length;
+    toast(`Filled ${added} seat(s)` + (short?` · ${short} pod(s) still short of eligible judges`:''), short?'err':'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast('Fill: '+e.message,'err'); }
+}
+
+async function selectRound(id){ ROUND = id; await loadRound(id); subscribe(id); }
+
+// ---------- load one round ----------
+async function loadRound(id){
+  const [round, entries, steps, divisions, pods, ja, results, ships, audit] = await Promise.all([
+    sb.from('rounds').select('id,seq,state,closes_at,judging_deadline,seasons(name)').eq('id', id).single(),
+    sb.from('entries').select('id', { count:'exact', head:true }).eq('round_id', id).eq('status','valid'),
+    sb.from('round_step_runs').select('step,status,detail,completed_at').eq('round_id', id),
+    sb.from('divisions').select('id,event,age_key,rank_key,is_collapsed,entry_count').eq('round_id', id),
+    sb.from('pods').select('id,seq,size,state,judge_count,divisions!inner(round_id,event,rank_key)').eq('divisions.round_id', id),
+    sb.from('judge_assignments').select('state,entries!inner(round_id)').eq('entries.round_id', id),
+    sb.from('results').select('id,entries!inner(round_id)', { count:'exact', head:true }).eq('entries.round_id', id),
+    sb.from('medal_shipments').select('item_count').eq('round_id', id),
+    sb.from('engine_audit').select('action,actor_id,created_at').eq('round_id', id).order('created_at', { ascending:false }).limit(12),
+  ]);
+  const stepMap = {}; (steps.data||[]).forEach(s => stepMap[s.step] = s);
+  const jaRows = ja.data || [];
+  STATE = {
+    round: round.data || {},
+    validEntries: entries.count || 0,
+    steps: stepMap,
+    divisions: divisions.data || [],
+    pods: pods.data || [],
+    jaTotal: jaRows.length,
+    jaSubmitted: jaRows.filter(a => a.state === 'submitted').length,
+    results: results.count || 0,
+    boxes: (ships.data||[]).length,
+    medals: (ships.data||[]).reduce((s,x)=> s + (x.item_count||0), 0),
+    audit: audit.data || [],
+  };
   render();
 }
 
-// map internal pods (division-scoped) to flat pods with ids
-function buildPods(){
-  S.scheme=parseScheme();
-  const {divisions}=(()=>{const base=ENGINE.classify(S.entries.filter(e=>e.status==='valid'),S.scheme);const divisions=ENGINE.collapse(base,S.scheme);return {divisions};})();
-  S.divisions=divisions;
-  let pid=0;S.pods=[];
-  for(const d of divisions){for(const p of ENGINE.formPods(d,S.scheme)){S.pods.push({id:'p'+(pid++),...p,division:d});}}
-}
+// ---------- render ----------
+const fmtTime = ts => ts ? new Date(ts).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+const TIER = k => k==='advanced' ? 'var(--ruby)' : k==='intermediate' ? 'var(--amethyst)' : 'var(--sapphire)';
 
-function doAssign(){
-  const videos=[];
-  for(const p of S.pods)for(const e of p.entries)videos.push({entryId:e.id,competitorSchoolId:e.schoolId,judgeCount:p.judgeCount,podId:p.id});
-  const {assignments,flags}=ENGINE.assignJudges(videos,S.judges);
-  // attach podId back
-  const podByEntry={};for(const p of S.pods)for(const e of p.entries)podByEntry[e.id]=p.id;
-  S.assignments=assignments.map(a=>({...a,podId:podByEntry[a.entryId]}));
-  S.flags=flags;
-}
+function render(){
+  const S = STATE, st = S.round.state || 'open';
+  const isDemo = (S.round.seq ?? 0) >= 900;
+  $('stateBadge').textContent = '● ' + st;
+  $('pipeSub').innerHTML = `${esc(S.round.seasons?.name || '')} · Round ${esc(S.round.seq ?? '')} · <span class="tiny">${esc((S.round.id||'').slice(0,8))}</span>`;
 
-function simulateScores(){
-  const rand=ENGINE.rng((+$('seed').value||1)*7+1);
-  S.scores={};
-  const entryById={};S.entries.forEach(e=>entryById[e.id]=e);
-  for(const a of S.assignments){
-    const e=entryById[a.entryId];
-    const raw=Math.max(0,Math.min(100,e.skill + (rand()*12-6))); // 0..100 judge score
-    (S.scores[a.entryId]=S.scores[a.entryId]||[]).push(Math.round(raw*10)/10);
+  // Demo bar — only for synthetic test rounds (seq >= 900). One-click full-pipeline showcase.
+  const demoBar = $('demoBar');
+  if (isDemo) {
+    demoBar.classList.remove('hide');
+    const finished = st === 'finalized';
+    demoBar.innerHTML = `
+      <span class="demo-tag">🧪 Demo round</span>
+      <span class="demo-msg">Synthetic data — safe to run end-to-end. ${finished
+        ? 'Pipeline <b>finalized</b>. Delete to reseed and run again.'
+        : 'Press <b>Auto-run</b> to watch every stage fire, or step through the pipeline manually.'}</span>
+      <span class="demo-actions">
+        ${finished ? '' : '<button class="btn gold" id="autoRunBtn">▶ Auto-run full pipeline</button>'}
+        <button class="btn danger" id="delDemoBtn">🗑 Delete demo round</button>
+      </span>`;
+  } else {
+    demoBar.classList.add('hide'); demoBar.innerHTML = '';
   }
+
+  // KPIs
+  const pct = S.jaTotal ? Math.round(S.jaSubmitted / S.jaTotal * 100) : 0;
+  $('kpis').innerHTML = [
+    ['Entries', S.validEntries], ['Divisions', S.divisions.length], ['Pods', S.pods.length],
+    ['Judges assigned', S.jaTotal], ['Judged', `${pct}<small>%</small>`], ['Medals', S.medals], ['School boxes', S.boxes],
+  ].map(([l,v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+
+  // Pipeline stages — status from round_step_runs; the first not-done step is "next".
+  const order = ['closed','divide','assign_judges','judging','resolve','distribute','finalize'];
+  const runStatus = step => (S.steps[step] || {}).status;   // done|running|error|undefined
+  const done = { closed: st !== 'open' && st !== 'collecting',
+                 divide: runStatus('divide')==='done', assign_judges: runStatus('assign_judges')==='done',
+                 judging: S.jaTotal>0 && S.jaSubmitted===S.jaTotal, resolve: runStatus('resolve')==='done',
+                 distribute: runStatus('distribute')==='done', finalize: st==='finalized' };
+  const canClose = !done.closed;   // round still open/collecting — close entries before divide
+  const actionable = ['divide','assign_judges','resolve','distribute','finalize'];
+  const nextStep = canClose ? null : actionable.find(s => !done[s]);
+
+  const stage = (key, title, sub, opts={}) => {
+    const rs = runStatus(key);
+    let cls = 'idle', pill='';
+    if (done[key]) { cls='done'; pill='done'; }
+    else if (rs==='running') { cls='run'; pill='running'; }
+    else if (rs==='error') { cls='error'; pill='error'; }
+    else if (key===nextStep || (opts.force && !done[key])) cls='next';
+    const time = (S.steps[key] && S.steps[key].completed_at) ? fmtTime(S.steps[key].completed_at) : (opts.time||'');
+    let right = `<span class="status-pill s-${cls}">${pill||cls}</span>`;
+    if (opts.demo && !done[key]) right = `<button class="btn gold" data-demo="${opts.demo}">${opts.demoLabel}</button>`;
+    else if (opts.action && !done[key] && (opts.force || cls==='next' || cls==='error')) right = `<button class="btn ${opts.gold?'gold':''}" data-run="${opts.runAs||key}">${opts.action}</button>`;
+    else if (opts.view && done[key]) right = `<button class="btn" data-view="${key}">${opts.view}</button>`;
+    return `<div class="stage"><span class="dot ${cls}"></span>
+      <div><div class="st-title">${title}${opts.muted?` <span class="muted">— ${opts.muted}</span>`:''}</div>
+        <div class="st-sub">${sub}</div></div>
+      <div class="st-right">${right}${time?`<span class="time">${time}</span>`:''}</div></div>`;
+  };
+
+  const collapsed = S.divisions.filter(d => d.is_collapsed).length;
+  $('pipeline').innerHTML =
+    stage('closed', 'Entries closed', `<b>${S.validEntries}</b> valid entries`, canClose ? { action:'Close entries', runAs:'close', force:true } : {}) +
+    stage('divide', 'Divide', `<b>${S.divisions.length}</b> divisions · <b>${S.pods.length}</b> pods${collapsed?` · ${collapsed} collapsed`:''}`, { muted:'classify → collapse → form pods', action:'Run divide', view:'View divisions' }) +
+    stage('assign_judges', 'Assign judges', `<b>${S.jaTotal}</b> assignments`, { action:'Run assign', view:'View judges' }) +
+    stage('judging', 'Judging window', `<b>${S.jaSubmitted} / ${S.jaTotal}</b> scored · ${pct}%`,
+      (isDemo && S.jaTotal > 0 && S.jaSubmitted < S.jaTotal) ? { demo:'autoscore', demoLabel:'⚡ Autoscore (demo)' } : {}) +
+    stage('resolve', 'Resolve', `<b>${S.results}</b> results · ratings updated`, { muted:'placements + ratings', action:'Run resolve', view:'View results' }) +
+    stage('distribute', 'Distribute', `<b>${S.medals}</b> medals · <b>${S.boxes}</b> boxes`, { muted:'medals + ship list', action:'Run distribute', view:'View medals' }) +
+    stage('finalize', 'Finalize round', 'Freeze scheme, publish results, archive.', { action:'Finalize ✓', gold:true });
+
+  // wire run + view + demo buttons
+  $('pipeline').querySelectorAll('[data-run]').forEach(b => b.onclick = () => runStep(b.dataset.run));
+  $('pipeline').querySelectorAll('[data-view]').forEach(b => b.onclick = () => openView(b.dataset.view));
+  $('pipeline').querySelectorAll('[data-demo]').forEach(b => b.onclick = () => { if (b.dataset.demo === 'autoscore') autoscoreDemo(); });
+  if ($('autoRunBtn')) $('autoRunBtn').onclick = autoRunPipeline;
+  if ($('delDemoBtn')) $('delDemoBtn').onclick = deleteDemo;
+
+  // right rail
+  const flagList = Object.values(S.steps).flatMap(s => Array.isArray(s.detail?.flags) ? s.detail.flags : []);
+  const divRows = S.divisions.map(d => {
+    const pod = S.pods.find(p => p.divisions && p.rank_key === d.rank_key && (p.divisions.event===d.event));
+    return `<div class="row"><span><span class="tier" style="background:${TIER(d.rank_key)}"></span>${esc(d.event)} · ${esc(d.rank_key)}</span>
+      <span class="muted" style="margin-left:auto">${d.entry_count||0} entries</span></div>`;
+  }).join('') || '<div class="row muted">No divisions yet.</div>';
+  const auditRows = S.audit.map(a =>
+    `<div class="row"><span class="t">${new Date(a.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span><span>${esc(a.action)}${a.actor_id?' · <span class="muted">operator</span>':''}</span></div>`
+  ).join('') || '<div class="row muted">No activity yet.</div>';
+
+  $('rail').innerHTML = `
+    <div class="card"><div class="hd"><h2>Exceptions &amp; guardrails</h2></div>
+      ${flagList.length ? flagList.map(f=>`<div class="flag">▲ ${esc(f)}</div>`).join('') : '<div class="allclear">● All clear — no flags.</div>'}
+      <ul class="guard"><li>Can't divide with 0 valid entries.</li><li>Can't distribute with a pod unresolved.</li><li>Finalize only from <i>distributed</i>.</li></ul>
+    </div>
+    <div class="card"><div class="hd"><h2>Divisions &amp; pods</h2><span class="sub">${S.divisions.length}</span></div><div class="list">${divRows}</div></div>
+    <div class="card"><div class="hd"><h2>Activity log</h2><span class="sub">audit</span></div><div class="list log">${auditRows}</div>
+      <div style="padding:0 14px 14px;display:flex;gap:8px;flex-wrap:wrap">
+        <select class="sel" id="rbTo" style="flex:1"${st==='finalized'?' disabled title="Reopen first — a finalized round is locked"':''}><option value="">Roll back to…</option><option value="distribute">distribute</option><option value="resolve">resolve</option><option value="assign_judges">assign judges</option><option value="divide">divide</option></select>
+        <button class="btn danger" id="rbBtn"${st==='finalized'?' disabled':''}>Roll back</button>
+        ${st==='finalized' ? '<button class="btn" id="reopenBtn" style="width:100%;border-color:#E9C15A;color:#E9C15A">↺ Reopen round — un-finalize</button>' : ''}
+        ${(st==='finalized'||st==='distributed') ? '<button class="btn" id="payBtn" style="width:100%;border-color:#3f7a52;color:#7ED0A0">💵 Pay judges for this round</button>' : ''}
+      </div>
+    </div>`;
+  $('rbBtn').onclick = () => { const to = $('rbTo').value; if (to) rollback(to); };
+  if ($('reopenBtn')) $('reopenBtn').onclick = reopen;
+  if ($('payBtn')) $('payBtn').onclick = payJudges;
 }
 
-function doResolve(){
-  simulateScores();
-  const entryById={};S.entries.forEach(e=>entryById[e.id]=e);
-  S.results=[];
-  for(const p of S.pods){
-    const scored=p.entries.filter(e=>S.scores[e.id]&&S.scores[e.id].length).map(e=>({entryId:e.id,competitorId:e.competitorId,rank:e.rank,judgeScores:S.scores[e.id],submittedAt:e.submittedAt}));
-    if(!scored.length)continue;
-    const resolved=ENGINE.resolvePod(scored);
-    const placeBy={};resolved.forEach(r=>placeBy[r.entryId]=r);
-    const states={};p.entries.forEach(e=>states[e.competitorId]={rating:e.rating,roundsPlayed:e.priorRounds});
-    const changes=ENGINE.updateRatings(resolved,states);
-    for(const e of p.entries){const r=placeBy[e.id];if(!r)continue;const c=changes[e.competitorId];
-      S.results.push({entryId:e.id,podId:p.id,competitorId:e.competitorId,competitorName:e.competitorName,schoolId:e.schoolId,event:e.event,rank:e.rank,
-        score:r.score,placement:r.placement,ratingBefore:c.before,ratingDelta:c.delta,ratingAfter:c.after,opponents:c.opponents});}
+// ---------- actions (round-controller) ----------
+async function callController(body){
+  const { data:{ session } } = await sb.auth.getSession();
+  const token = session?.access_token || ANON;
+  const r = await fetch(SUPABASE_URL + '/functions/v1/round-controller', {
+    method:'POST', headers:{ 'Content-Type':'application/json', apikey: ANON, Authorization:'Bearer '+token }, body: JSON.stringify(body) });
+  const d = await r.json().catch(()=>({}));
+  if (!r.ok || d.ok === false) throw new Error(d.error || `Failed (${r.status})`);
+  return d;
+}
+const STEP_CONFIRM = {
+  close: 'Close entries for this round? No new entries can be submitted after this.',
+  divide: 'Run divide? This classifies entries and forms the divisions and pods.',
+  assign_judges: 'Run judge assignment? This assigns judges to every pod.',
+  resolve: 'Run resolve? This computes placements and updates competitor ratings.',
+  distribute: 'Run distribute? This awards medals and builds the ship list.',
+  finalize: 'Finalize this round? This freezes the scheme and publishes results.',
+};
+async function runStep(step){
+  if (STEP_CONFIRM[step] && !confirm(STEP_CONFIRM[step])) return;
+  toast('Running ' + step + '…');
+  try {
+    const d = await callController({ roundId: ROUND, step });
+    const oc = Array.isArray(d.outcome) ? d.outcome[d.outcome.length-1] : d.outcome;
+    const flags = (oc && oc.flags && oc.flags.length) ? ' · flags: ' + oc.flags.join(', ') : '';
+    toast((oc && oc.ran === false) ? `${step}: ${oc.detail||'already done'}` : `${step} done${flags}`, oc && oc.flags && oc.flags.length ? 'err':'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast(step + ': ' + e.message, 'err'); }
+}
+async function rollback(to){
+  if (!confirm(`Roll back to ${to}? This clears everything from that stage forward (and reverts ratings).`)) return;
+  toast('Rolling back to ' + to + '…');
+  try { await callController({ roundId: ROUND, step:'rollback', to }); toast('Rolled back to ' + to, 'ok'); await loadRound(ROUND); }
+  catch(e){ toast('Rollback: ' + e.message, 'err'); }
+}
+async function reopen(){
+  if (!confirm('Reopen this finalized round? It returns to "distributed" so you can re-distribute or roll back. Use only to correct a premature finalize — it unlocks the scheme.')) return;
+  toast('Reopening…');
+  try { await callController({ roundId: ROUND, step:'reopen' }); toast('Round reopened → distributed', 'ok'); await loadRound(ROUND); }
+  catch(e){ toast('Reopen: ' + e.message, 'err'); }
+}
+async function payJudges(){
+  if (!confirm('Pay judges for this round? This records each judge\'s earnings ($/video) and sends payouts to judges who have connected their bank. Judges without payouts stay pending and get paid on a later run. Safe to re-run — settled payments are never double-paid.')) return;
+  toast('Paying judges…');
+  try {
+    const { data:{ session } } = await sb.auth.getSession();
+    const token = session?.access_token || ANON;
+    const r = await fetch(SUPABASE_URL + '/functions/v1/pay-judges', {
+      method:'POST', headers:{ 'Content-Type':'application/json', apikey: ANON, Authorization:'Bearer '+token }, body: JSON.stringify({ round_id: ROUND }) });
+    const d = await r.json().catch(()=>({}));
+    if (!r.ok || d.ok===false) throw new Error(d.error || `Failed (${r.status})`);
+    const tot = ((d.total_round_cents||0)/100).toFixed(2);
+    toast(`Judges: ${d.paid||0} paid · ${d.pending||0} pending · $${tot} total`, 'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast('Pay judges: ' + e.message, 'err'); }
+}
+
+// ---------- demo round (staff-only admin_* RPCs; seq >= 900 test band) ----------
+async function seedDemo(){
+  if (!confirm('Create a fresh DEMO round?\n\nClones the latest round\'s entry shape onto brand-new synthetic competitors (isolated — real ratings are never touched). It lands in the 900+ test band and can be deleted anytime.')) return;
+  $('seedBtn').disabled = true; toast('Seeding demo round…');
+  try {
+    const { data, error } = await sb.rpc('admin_create_test_round');
+    if (error) throw error;
+    toast(`Demo Round ${data.seq} created · ${data.entries} entries. Press “▶ Auto-run full pipeline”.`, 'ok');
+    await loadRounds(data.round_id);
+  } catch(e){ toast('Seed: ' + (e.message || e), 'err'); }
+  finally { $('seedBtn').disabled = false; }
+}
+// Reset the Compete-app dueling demo (competitor showcase) — reveal replays,
+// alerts return, all vote-queue duels reappear. Rounds are untouched.
+async function resetAppDemo(){
+  if (!confirm('Reset the Compete-app demo for the competitor showcase?\n\n• The monthly reveal will auto-play again\n• The bell alerts (won / loss / monthly) return\n• Every vote-queue duel reappears\n\nRounds are untouched — use “✨ Seed demo” for a fresh round.')) return;
+  const btn = $('resetAppBtn'); if (btn) btn.disabled = true; toast('Resetting app demo…');
+  try {
+    const { error } = await sb.rpc('admin_reset_dueling_demo');
+    if (error) throw error;
+    toast('App demo reset ✓ — reveal replays, alerts + vote queue restored. Re-open the Compete app.', 'ok');
+  } catch(e){ toast('Reset: ' + (e.message || e), 'err'); }
+  finally { if (btn) btn.disabled = false; }
+}
+// ---- Medal packing & shipping list (operations) -----------------------------
+// A printable, per-school manifest for physically distributing medals: how many
+// of each medal type each school receives, the competitor who earns each one and
+// the category (event · age · rank) they earned it in, plus the ship-to address.
+// Sourced from the `medals` table (authoritative award record — includes the
+// per-competitor participation medals), joined to competitor → school → division.
+const _PK_ORDER = ['gold','silver','bronze','participation'];
+const _PK_LABEL = { gold:'Gold', silver:'Silver', bronze:'Bronze', participation:'Participation' };
+const _PK_EMOJI = { gold:'🥇', silver:'🥈', bronze:'🥉', participation:'🎗️' };
+const _PK_RANK  = { gold:0, silver:1, bronze:2, participation:3 };
+function _pkAddr(a){
+  if (!a || typeof a !== 'object') return '— no address on file —';
+  const city = a.city ? String(a.city).replace(/\b\w/g, c => c.toUpperCase()) : '';
+  const st = a.state ? (String(a.state).length <= 3 ? String(a.state).toUpperCase() : a.state) : '';
+  const tail = [[city, st].filter(Boolean).join(', '), a.postal].filter(Boolean).join(' ');  // "City, ST 12345"
+  return [a.line1, a.line2, tail].filter(Boolean).join(', ') || '— no address on file —';
+}
+function _pkKey(s){
+  if (!s) return '';
+  return String(s)
+    .replace(/(\d)_(\d)/g, '$1–$2')    // 10_12 -> 10–12
+    .replace(/_/g, ' ')                // under_10 -> under 10
+    .replace(/\+/g, ' + ')             // intermediate+advanced -> intermediate + advanced
+    .replace(/\s+/g, ' ').trim()
+    .replace(/\b\w/g, c => c.toUpperCase());
+}
+function _pkCat(label, cat){
+  const parts = [label];
+  if (cat) { if (cat.age) parts.push(_pkKey(cat.age)); if (cat.rank) parts.push(_pkKey(cat.rank)); }
+  return parts.filter(Boolean).join(' · ') || '—';
+}
+async function printPackingList(){
+  if (!ROUND) return toast('Pick a round first.', 'err');
+  toast('Building packing list…');
+  // medals = the awarded medals (incl. per-competitor participation); entries carry the
+  // division (the category the medal was won in — medals.division_id is never stamped);
+  // event_types maps event codes -> display names.
+  const [medalsRes, entriesRes, evRes] = await Promise.all([
+    sb.from('medals').select('medal_type, placement, event, competitor_id, competitors!inner(first_name,last_name,school_id,schools(name,address,contact_name,contact_email,phone))').eq('round_id', ROUND),
+    sb.from('entries').select('competitor_id, event, age_bracket, declared_rank, divisions(age_key,rank_key)').eq('round_id', ROUND),
+    sb.from('event_types').select('code, name'),
+  ]);
+  if (medalsRes.error) return toast('Packing list: ' + (medalsRes.error.message || medalsRes.error), 'err');
+  const data = medalsRes.data;
+  if (!data || !data.length) return toast('No medals for this round yet — run Distribute first.', 'err');
+
+  // Normalize event codes <-> labels so both the join key and the display are stable
+  // whether a medal's `event` was stored as "trad_forms" or "Traditional Forms".
+  const codeToName = {}, nameToCode = {};
+  for (const e of (evRes.data || [])) { codeToName[e.code] = e.name; nameToCode[String(e.name).toLowerCase()] = e.code; }
+  const canonEv = e => codeToName[e] ? e : (nameToCode[String(e || '').toLowerCase()] || e);
+  const evLabel = e => codeToName[canonEv(e)] || _pkKey(e);
+
+  // category (age · rank) keyed by competitor + event; prefer the division, fall back to the entry.
+  const catMap = new Map();
+  for (const en of (entriesRes.data || [])) {
+    const d = en.divisions;
+    catMap.set(`${en.competitor_id}|${canonEv(en.event)}`, { age: (d && d.age_key) || en.age_bracket, rank: (d && d.rank_key) || en.declared_rank });
   }
-}
 
-function doDistribute(){ S.shipList=ENGINE.buildShipList(S.results,S.schools); }
-
-// ---- advance / rollback ----
-function guardReason(to){
-  const valid=S.entries.filter(e=>e.status==='valid').length;
-  if(to==='classified'&&valid===0)return 'Zero valid entries — cannot classify.';
-  return null;
-}
-function advance(){
-  const to=ENGINE.nextState(S.state);if(!to)return;
-  const g=guardReason(to);if(g){$('guardMsg').textContent=g;return;}
-  $('guardMsg').textContent='';
-  if(to==='classified'){S.scheme=parseScheme();const base=ENGINE.classify(S.entries.filter(e=>e.status==='valid'),S.scheme);S.divisions=base;}
-  if(to==='collapsed'){S.divisions=ENGINE.collapse(ENGINE.classify(S.entries.filter(e=>e.status==='valid'),S.scheme),S.scheme);S.flags=ENGINE.runDivisioning(S.entries.filter(e=>e.status==='valid'),S.scheme).flags;}
-  if(to==='podded'){buildPods();}
-  if(to==='judging'){doAssign();}
-  if(to==='resolving'){doResolve();}
-  if(to==='distributed'){doDistribute();}
-  S.state=to;render();
-}
-function rollback(){
-  const i=ENGINE.STATES.indexOf(S.state);if(i<=0)return;
-  const to=ENGINE.STATES[i-1];
-  // clear artifacts at/after the state we're leaving
-  const clearFrom=ENGINE.STATES.indexOf(to)+1;
-  const order=['classified','collapsed','podded','judging','resolving','distributed'];
-  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('distributed'))S.shipList=null;
-  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('resolving')){S.results=[];S.scores={};}
-  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('judging'))S.assignments=[];
-  if(ENGINE.STATES.indexOf(S.state)>=ENGINE.STATES.indexOf('podded'))S.pods=[];
-  S.state=to;$('guardMsg').textContent='';render();
-}
-function runAll(){let guard=0;while(ENGINE.nextState(S.state)&&guard++<20){const before=S.state;advance();if(S.state===before)break;}}
-
-// ---- overrides ----
-function logAudit(action,detail){S.audit.unshift({t:new Date().toLocaleTimeString(),action,detail});renderAudit();}
-function ovVoid(){
-  const live=S.entries.filter(e=>e.status==='valid');if(!live.length)return;
-  const rand=ENGINE.rng(Date.now()%100000);const victim=live[Math.floor(rand()*live.length)];
-  victim.status='voided';logAudit('void','entry '+victim.id+' ('+victim.competitorName+') voided');
-  // re-resolve affected pod if we're past podded
-  if(['podded','judging','resolving','distributed','finalized'].includes(S.state)){
-    buildPods();if(['judging','resolving','distributed','finalized'].includes(S.state))doAssign();
-    if(['resolving','distributed','finalized'].includes(S.state))doResolve();
-    if(['distributed','finalized'].includes(S.state))doDistribute();
+  const bySchool = new Map();
+  for (const m of data){
+    const c = m.competitors || {}, s = c.schools || {};
+    const key = c.school_id || s.name || 'unknown';
+    if (!bySchool.has(key)) bySchool.set(key, { school: s, items: [], counts: { gold:0, silver:0, bronze:0, participation:0 } });
+    const g = bySchool.get(key);
+    g.items.push({
+      name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || '—',
+      cat: _pkCat(evLabel(m.event), catMap.get(`${m.competitor_id}|${canonEv(m.event)}`)),
+      medal: m.medal_type, place: m.placement,
+    });
+    if (g.counts[m.medal_type] != null) g.counts[m.medal_type]++;
   }
-  render();
-}
-function ovReassign(){
-  if(!S.assignments.length){logAudit('reassign','no assignments yet');return;}
-  const rand=ENGINE.rng(Date.now()%99991);const a=S.assignments[Math.floor(rand()*S.assignments.length)];
-  const entry=S.entries.find(e=>e.id===a.entryId);
-  const onVideo=S.assignments.filter(x=>x.entryId===a.entryId).map(x=>x.judgeId);
-  const cand=S.judges.filter(j=>j.schoolId!==entry.schoolId&&!onVideo.includes(j.judgeId));
-  if(!cand.length){logAudit('reassign','no eligible replacement for '+a.entryId);return;}
-  const repl=cand[Math.floor(rand()*cand.length)];
-  logAudit('reassign','video '+a.entryId+': '+a.judgeId+' → '+repl.judgeId);
-  a.judgeId=repl.judgeId;
-  if(['resolving','distributed','finalized'].includes(S.state)){doResolve();if(['distributed','finalized'].includes(S.state))doDistribute();}
-  render();
-}
+  const groups = [...bySchool.values()].sort((a,b) => (a.school.name || '').localeCompare(b.school.name || ''));
+  const grand = { gold:0, silver:0, bronze:0, participation:0 }; let grandTot = 0;
+  groups.forEach(g => _PK_ORDER.forEach(t => { grand[t] += g.counts[t]; grandTot += g.counts[t]; }));
 
-// ---------------- rendering ----------------
-function rankPill(rk){const map={beginner:'beg',intermediate:'int',advanced:'adv'};const cls=rk.split('+').map(r=>map[r]||'beg')[0];
-  return '<span class="pill '+cls+'">'+rk+'</span>';}
+  const seq = STATE?.round?.seq ?? '';
+  const when = new Date().toLocaleString();
+  const tally = c => _PK_ORDER.filter(t => c[t] > 0).map(t => `${_PK_EMOJI[t]} ${_PK_LABEL[t]} × <b>${c[t]}</b>`).join('&nbsp;&nbsp;&nbsp;') || '—';
 
-function renderPipeline(){
-  $('pipeline').innerHTML=ENGINE.STATES.map(st=>{
-    const cur=st===S.state;const done=ENGINE.STATES.indexOf(st)<ENGINE.STATES.indexOf(S.state);
-    return '<span class="step '+(cur?'current':done?'done':'')+'">'+st+'</span>';
+  const blocks = groups.map(g => {
+    const s = g.school, total = _PK_ORDER.reduce((x,t) => x + g.counts[t], 0);
+    g.items.sort((a,b) => (a.cat||'').localeCompare(b.cat||'') || (_PK_RANK[a.medal]-_PK_RANK[b.medal]) || a.name.localeCompare(b.name));
+    const rows = g.items.map(it =>
+      `<tr><td>${esc(it.name)}</td><td>${esc(it.cat)}</td><td class="c">${it.place ?? '—'}</td><td>${_PK_EMOJI[it.medal] || ''} ${esc(_PK_LABEL[it.medal] || it.medal)}</td></tr>`).join('');
+    const contact = [s.contact_name, s.contact_email, s.phone].filter(Boolean).join(' · ') || '—';
+    return `<section class="pk-s">
+      <div class="pk-h"><div><h2>${esc(s.name || 'School')}</h2>
+        <div class="pk-a">📦 ${esc(_pkAddr(s.address))}</div>
+        <div class="pk-c">${esc(contact)}</div></div>
+        <div class="pk-t"><div class="n">${total}</div><div class="l">medals</div></div></div>
+      <div class="pk-y">${tally(g.counts)}</div>
+      <table class="pk-tb"><thead><tr><th>Competitor</th><th>Category</th><th class="c">Place</th><th>Medal</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="pk-k">Packed&nbsp;☐&nbsp;&nbsp;&nbsp;Shipped&nbsp;☐&nbsp;&nbsp;&nbsp;Carrier / Tracking&nbsp;#&nbsp;____________________________</div>
+    </section>`;
   }).join('');
-  $('stateBadge').textContent=S.state;
-  $('btnAdvance').disabled=!ENGINE.nextState(S.state);
-  $('btnRollback').disabled=ENGINE.STATES.indexOf(S.state)<=0;
-}
-function renderKpis(){
-  const valid=S.entries.filter(e=>e.status==='valid').length;
-  const items=[['Valid entries',valid],['Divisions',S.divisions.length||'—'],['Pods',S.pods.length||'—'],
-    ['Judge assigns',S.assignments.length||'—'],['Resolved',S.results.length||'—'],
-    ['Medals',S.shipList?S.shipList.totalMedals:'—']];
-  $('kpis').innerHTML=items.map(([l,v])=>'<div class="kpi"><b>'+v+'</b><span>'+l+'</span></div>').join('');
-}
-function renderFlags(){
-  $('flags').innerHTML=(S.flags&&S.flags.length)?S.flags.map(f=>'<div class="flag">⚠ '+f+'</div>').join(''):'';
-}
-function renderBoard(){
-  const st=S.state, i=ENGINE.STATES.indexOf(st);
-  let html='';
-  if(i>=ENGINE.STATES.indexOf('distributed')&&S.shipList){
-    html+='<div class="card"><h2>Medal ship list — one shipment per school</h2>';
-    html+='<div class="grid">'+S.shipList.shipments.map(sh=>
-      '<div class="pod"><h3>'+sh.schoolName+'<span class="tag">'+sh.itemCount+' pcs</span></h3><table>'+
-      sh.items.map(it=>'<tr><td>'+it.competitorName+'<div class="muted" style="font-size:10px">'+it.event+' · '+ordinal(it.placement)+'</div></td><td style="text-align:right">'+
-        it.medals.map(m=>'<span class="medal '+m+'">'+m[0].toUpperCase()+'</span>').join(' ')+'</td></tr>').join('')+
-      '</table></div>').join('')+'</div></div>';
-  }
-  if(i>=ENGINE.STATES.indexOf('resolving')&&S.results.length){
-    const sorted=[...S.results].sort((a,b)=>a.podId.localeCompare(b.podId)||a.placement-b.placement);
-    html+='<div class="card"><h2>Results & rating updates</h2><table class="data"><thead><tr>'+
-      '<th>Pod</th><th>Place</th><th>Competitor</th><th>Rank</th><th>Score</th><th>Rating</th><th>Δ</th></tr></thead><tbody>'+
-      sorted.slice(0,200).map(r=>'<tr><td class="muted">'+r.podId+'</td><td>'+ordinal(r.placement)+'</td><td>'+r.competitorName+'</td><td>'+rankPill(r.rank)+
-        '</td><td>'+r.score.toFixed(2)+'</td><td>'+Math.round(r.ratingAfter)+'</td><td class="delta '+(r.ratingDelta>=0?'up':'down')+'">'+(r.ratingDelta>=0?'+':'')+r.ratingDelta.toFixed(1)+'</td></tr>').join('')+
-      '</tbody></table>'+(sorted.length>200?'<div class="hint">showing first 200 of '+sorted.length+'</div>':'')+'</div>';
-  }
-  if(st==='judging'&&S.assignments.length){
-    const byPod={};S.assignments.forEach(a=>{(byPod[a.podId]=byPod[a.podId]||[]).push(a);});
-    html+='<div class="card"><h2>Judge assignments (per video)</h2><div class="grid">'+
-      S.pods.map(p=>{const as=byPod[p.id]||[];const uniq=[...new Set(as.map(a=>a.judgeId))];
-        return '<div class="pod"><h3>'+p.division.event+' · '+p.division.ageKey+'<span class="tag">'+p.judgeCount+'-judge</span></h3>'+
-        '<table><tr><td class="muted">Videos</td><td style="text-align:right">'+p.entries.length+'</td></tr>'+
-        '<tr><td class="muted">Assignments</td><td style="text-align:right">'+as.length+'</td></tr>'+
-        '<tr><td class="muted">Judges used</td><td style="text-align:right">'+uniq.length+'</td></tr></table></div>';}).join('')+'</div></div>';
-  }
-  if((st==='podded'||st==='judging')&&S.pods.length){
-    html+='<div class="card"><h2>Pods ('+S.pods.length+')</h2><div class="grid">'+
-      S.pods.map(p=>'<div class="pod"><h3>'+p.division.event+' · '+p.division.ageKey+' '+rankPill(p.division.rankKey)+
-        '<span class="tag">pod '+p.seq+'</span></h3><table>'+
-        p.entries.slice(0,10).map(e=>'<tr><td>'+e.competitorName+'</td><td class="muted" style="text-align:right">'+e.rating+'</td></tr>').join('')+
-        (p.entries.length>10?'<tr><td class="muted" colspan="2">+'+(p.entries.length-10)+' more</td></tr>':'')+
-        '</table></div>').join('')+'</div></div>';
-  }
-  if((st==='classified'||st==='collapsed')&&S.divisions.length){
-    html+='<div class="card"><h2>Divisions ('+S.divisions.length+')</h2><table class="data"><thead><tr><th>Event</th><th>Age</th><th>Rank</th><th>Entries</th><th>Status</th></tr></thead><tbody>'+
-      [...S.divisions].sort((a,b)=>b.entries.length-a.entries.length).map(d=>'<tr><td>'+d.event+'</td><td>'+d.ageKey+'</td><td>'+rankPill(d.rankKey)+'</td><td>'+d.entries.length+'</td><td>'+
-        (d.underFloorUnmergeable?'<span class="medal bronze">under floor</span>':d.isCollapsed?'<span class="muted">collapsed</span>':'<span class="delta up">ok</span>')+'</td></tr>').join('')+
-      '</tbody></table></div>';
-  }
-  if(i<ENGINE.STATES.indexOf('classified')){
-    html+='<div class="card"><h2>Entries preview</h2><div class="hint">'+S.entries.filter(e=>e.status==='valid').length+' valid entries seeded. Advance to classify them into divisions.</div>'+
-      '<table class="data"><thead><tr><th>Competitor</th><th>School</th><th>Event</th><th>Age</th><th>Rank</th><th>Rating</th></tr></thead><tbody>'+
-      S.entries.slice(0,12).map(e=>'<tr><td>'+e.competitorName+'</td><td class="muted">'+(S.schools[e.schoolId]?.name||e.schoolId)+'</td><td>'+e.event+'</td><td>'+e.ageBracket+'</td><td>'+rankPill(e.rank)+'</td><td>'+e.rating+'</td></tr>').join('')+
-      '</tbody></table><div class="hint">showing 12 of '+S.entries.length+'</div></div>';
-  }
-  $('board').innerHTML=html;
-}
-function renderAudit(){
-  $('audit').innerHTML=S.audit.length?S.audit.map(a=>'<div><b style="color:var(--ink)">'+a.action+'</b> · '+a.detail+' <span style="float:right">'+a.t+'</span></div>').join(''):'<div class="muted">No overrides yet.</div>';
-}
-function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
 
-function simulate(){
-  const sc=parseScheme();const valid=S.entries.filter(e=>e.status==='valid');
-  if(!valid.length){$('simBox').innerHTML='<div class="sim">Seed a round first.</div>';return;}
-  const res=ENGINE.runDivisioning(valid,sc);
-  const healthy=res.pods.filter(p=>p.entries.length>=sc.podFloor).length;
-  const under=res.pods.length-healthy;
-  $('simBox').innerHTML='<div class="sim"><b>Simulation</b> (no state change) — '+valid.length+' entries → <b>'+res.divisions.length+'</b> divisions, <b>'+res.pods.length+'</b> pods ('+
-    healthy+' healthy'+(under?', '+under+' under floor':'')+'), '+res.flags.length+' flag(s). Collapsed: '+
-    res.divisions.filter(d=>d.isCollapsed).length+' division(s).</div>';
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Medal Packing List — Round ${esc(seq)}</title><style>
+    *{box-sizing:border-box} body{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#141210;margin:22px}
+    h1{font-size:20px;margin:0} .pk-m{color:#6b6357;font-size:12px;margin:2px 0 14px}
+    .pk-sum{background:#f6efdc;border:1px solid #e6d8b4;border-radius:9px;padding:11px 15px;margin-bottom:18px;font-size:14px}
+    .pk-s{border:1px solid #cbb98f;border-radius:10px;padding:14px 16px;margin-bottom:14px;page-break-inside:avoid}
+    .pk-h{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid #eee;padding-bottom:9px;margin-bottom:9px}
+    .pk-h h2{font-size:17px;margin:0 0 3px} .pk-a{font-size:13px} .pk-c{color:#8a8172;font-size:12px;margin-top:2px}
+    .pk-t{text-align:center;min-width:64px} .pk-t .n{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums} .pk-t .l{font-size:9px;color:#a99;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+    .pk-y{font-size:13px;margin-bottom:9px} .pk-y b{font-variant-numeric:tabular-nums}
+    table.pk-tb{width:100%;border-collapse:collapse;font-size:12px} .pk-tb th,.pk-tb td{border:1px solid #e3ddca;padding:4px 9px;text-align:left} .pk-tb th{background:#faf6ea;font-weight:700} .pk-tb .c{text-align:center}
+    .pk-k{margin-top:9px;font-size:12px;color:#333}
+    .pk-bar{margin-bottom:14px} .pk-bar button{font:600 13px sans-serif;padding:8px 16px;border-radius:8px;border:1px solid #141210;background:#141210;color:#fff;cursor:pointer}
+    @media print{ body{margin:12mm} .noprint{display:none} }
+  </style></head><body>
+    <div class="pk-bar noprint"><button onclick="window.print()">🖨 Print</button></div>
+    <h1>NMAO Tournament — Medal Packing &amp; Shipping List</h1>
+    <div class="pk-m">Round ${esc(seq)} · ${groups.length} school${groups.length===1?'':'s'} · ${grandTot} medals total · generated ${esc(when)}</div>
+    <div class="pk-sum"><b>Grand total:</b> ${tally(grand)}</div>
+    ${blocks}
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) return toast('Pop-up blocked — allow pop-ups to open the packing list.', 'err');
+  w.document.write(html); w.document.close(); w.focus();
+  toast('Packing list opened in a new tab — press Print.', 'ok');
+}
+async function autoscoreDemo(){
+  toast('Autoscoring judge seats…');
+  try {
+    const { data, error } = await sb.rpc('admin_autoscore_round', { p_round_id: ROUND });
+    if (error) throw error;
+    toast(`Autoscored ${data.seats_scored} seat(s).`, 'ok');
+    await loadRound(ROUND);
+  } catch(e){ toast('Autoscore: ' + (e.message || e), 'err'); }
+}
+async function deleteDemo(){
+  if (!confirm('Delete this demo round and its synthetic competitors? This cannot be undone.')) return;
+  const btn = $('delDemoBtn'); if (btn) btn.disabled = true; toast('Deleting demo round…');
+  try {
+    const { data, error } = await sb.rpc('admin_delete_test_round', { p_round_id: ROUND });
+    if (error) throw error;
+    toast(`Deleted · ${data.deleted_synthetic_competitors} synthetic competitors removed.`, 'ok');
+    await loadRounds();
+  } catch(e){ toast('Delete: ' + (e.message || e), 'err'); if (btn) btn.disabled = false; }
+}
+// One-click showcase: run every stage in order, letting the board light up between each.
+async function autoRunPipeline(){
+  if ((STATE.round.seq ?? 0) < 900) return toast('Auto-run is only for demo rounds.', 'err');
+  if (!confirm('Run the ENTIRE pipeline on this demo round?\n\nclose → divide → assign judges → autoscore → resolve → distribute → finalize')) return;
+  const btn = $('autoRunBtn'); if (btn){ btn.disabled = true; }
+  const steps = [
+    ['close',         () => callController({ roundId: ROUND, step:'close' })],
+    ['divide',        () => callController({ roundId: ROUND, step:'divide' })],
+    ['assign judges', () => callController({ roundId: ROUND, step:'assign_judges' })],
+    ['autoscore',     async () => { const { error } = await sb.rpc('admin_autoscore_round', { p_round_id: ROUND }); if (error) throw error; }],
+    ['resolve',       () => callController({ roundId: ROUND, step:'resolve' })],
+    ['distribute',    () => callController({ roundId: ROUND, step:'distribute' })],
+    ['finalize',      () => callController({ roundId: ROUND, step:'finalize' })],
+  ];
+  try {
+    for (const [name, fn] of steps){
+      toast('▶ ' + name + '…');
+      await fn();
+      await loadRound(ROUND);                              // repaint the board
+      await new Promise(r => setTimeout(r, 850));          // let the stage visibly light up
+    }
+    toast('✓ Pipeline complete — round finalized.', 'ok');
+  } catch(e){
+    toast('Auto-run stopped: ' + (e.message || e), 'err');
+    await loadRound(ROUND);
+  }
 }
 
-function render(){renderPipeline();renderKpis();renderFlags();renderBoard();renderAudit();}
+// ---------- stage drill-downs (View buttons) ----------
+const vItem = (hd, sub) => `<div style="padding:9px 12px;border-bottom:1px solid var(--line,#26262b)"><div style="display:flex;align-items:center;gap:8px;font-size:13px">${hd}</div>${sub?`<div style="font-size:12px;color:var(--muted-2,#7a7060);margin-top:3px">${sub}</div>`:''}</div>`;
+async function openView(key){
+  const S = STATE;
+  showModal('Loading…', '<div style="padding:20px;color:var(--muted-2,#7a7060)">Loading…</div>');
+  try {
+    let title = '', body = '';
+    if (key === 'divide'){
+      title = 'Divisions & pods';
+      // Pull the roster + event labels so each division expands to the athletes inside it.
+      const [entRes, evRes] = await Promise.all([
+        sb.from('entries').select('division_id,pod_id,age_bracket,declared_rank,competitors!inner(first_name,last_name,schools(name))').eq('round_id', ROUND),
+        sb.from('event_types').select('code,name'),
+      ]);
+      const codeToName = {}; (evRes.data||[]).forEach(e => codeToName[e.code]=e.name);
+      const evLabel = e => codeToName[e] || e;
+      const podSeq = {}; S.pods.forEach(p => podSeq[p.id]=p.seq);
+      const byDiv = {}; (entRes.data||[]).forEach(en => (byDiv[en.division_id]=byDiv[en.division_id]||[]).push(en));
+      body = S.divisions.map(d => {
+        const dp = S.pods.filter(p => p.divisions && p.divisions.event===d.event && p.divisions.rank_key===d.rank_key);
+        const podLine = dp.map(p => `Pod ${p.seq} · ${p.size} entries · ${p.judge_count} judge${p.judge_count===1?'':'s'} · ${p.state}`).join('  ·  ') || 'no pods yet';
+        const roster = (byDiv[d.id]||[])
+          .sort((a,b)=>(`${a.competitors?.last_name||''}`).localeCompare(`${b.competitors?.last_name||''}`))
+          .map(en => {
+            const nm = esc(`${en.competitors?.first_name||''} ${en.competitors?.last_name||''}`.trim()||'—');
+            const school = esc(en.competitors?.schools?.name||'');
+            const pod = en.pod_id!=null ? `Pod ${podSeq[en.pod_id]??'?'}` : 'unpodded';
+            const meta = [esc(en.age_bracket||''), esc(en.declared_rank||''), school, pod].filter(Boolean).join(' · ');
+            return `<div style="padding:6px 12px 6px 26px;border-top:1px solid var(--line,#26262b)"><div style="font-size:12px;color:var(--text,#f5f0e8)">${nm}</div><div style="font-size:11px;color:var(--muted-2,#7a7060);margin-top:1px">${meta}</div></div>`;
+          }).join('') || `<div style="padding:6px 12px 6px 26px;font-size:12px;color:var(--muted-2,#7a7060)">No athletes in this division.</div>`;
+        const count = (byDiv[d.id]||[]).length || d.entry_count || 0;
+        return `<details style="border-bottom:1px solid var(--line,#26262b)">
+          <summary style="padding:9px 12px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:13px">
+            <span class="tier" style="width:8px;height:8px;border-radius:2px;background:${TIER(d.rank_key)}"></span>
+            <b>${esc(evLabel(d.event))}</b> · ${esc(d.rank_key)} · ${esc(d.age_key)}${d.is_collapsed?' · <span style="color:var(--muted-2,#7a7060)">collapsed</span>':''}
+            <span style="margin-left:auto;color:var(--muted-2,#7a7060)">${count} athlete${count===1?'':'s'} ▾</span>
+          </summary>
+          <div style="background:rgba(0,0,0,.15);padding-bottom:4px">
+            <div style="padding:5px 12px;font-size:11px;color:var(--muted-2,#7a7060)">${podLine}</div>
+            ${roster}
+          </div>
+        </details>`;
+      }).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No divisions yet — run Divide first.</div>';
+    } else if (key === 'assign_judges'){
+      title = 'Judge assignments';
+      const { data } = await sb.from('judge_assignments').select('state,pod_id,judges(first_name,last_name),entries!inner(round_id)').eq('entries.round_id', ROUND);
+      const seq = {}; S.pods.forEach(p => seq[p.id]=p.seq);
+      const byPod = {}; (data||[]).forEach(a => (byPod[a.pod_id]=byPod[a.pod_id]||[]).push(a));
+      body = Object.keys(byPod).sort((a,b)=>(seq[a]??0)-(seq[b]??0)).map(pid => {
+        const rows = byPod[pid], sub = rows.filter(r=>r.state==='submitted').length;
+        const names = rows.map(r => esc(`${(r.judges?.first_name||'')} ${(r.judges?.last_name||'')}`.trim()||'Judge')).join(', ');
+        return vItem(`<b>Pod ${seq[pid]??'?'}</b><span style="margin-left:auto;color:var(--muted-2,#7a7060)">${sub}/${rows.length} scored</span>`, names);
+      }).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No assignments yet.</div>';
+    } else if (key === 'resolve'){
+      title = 'Results & placements';
+      const { data } = await sb.from('results').select('placement,score,rating_after,entries!inner(round_id,event,competitors(first_name,last_name))').eq('entries.round_id', ROUND).order('placement');
+      body = (data||[]).map(r => vItem(`<b>#${r.placement}</b> ${esc(r.entries?.competitors?.first_name||'')} ${esc(r.entries?.competitors?.last_name||'')}<span style="margin-left:auto;color:var(--muted-2,#7a7060)">${esc(r.entries?.event||'')} · score ${r.score} · rating ${r.rating_after}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No results yet.</div>';
+    } else if (key === 'distribute'){
+      title = 'Medal ship list';
+      const { data } = await sb.from('medal_shipments').select('item_count,ship_status,schools(name)').eq('round_id', ROUND).order('item_count', { ascending:false });
+      body = (data||[]).map(m => vItem(`<b>${esc(m.schools?.name||'School')}</b><span style="margin-left:auto;color:var(--muted-2,#7a7060)">${m.item_count} items · ${esc(m.ship_status)}</span>`, '')).join('') || '<div style="padding:16px;color:var(--muted-2,#7a7060)">No shipments yet.</div>';
+    }
+    showModal(title, body);
+  } catch(e){ showModal('Error', `<div style="padding:16px;color:var(--danger,#e07070)">${e.message}</div>`); }
+}
+function showModal(title, html){
+  let ov = document.querySelector('.mc-modal');
+  if (!ov){ ov = document.createElement('div'); ov.className='mc-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px';
+    document.body.appendChild(ov); }
+  ov.innerHTML = `<div style="background:var(--surface,#141416);border:1px solid var(--border,#26262b);border-radius:12px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border,#26262b)"><h2 style="margin:0;font-size:16px;color:var(--text,#f5f0e8)">${title}</h2><button class="mc-modal-x" style="margin-left:auto;background:none;border:none;color:var(--muted-2,#7a7060);font-size:18px;cursor:pointer">✕</button></div>
+    <div style="overflow:auto">${html}</div></div>`;
+  ov.style.display='flex';
+  ov.onclick = e => { if (e.target===ov || e.target.classList.contains('mc-modal-x')) ov.style.display='none'; };
+}
 
-// ---- wire up ----
-$('btnSeed').onclick=seedRound;
-$('btnAdvance').onclick=advance;
-$('btnRollback').onclick=rollback;
-$('btnRunAll').onclick=runAll;
-$('btnSim').onclick=simulate;
-$('ovVoid').onclick=ovVoid;
-$('ovReassign').onclick=ovReassign;
+// ---------- realtime ----------
+function subscribe(id){
+  if (channel) sb.removeChannel(channel);
+  clearInterval(pollTimer);
+  let t; const reload = () => { clearTimeout(t); t = setTimeout(() => loadRound(id), 400); };
+  channel = sb.channel('mc-' + id);
+  ['round_step_runs','judge_assignments','results','engine_audit','rounds','pods'].forEach(tbl =>
+    channel.on('postgres_changes', { event:'*', schema:'public', table: tbl }, reload));
+  channel.subscribe(status => {
+    if (['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)) toast('Live updates dropped — reconnecting. The board still refreshes every 30s.','err');
+  });
+  // safety net: a dropped socket must never silently freeze the board mid-round
+  pollTimer = setInterval(() => loadRound(id), 30000);
+}
 
-seedRound();
+// ---------- helpers ----------
+function setMsg(id, t, k){ const e=$(id); e.textContent=t||''; e.className='msg'+(t?(' '+k):''); }
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let toastTimer, pollTimer;
+function toast(t, k){ let e=document.querySelector('.toast'); if(!e){ e=document.createElement('div'); e.className='toast'; document.body.appendChild(e); }
+  e.className='toast'+(k?(' '+k):''); e.textContent=t; e.onclick=()=>e.remove(); clearTimeout(toastTimer);
+  // errors stay until clicked so an operator never misses a failed step; others auto-clear
+  if(k!=='err') toastTimer=setTimeout(()=>e.remove(), 4200); }
+
+// resume an existing session
+(async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
 </script>
 </body>
 </html>
