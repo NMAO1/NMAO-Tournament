@@ -23,8 +23,25 @@ export default function JudgeSetPassword() {
     let settled = false;
     const mark = () => { settled = true; setReady("ok"); };
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { if (session) mark(); });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) mark(); });
-    const t = setTimeout(() => { if (!settled) setReady((r) => (r === "checking" ? "no-session" : r)); }, 2500);
+
+    // Scanner-safe flow: if the link carries a token_hash, verify it here in JS.
+    // Email security scanners fetch links but don't run JS, so they can't burn
+    // the one-time token before the human clicks.
+    const params = new URLSearchParams(window.location.search);
+    const token_hash = params.get("token_hash");
+    const type = (params.get("type") || "recovery") as "recovery" | "invite" | "email";
+    if (token_hash) {
+      supabase.auth.verifyOtp({ type, token_hash }).then(({ data, error }) => {
+        if (data?.session && !error) mark();
+        // strip the token from the URL so it can't be re-shared / re-used
+        window.history.replaceState({}, "", window.location.pathname);
+      }).catch(() => {});
+    } else {
+      // Legacy implicit hash flow (#access_token=…): the client parses it on load.
+      supabase.auth.getSession().then(({ data }) => { if (data.session) mark(); });
+    }
+
+    const t = setTimeout(() => { if (!settled) setReady((r) => (r === "checking" ? "no-session" : r)); }, 5000);
     return () => { sub.subscription.unsubscribe(); clearTimeout(t); };
   }, [supabase]);
 

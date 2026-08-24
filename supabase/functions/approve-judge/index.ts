@@ -96,7 +96,40 @@ Deno.serve(async (req) => {
     if (!authUserId && (linkData as any)?.user?.id) authUserId = (linkData as any).user.id;
     if (authUserId && authUserId !== (judge as any).auth_user_id) await svc.from("judges").update({ auth_user_id: authUserId }).eq("id", judgeId);
 
-    return json({ ok: true, judge_status: "approved", setup_link: (linkData as any)?.properties?.action_link ?? null });
+    // Prefer a scanner-safe link straight to the set-password page carrying the
+    // token_hash (the page verifies it in JS — email scanners can't burn it).
+    // Fall back to the raw action_link if the hash isn't available.
+    const hashed = (linkData as any)?.properties?.hashed_token as string | undefined;
+    const link = hashed
+      ? `${JUDGE}/judge/set-password?token_hash=${encodeURIComponent(hashed)}&type=recovery`
+      : ((linkData as any)?.properties?.action_link ?? null);
+
+    // Auto-email the setup link to the judge (best-effort; MC still shows it as a fallback).
+    const RESEND = Deno.env.get("RESEND_API_KEY");
+    const FROM = Deno.env.get("EMAIL_FROM") || "NMAO Tournament <noreply@nmao.us>";
+    let emailed = false;
+    if (RESEND && link) {
+      try {
+        const first = String((judge as any).first_name || "there").replace(/[<>&]/g, "");
+        const html =
+          `<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:auto;color:#222">` +
+          `<h2 style="margin:0 0 10px">Welcome to NMAO judging</h2>` +
+          `<p>Hi ${first}, your judge application has been <b>approved</b>.</p>` +
+          `<p>Set your password to activate your account and start scoring:</p>` +
+          `<p><a href="${link}" style="display:inline-block;background:#C89B3C;color:#141210;font-weight:bold;text-decoration:none;padding:12px 24px;border-radius:10px">Set your password</a></p>` +
+          `<p style="color:#888;font-size:12px">Or paste this into your browser:<br>${link}</p>` +
+          `<p style="color:#888;font-size:12px">This link is single-use and expires soon. If it lapses, ask NMAO to resend it.</p></div>`;
+        const r = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ from: FROM, to: email, subject: "Your NMAO judge account — set your password", html }),
+        });
+        emailed = r.ok;
+        if (!r.ok) console.error("approve-judge email failed", r.status, await r.text().catch(() => ""));
+      } catch (ee: any) { console.error("approve-judge email threw", ee?.message || ee); }
+    }
+
+    return json({ ok: true, judge_status: "approved", setup_link: link, emailed });
   } catch (e: any) {
     console.error("approve-judge error:", e?.message || e);
     return json({ ok: false, error: e?.message || "server_error" }, 500);
