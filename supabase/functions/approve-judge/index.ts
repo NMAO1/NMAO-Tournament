@@ -48,7 +48,11 @@ Deno.serve(async (req) => {
     const b = await req.json().catch(() => ({}));
     const judgeId = String(b.judge_id || "").trim();
     if (!judgeId) return json({ ok: false, error: "judge_id is required." }, 400);
-    const redirectTo = String(b.redirect_to || "").trim() || `${SITE}/judge`;
+    // Where the recovery link lands to set a password. Ignore localhost / example
+    // (dev origins Mission Control may pass) and always use the real judge portal.
+    const JUDGE = (Deno.env.get("JUDGE_URL") || "https://judge.nmao.us").replace(/\/$/, "");
+    let redirectTo = String(b.redirect_to || "").trim();
+    if (!redirectTo || /localhost|127\.0\.0\.1|example\.com/i.test(redirectTo)) redirectTo = `${JUDGE}/judge/set-password`;
 
     const { data: judge } = await svc.from("judges").select("id, email, status, auth_user_id").eq("id", judgeId).maybeSingle();
     if (!judge) return json({ ok: false, error: "Judge not found." }, 404);
