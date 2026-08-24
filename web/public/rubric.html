@@ -94,6 +94,7 @@
     background:rgba(4,6,20,0.7);border:1px solid rgba(63,107,255,0.28);border-radius:12px;padding:14px 15px;margin-top:14px;line-height:1.75;overflow-x:auto;}
   .formula .c{color:var(--muted2);}
   .formula .hl{color:var(--gold-lt);}
+  .credline{font-family:var(--serif);font-style:italic;font-size:13.5px;color:var(--gold-lt);margin-top:11px;position:relative;}
 
   .caveat{font-family:var(--sans);font-size:12px;color:var(--muted2);line-height:1.6;position:relative;}
   .footer{text-align:center;font-family:var(--sans);font-size:11px;color:var(--muted2);padding:30px 22px 4px;letter-spacing:0.03em;}
@@ -156,34 +157,43 @@
       <div class="eyebrow">Two different things</div>
       <h2>Rank and rating aren't the same.</h2>
       <div class="mini rank"><div class="tag">Rank</div><h3>Your belt tier</h3><p>Set by your school — beginner, intermediate, advanced. The tournament never changes it. Rank is how you're grouped for a fair division.</p></div>
-      <div class="mini rating"><div class="tag">Rating</div><h3>Your skill number</h3><p>A 0–100 number computed as you compete. It tracks your growth and matches you with competitors at your level — not your belt, not the standings.</p></div>
+      <div class="mini rating"><div class="tag">Rating</div><h3>Your skill number</h3><p>A number the platform computes as you compete — it tracks your skill and sets your matchups, not your belt and not the standings. You carry two: one for tournaments, one for duels.</p></div>
     </section>
 
-    <!-- RATING SYSTEM -->
-    <section class="tile span4" style="--accent:var(--blue);">
-      <div class="eyebrow">The rating</div>
-      <h2>How your rating <span class="spectrum">moves</span>.</h2>
-      <p class="body">Every competitor starts at <b>50</b>. After each round, your rating adjusts by how you placed against competitors of your <b>same rank</b>. The system expects the higher-rated competitor to come out ahead — so beating a stronger one moves you up more, and an upset is rewarded.</p>
-      <p class="body">Your <b>first three rounds move faster</b>, so you find your level quickly; after that, steadier steps. Ratings always stay between 0 and 100, and only ever move you against same-rank competitors.</p>
+    <!-- TOURNAMENT RATING -->
+    <section class="tile span3" style="--accent:var(--blue);">
+      <div class="eyebrow">In tournaments</div>
+      <h2>Your tournament rating.</h2>
+      <p class="body">A skill number from 0–100 — everyone starts at <b>50</b>. After each round it adjusts by how you placed against <b>same-rank</b> competitors: beat someone stronger and you gain more; an upset is rewarded. Your first three rounds move fastest, then steady.</p>
       <div class="formula">
-        <span class="c"># expected result vs one opponent</span><br/>
-        expected = 1 / (1 + 10 ^ ((opponent − you) / 40))<br/>
-        <span class="c"># your change, summed over opponents</span><br/>
-        change = (<span class="hl">K</span> / opponents) × Σ (result − expected)<br/>
-        <span class="c"># result = 1 win · 0 loss · ½ tie</span><br/>
-        <span class="c"># <span class="hl">K</span> = 8 for your first 3 rounds, then 4</span>
+        expected = 1 / (1 + 10 ^ ((them − you) / 40))<br/>
+        you move by <span class="hl">K</span> × (result − expected)<br/>
+        <span class="c"># seed 50 · <span class="hl">K</span> 8 for 3 rounds, then 4 · capped 0–100</span>
+      </div>
+    </section>
+
+    <!-- DUELING RATING -->
+    <section class="tile span3" style="--accent:var(--red);">
+      <div class="eyebrow">In duels</div>
+      <h2>Your dueling rating.</h2>
+      <p class="body">A separate rating — everyone starts at <b>1200</b>. Each duel, the <b>community vote</b> picks the winner, whose rating rises by exactly what the loser's falls. Beat a higher-rated opponent and you gain more. It's zero-sum, so the whole pool stays balanced.</p>
+      <p class="credline">The same rating system trusted by world chess and pro sports.</p>
+      <div class="formula">
+        expected = 1 / (1 + 10 ^ ((them − you) / 400))<br/>
+        winner + <span class="hl">K</span> × (1 − expected) · loser − the same<br/>
+        <span class="c"># seed 1200 · <span class="hl">K</span> 32 — classic chess Elo</span>
       </div>
     </section>
 
     <!-- STANDINGS -->
-    <section class="tile span2 tvcenter" style="--accent:var(--gold-lt);">
+    <section class="tile span3 tvcenter" style="--accent:var(--gold-lt);">
       <div class="eyebrow">The season</div>
       <h2>What carries the season.</h2>
       <p class="body">Standings come from your <b>best five of nine</b> rounds, by placement — computed independently of your rating. They're what carry you toward the semi-finals and Grand Finale.</p>
     </section>
 
     <!-- CAVEAT -->
-    <section class="tile span6" style="--accent:var(--violet);">
+    <section class="tile span3" style="--accent:var(--violet);">
       <p class="caveat">The weights and rating settings shown here are the current season's configuration, and may be tuned between seasons to keep competition fair. Scores are computed on our servers from the judges' inputs — never on a competitor's device.</p>
     </section>
 
