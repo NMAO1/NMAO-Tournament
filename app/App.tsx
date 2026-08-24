@@ -6,7 +6,7 @@ import { neutrals, hues } from "@nmao/design-tokens";
 import { supabase } from "./lib/supabase";
 import { myCompetitors } from "./lib/competitors";
 import { useActiveCompetitor } from "./lib/activeCompetitor";
-import { unreadCount, subscribeNotifications, latestUnseenMonthly, type Notif } from "./lib/notifications";
+import { unreadCount, subscribeNotifications, type Notif } from "./lib/notifications";
 import Login from "./screens/Login";
 import Signup from "./screens/Signup";
 import Onboard from "./screens/Onboard";
@@ -17,7 +17,6 @@ import Achievements from "./screens/Achievements";
 import Leaderboard from "./screens/Leaderboard";
 import Profile from "./screens/Profile";
 import DuelReveal from "./screens/DuelReveal";
-import MonthlyReveal from "./screens/MonthlyReveal";
 import { Header } from "./components/Header";
 import { AlertsSheet } from "./components/AlertsSheet";
 
@@ -45,11 +44,10 @@ function MainTabs() {
   const active = TABS.find((t) => t.key === tab)!;
 
   useEffect(() => {
-    (async () => {
-      setUnread(await unreadCount());
-      const m = await latestUnseenMonthly();
-      if (m) setReveal({ kind: "monthly", period: m.period, payload: m.payload }); // auto-detect on launch (§8b)
-    })();
+    // Monthly reveal no longer auto-opens — it launches from the Compete tab's
+    // "Results Reveal" button (a deliberate, worthy moment). Duel reveals still
+    // route through the notification handler below.
+    (async () => { setUnread(await unreadCount()); })();
   }, []);
 
   // Subscribe to notifications filtered to this user's competitor(s) — re-subscribes
@@ -64,7 +62,7 @@ function MainTabs() {
   function routeNotif(n: Notif) {
     setAlertsOpen(false);
     const duelId = typeof n.data?.duel_id === "string" ? (n.data.duel_id as string) : null;
-    if (n.type === "reveal_ready") { latestUnseenMonthly().then((m) => m && setReveal({ kind: "monthly", period: m.period, payload: m.payload })); return; }
+    if (n.type === "reveal_ready") { setTab("compete"); return; } // launch is on the Compete tab now
     if (duelId && n.type === "duel_result") { setReveal({ kind: "duel", duelId }); return; }
     if (duelId) { setTab("duel"); }
   }
@@ -106,7 +104,6 @@ function MainTabs() {
 
       <Modal visible={!!reveal} animationType="fade" onRequestClose={() => setReveal(null)}>
         {reveal?.kind === "duel" ? <DuelReveal duelId={reveal.duelId} myId={myId} onClose={() => setReveal(null)} /> : null}
-        {reveal?.kind === "monthly" ? <MonthlyReveal period={reveal.period} payload={reveal.payload} onClose={() => setReveal(null)} /> : null}
       </Modal>
     </View>
   );

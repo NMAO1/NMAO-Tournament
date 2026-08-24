@@ -9,6 +9,9 @@ import { uploadEntryVideo, PickedVideo } from "../lib/upload";
 import { myCompetitors } from "../lib/competitors";
 import { getActiveCompetitorId, setActiveCompetitorId } from "../lib/activeCompetitor";
 import { creditSummary } from "../lib/pricing";
+import { competeDashboard, formatCountdown, CompeteDashboard, CompeteEvent, CompeteRound, CompeteRating } from "../lib/compete";
+import { latestUnseenMonthly, markMonthlySeen, MonthlyReveal as MonthlyRevealData } from "../lib/notifications";
+import MonthlyReveal from "./MonthlyReveal";
 import BuyEntry from "./BuyEntry";
 import * as WebBrowser from "expo-web-browser";
 
@@ -26,6 +29,7 @@ const EVENTS = [
   { code: "open_weapons", name: "Open Weapons" },
 ];
 const prettyBracket = (b: string) => b.replace("_plus", "+").replace("_", "–");
+const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 
 export default function Compete() {
   const [comps, setComps] = useState<Competitor[]>([]);
@@ -38,23 +42,34 @@ export default function Compete() {
   const [done, setDone] = useState<{ event: string; age_bracket: string } | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [paid, setPaid] = useState(false);
-  const [pending, setPending] = useState<{ id: string; competitor_id: string; event: string }[]>([]);
   const [credits, setCredits] = useState<number | null>(null); // spendable entry credits for the active competitor
   const [showBuy, setShowBuy] = useState(false);
+  const [dash, setDash] = useState<CompeteDashboard | null>(null); // round + per-event status + ratings
+  const [unseenReveal, setUnseenReveal] = useState<MonthlyRevealData | null>(null);
+  const [showReveal, setShowReveal] = useState(false);
+  const [nowTs, setNowTs] = useState(Date.now()); // ticks the deadline countdown
 
   async function refreshCredits(cid: string | null) {
     if (!cid) { setCredits(null); return; }
     const s = await creditSummary(cid);
     setCredits(s.credits_remaining);
   }
-  useEffect(() => { refreshCredits(competitorId); }, [competitorId]);
-
-  async function loadPending(compIds: string[]) {
-    if (!compIds.length) { setPending([]); return; }
-    const { data: en } = await supabase.from("entries")
-      .select("id, competitor_id, event, payment_status").eq("payment_status", "unpaid").in("competitor_id", compIds);
-    setPending(((en ?? []) as { id: string; competitor_id: string; event: string }[]).map((e) => ({ id: e.id, competitor_id: e.competitor_id, event: e.event })));
+  async function refreshDash(cid: string | null) {
+    if (!cid) { setDash(null); return; }
+    setDash(await competeDashboard(cid));
   }
+  useEffect(() => { refreshCredits(competitorId); refreshDash(competitorId); }, [competitorId]);
+
+  // Unseen monthly reveal → the "Results Reveal" button (the only launch point).
+  useEffect(() => { latestUnseenMonthly().then(setUnseenReveal); }, []);
+
+  // Tick the countdown once a second, but only while a live deadline is shown.
+  const deadlineOpen = !!(dash?.round?.submissionsOpen && dash?.round?.closesAt);
+  useEffect(() => {
+    if (!deadlineOpen) return;
+    const id = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [deadlineOpen]);
 
   useEffect(() => {
     (async () => {
@@ -62,7 +77,6 @@ export default function Compete() {
       setComps(rows);
       if (rows.length === 1) setCompetitorId(rows[0].id);
       else if (getActiveCompetitorId()) setCompetitorId(getActiveCompetitorId()); // pre-select the child you're viewing
-      loadPending(rows.map((r) => r.id));
     })();
   }, []);
 
@@ -118,7 +132,7 @@ export default function Compete() {
       // Season-pass claim: entered for free by spending a credit — no browser checkout.
       if (j.claimed) {
         setCompetitorId(cid); setEvent(evt); setPaid(true); setPhase("idle"); setStep("");
-        setPending((p) => p.filter((x) => !(x.competitor_id === cid && x.event === evt)));
+        refreshDash(cid);
         if (typeof j.credits_remaining === "number") setCredits(j.credits_remaining);
         const left = typeof j.credits_remaining === "number" ? `  ${j.credits_remaining} credit${j.credits_remaining === 1 ? "" : "s"} left.` : "";
         Alert.alert("You're in!", `Entered with your season pass.${left}`);
@@ -133,7 +147,7 @@ export default function Compete() {
         setPhase("idle"); setStep(""); return;
       }
       setCompetitorId(cid); setEvent(evt); setPaid(true); setPhase("idle"); setStep("");
-      setPending((p) => p.filter((x) => !(x.competitor_id === cid && x.event === evt)));
+      refreshDash(cid);
     } catch (e: any) {
       Alert.alert("Registration", e?.message ?? "Please try again."); setPhase("idle"); setStep("");
     }
@@ -161,6 +175,7 @@ export default function Compete() {
       const j = await res.json();
       if (!res.ok || !j.ok) { throw new Error(j.error || "Could not submit your entry."); }
       setDone({ event: j.event, age_bracket: j.age_bracket });
+      refreshDash(competitorId);
     } catch (e: any) {
       Alert.alert("Entry not submitted", e?.message ?? "Please try again.");
     } finally {
@@ -190,6 +205,18 @@ export default function Compete() {
 
   if (showBuy && competitorId) {
     return <BuyEntry competitorId={competitorId} onClose={() => { setShowBuy(false); refreshCredits(competitorId); }} onPaid={() => { setShowBuy(false); refreshCredits(competitorId); }} />;
+  }
+
+  // The Results Reveal ceremony — launched deliberately from the button below
+  // (this is the only entry point; the app no longer auto-plays it on open).
+  if (showReveal && unseenReveal) {
+    return (
+      <MonthlyReveal
+        period={unseenReveal.period}
+        payload={unseenReveal.payload}
+        onClose={() => { markMonthlySeen(unseenReveal.period); setUnseenReveal(null); setShowReveal(false); }}
+      />
+    );
   }
 
   if (done) {
@@ -224,7 +251,20 @@ export default function Compete() {
           <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>
         </TouchableOpacity>
       </View>
-      <Text style={{ color: neutrals.muted, fontSize: 14, marginBottom: 16 }}>Submit your entry for the open round.</Text>
+      {dash?.round ? (
+        <RoundBanner round={dash.round} nowTs={nowTs} />
+      ) : (
+        <Text style={{ color: neutrals.muted, fontSize: 14, marginBottom: 16 }}>Submit your entry for the open round.</Text>
+      )}
+
+      {unseenReveal && competitorId ? <RevealButton onPress={() => setShowReveal(true)} /> : null}
+
+      {dash && competitorId ? (
+        <IdentityStrip
+          name={(() => { const c = comps.find((x) => x.id === competitorId); return c ? `${c.first_name} ${c.last_name}` : ""; })()}
+          rating={dash.rating}
+        />
+      ) : null}
 
       {competitorId && credits !== null && (
         <TouchableOpacity onPress={() => setShowBuy(true)} activeOpacity={0.85}
@@ -241,27 +281,6 @@ export default function Compete() {
           </View>
           <Text style={{ color: hues.sapphire.hi, fontWeight: "700", fontSize: 13 }}>Buy credits ›</Text>
         </TouchableOpacity>
-      )}
-
-      {pending.length > 0 && !paid && (
-        <Section label="Awaiting payment">
-          {pending.map((p) => {
-            const c = comps.find((x) => x.id === p.competitor_id);
-            return (
-              <View key={p.id} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: "rgba(230,185,63,0.08)", borderWidth: 1, borderColor: hues.gold.shadow, borderRadius: 12, padding: 14, marginBottom: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: neutrals.text, fontWeight: "600" }}>{EVENTS.find((e) => e.code === p.event)?.name ?? p.event}</Text>
-                  <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{c ? `${c.first_name} ${c.last_name}` : "Registered — finish to compete"}</Text>
-                </View>
-                <TouchableOpacity onPress={() => onRegisterTap(p.competitor_id, p.event)} activeOpacity={0.85}>
-                  <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9 }}>
-                    <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>{credits && credits > 0 ? "Use 1 credit" : "Complete"}</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-            );
-          })}
-        </Section>
       )}
 
       {loadErr ? <Text style={{ color: status.danger, marginBottom: 16 }}>{loadErr}</Text> : null}
@@ -281,12 +300,24 @@ export default function Compete() {
 
       {competitorId && (
         <>
-          <Section label="Event">
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {EVENTS.map((e) => (
-                <Chip key={e.code} active={event === e.code} onPress={() => { setEvent(e.code); setPaid(false); }} label={e.name} />
-              ))}
-            </View>
+          <Section label="This round">
+            {(dash?.events && dash.events.length
+              ? dash.events
+              : EVENTS.map((e) => ({ event: e.code, name: e.name, status: "not_entered" as const, entryId: null, medal: null, place: null }))
+            ).map((ev) => (
+              <EventStatusRow
+                key={ev.event}
+                ev={ev}
+                selected={event === ev.event}
+                canEnter={dash?.round ? dash.round.submissionsOpen : true}
+                hasCredits={!!credits && credits > 0}
+                onAction={() => {
+                  if (ev.status === "awaiting_payment") onRegisterTap(competitorId, ev.event);
+                  else if (ev.status === "awaiting_video") { setEvent(ev.event); setPaid(true); }
+                  else { setEvent(ev.event); setPaid(false); }
+                }}
+              />
+            ))}
           </Section>
 
           {event && !paid && (
@@ -353,6 +384,128 @@ function Chip({ active, onPress, label }: { active: boolean; onPress: () => void
     </TouchableOpacity>
   );
 }
+// Round banner — season · round + a state-aware line (live deadline countdown
+// when submissions are open, otherwise the round's phase).
+function RoundBanner({ round, nowTs }: { round: CompeteRound; nowTs: number }) {
+  let main: string, sub: string, open = false;
+  if (round.submissionsOpen && round.closesAt) {
+    open = true;
+    main = `Closes in ${formatCountdown(round.closesAt, nowTs)}`;
+    sub = "Submit your entry before the deadline.";
+  } else if (round.state === "finalized" || round.state === "distributed") {
+    main = "Results are in"; sub = "See your reveal above, or start the next round soon.";
+  } else if (["closed", "podded", "judging", "resolving"].includes(round.state)) {
+    main = "In judging"; sub = "Scores are being tallied — results reveal soon.";
+  } else {
+    main = "Next round opening soon"; sub = "Get ready — a new round is on the way.";
+  }
+  return (
+    <View style={{ borderRadius: 16, borderWidth: 1, borderColor: neutrals.border, backgroundColor: neutrals.surface, overflow: "hidden", marginBottom: 16 }}>
+      <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 4 }} />
+      <View style={{ padding: 16 }}>
+        <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 1.6, textTransform: "uppercase", fontWeight: "700" }}>
+          {round.seasonName ?? "Season"} · Round {round.seq}
+        </Text>
+        <Text style={{ color: open ? hues.gold.hi : neutrals.text, fontSize: 21, fontWeight: "800", marginTop: 6 }}>
+          {open ? "⏳ " : ""}{main}
+        </Text>
+        <Text style={{ color: neutrals.muted, fontSize: 13, marginTop: 4 }}>{sub}</Text>
+      </View>
+    </View>
+  );
+}
+
+// The "worthy" launch button for the monthly reveal (only when one is unseen).
+function RevealButton({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={{ marginBottom: 18 }}>
+      <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ borderRadius: 15, padding: 2 }}>
+        <View style={{ backgroundColor: "#0b0b0d", borderRadius: 13, paddingVertical: 15, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+            <Text style={{ fontSize: 24 }}>🎬</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: hues.gold.hi, fontWeight: "800", fontSize: 15 }}>Your Results Reveal is ready</Text>
+              <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 2 }}>Tap to begin the ceremony</Text>
+            </View>
+          </View>
+          <Text style={{ color: "#fff", fontWeight: "900", fontSize: 20 }}>▶</Text>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+// Identity strip — name · rank + Tournament and Duel ratings.
+function IdentityStrip({ name, rating }: { name: string; rating: CompeteRating }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 20 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: neutrals.text, fontSize: 17, fontWeight: "800" }} numberOfLines={1}>{name}</Text>
+        {rating.rank ? <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2, textTransform: "capitalize" }}>{rating.rank}</Text> : null}
+      </View>
+      <RatingPill label="Tournament" value={rating.skill != null ? String(rating.skill) : "—"}
+        note={rating.skill == null ? "unrated" : rating.skillProvisional ? "provisional" : "of 100"} hi={hues.gold.hi} />
+      <RatingPill label="Duel" value={rating.duel != null ? String(rating.duel) : "—"}
+        note={`${rating.duelWins}W–${rating.duelLosses}L${rating.duelStreak > 1 ? ` · 🔥${rating.duelStreak}` : ""}`} hi={hues.sapphire.hi} />
+    </View>
+  );
+}
+function RatingPill({ label, value, note, hi }: { label: string; value: string; note: string; hi: string }) {
+  return (
+    <View style={{ backgroundColor: neutrals.surface, borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, paddingVertical: 8, paddingHorizontal: 12, alignItems: "center", minWidth: 84 }}>
+      <Text style={{ color: neutrals.muted2, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase", fontWeight: "700" }}>{label}</Text>
+      <Text style={{ color: hi, fontSize: 22, fontWeight: "900", marginTop: 1 }}>{value}</Text>
+      <Text style={{ color: neutrals.muted2, fontSize: 9, marginTop: 1 }}>{note}</Text>
+    </View>
+  );
+}
+
+// One event row in the status board — status label + the right action.
+function statusMeta(ev: CompeteEvent, canEnter: boolean, hasCredits: boolean):
+  { label: string; color: string; action?: string; spectrum?: boolean; badge?: string } {
+  switch (ev.status) {
+    case "awaiting_payment": return { label: "Awaiting payment", color: hues.gold.hi, action: hasCredits ? "Use 1 credit" : "Complete", spectrum: true };
+    case "awaiting_video":   return { label: "Paid — upload your video", color: hues.sapphire.hi, action: "Upload", spectrum: true };
+    case "in_judging":       return { label: "In judging", color: status.success, badge: "⏳" };
+    case "scored": {
+      const emoji = ev.medal === "gold" ? "🥇" : ev.medal === "silver" ? "🥈" : ev.medal === "bronze" ? "🥉" : "✓";
+      const place = ev.place ? ` · ${ordinal(ev.place)}` : "";
+      return { label: ev.medal ? `${ev.medal}${place}` : "Results in", color: hues.gold.hi, badge: emoji };
+    }
+    default: // not_entered
+      return canEnter
+        ? { label: "Not entered", color: neutrals.muted2, action: "Enter" }
+        : { label: "Not entered", color: neutrals.muted2 };
+  }
+}
+function EventStatusRow({ ev, selected, canEnter, hasCredits, onAction }:
+  { ev: CompeteEvent; selected: boolean; canEnter: boolean; hasCredits: boolean; onAction: () => void }) {
+  const meta = statusMeta(ev, canEnter, hasCredits);
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12,
+      backgroundColor: selected ? "rgba(230,185,63,0.10)" : neutrals.surface,
+      borderWidth: 1, borderColor: selected ? hues.gold.base : neutrals.border,
+      borderRadius: 12, padding: 14, marginBottom: 8 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 15 }}>{ev.name}</Text>
+        <Text style={{ color: meta.color, fontSize: 12.5, marginTop: 3, fontWeight: "600" }}>{meta.label}</Text>
+      </View>
+      {meta.action ? (
+        <TouchableOpacity onPress={onAction} activeOpacity={0.85}>
+          <LinearGradient
+            colors={meta.spectrum ? spectrumStops : metalStops("gold")}
+            start={{ x: 0, y: meta.spectrum ? 0.5 : 0 }} end={{ x: 1, y: meta.spectrum ? 0.5 : 1 }}
+            style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 9 }}>
+            <Text style={{ color: meta.spectrum ? "#fff" : "#141210", fontWeight: "800", fontSize: 13 }}>{meta.action}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      ) : meta.badge ? (
+        <Text style={{ fontSize: 22 }}>{meta.badge}</Text>
+      ) : null}
+    </View>
+  );
+}
+
 function VideoSlot({ n, picked, onPick, onClear, required }: { n: number; picked: PickedVideo | null; onPick: () => void; onClear: () => void; required?: boolean }) {
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: neutrals.surface, borderWidth: 1, borderColor: picked ? hues.gold.shadow : neutrals.border, borderRadius: 12, padding: 14 }}>
