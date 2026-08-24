@@ -118,6 +118,20 @@ Deno.serve(async (req) => {
     tournamentSchoolId = (newSchool as any).id; created = true;
   }
 
+  // ---- stamp owner contact + auto-email a scanner-safe setup/sign-in link ----
+  if (school.owner_email) {
+    try {
+      const upd: any = { contact_email: String(school.owner_email) };
+      if (school.owner_name) upd.contact_name = String(school.owner_name);
+      await svc.from("schools").update(upd).eq("id", tournamentSchoolId);
+      await fetch(`${URL_}/functions/v1/send-school-setup-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE}` },
+        body: JSON.stringify({ school_id: tournamentSchoolId }),
+      });
+    } catch (e) { console.error("school owner setup-link (non-fatal)", (e as Error).message); }
+  }
+
   // ---- seed roster as PENDING athletes (rank UNSET) ----
   const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 86400000).toISOString();
   let seeded = 0, already = 0;

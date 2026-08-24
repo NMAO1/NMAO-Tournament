@@ -22,8 +22,21 @@ export default function SchoolSetPassword() {
     let settled = false;
     const mark = () => { settled = true; setReady("ok"); };
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { if (session) mark(); });
-    supabase.auth.getSession().then(({ data }) => { if (data.session) mark(); });
-    const t = setTimeout(() => { if (!settled) setReady((r) => (r === "checking" ? "no-session" : r)); }, 2500);
+
+    // Scanner-safe flow: verify a token_hash in JS (email scanners can't burn it).
+    const params = new URLSearchParams(window.location.search);
+    const token_hash = params.get("token_hash");
+    const type = (params.get("type") || "recovery") as "recovery" | "invite" | "email";
+    if (token_hash) {
+      supabase.auth.verifyOtp({ type, token_hash }).then(({ data, error }) => {
+        if (data?.session && !error) mark();
+        window.history.replaceState({}, "", window.location.pathname);
+      }).catch(() => {});
+    } else {
+      supabase.auth.getSession().then(({ data }) => { if (data.session) mark(); });
+    }
+
+    const t = setTimeout(() => { if (!settled) setReady((r) => (r === "checking" ? "no-session" : r)); }, 5000);
     return () => { sub.subscription.unsubscribe(); clearTimeout(t); };
   }, [supabase]);
 

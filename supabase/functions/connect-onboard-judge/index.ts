@@ -59,17 +59,25 @@ Deno.serve(async (req) => {
     const judgeId = (judge as any).id;
 
     let acct = (judge as any).stripe_connect_account_id as string | null;
+    // Request BOTH transfers + card_payments — a standard Express account, which
+    // clears Stripe's "transfers without card_payments" platform-approval gate.
+    // card_payments is never used (judges don't charge); it just satisfies the default.
+    const caps = { transfers: { requested: true }, card_payments: { requested: true } };
     if (!acct) {
       const created = await stripe.accounts.create({
         type: "express",
         email: (judge as any).email || undefined,
         business_type: "individual",
-        capabilities: { transfers: { requested: true } },
+        capabilities: caps,
         business_profile: { product_description: "Independent judge scoring martial-arts tournament videos for NMAO." },
         metadata: { judge_id: judgeId },
       });
       acct = created.id;
       await svc.from("judges").update({ stripe_connect_account_id: acct }).eq("id", judgeId);
+    } else {
+      // Existing account created transfers-only earlier — add card_payments so it
+      // clears the same gate. Best-effort; ignore if already requested.
+      try { await stripe.accounts.update(acct, { capabilities: caps }); } catch (_e) { /* already set */ }
     }
 
     if (action === "status") {

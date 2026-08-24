@@ -21,8 +21,12 @@ export default function SchoolLogin() {
   }
   async function reset() {
     if (!email.trim()) return setMsg("Enter your email first.");
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: location.origin + "/school/set-password" });
-    setMsg(error ? error.message : "Check your email for a link to set a new password.");
+    setBusy(true);
+    // Route through our function: creates the owner account if needed, sends a
+    // scanner-safe link via Resend. Generic response — never reveals existence.
+    try { await supabase.functions.invoke("send-school-setup-link", { body: { email: email.trim() } }); } catch { /* ignore */ }
+    setBusy(false);
+    setMsg("If that email is on file, we've emailed you a link to set your password.");
   }
 
   const input: React.CSSProperties = {
