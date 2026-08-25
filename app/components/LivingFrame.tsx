@@ -2,14 +2,14 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { View, Text, Image, Animated, Easing } from "react-native";
 import { BadgeFrame, type FrameRarity } from "./BadgeFrame";
 import {
-  FRAME_SPECS, elementsForTier, ELEMENT_GLYPH, frameElementUrl,
-  type FrameElement, type ElementAnim,
+  FRAME_SPECS, resolveElements, ELEMENT_GLYPH, frameElementUrl,
+  type PlacedElement, type ElementAnim,
 } from "../lib/badgeFrames";
 
 // LivingFrame — a base rarity BadgeFrame with the badge's motif elements
-// composited on a bottom "shelf", gated to tier, each with optional motion.
-export function LivingFrame({ badgeCode, rarity, tier, w, h, radius = 18, children }:
-  { badgeCode?: string; rarity: FrameRarity; tier: number; w: number; h: number; radius?: number; children?: ReactNode }) {
+// composited on a bottom "shelf", grown by the progress `value`, each with motion.
+export function LivingFrame({ badgeCode, rarity, value, w, h, radius = 18, children }:
+  { badgeCode?: string; rarity: FrameRarity; value: number; w: number; h: number; radius?: number; children?: ReactNode }) {
   const spec = badgeCode ? FRAME_SPECS[badgeCode] : undefined;
   const baseRarity = spec?.base ?? rarity;
   const shelfH = h * 0.5; // bottom half = the shelf; elements may spill above it
@@ -17,7 +17,7 @@ export function LivingFrame({ badgeCode, rarity, tier, w, h, radius = 18, childr
     <View style={{ width: w, height: h }}>
       <BadgeFrame rarity={baseRarity} w={w} h={h} radius={radius}>{children}</BadgeFrame>
       <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: shelfH }}>
-        <FrameElements badgeCode={badgeCode} tier={tier} w={w} h={shelfH} />
+        <FrameElements badgeCode={badgeCode} value={value} w={w} h={shelfH} />
       </View>
     </View>
   );
@@ -25,13 +25,13 @@ export function LivingFrame({ badgeCode, rarity, tier, w, h, radius = 18, childr
 
 // Just the composited element layer — placed within a w×h shelf box. Reused by
 // LivingFrame (over a card) and by the Arena Side (over the thick bottom band).
-export function FrameElements({ badgeCode, tier, w, h, baseSize }:
-  { badgeCode?: string; tier: number; w: number; h: number; baseSize?: number }) {
+export function FrameElements({ badgeCode, value, w, h, baseSize }:
+  { badgeCode?: string; value: number; w: number; h: number; baseSize?: number }) {
   const spec = badgeCode ? FRAME_SPECS[badgeCode] : undefined;
   if (!spec) return null;
-  const els = elementsForTier(spec, tier);
+  const els = resolveElements(spec, value);
   const bs = baseSize ?? Math.min(w, h) * 0.46;
-  return <>{els.map((el, i) => <ElementView key={`${el.img}-${el.tier}-${i}`} el={el} w={w} h={h} baseSize={bs} />)}</>;
+  return <>{els.map((el, i) => <ElementView key={`${el.img}-${i}`} el={el} w={w} h={h} baseSize={bs} />)}</>;
 }
 
 function useElementAnim(kind?: ElementAnim) {
@@ -71,7 +71,7 @@ function useElementAnim(kind?: ElementAnim) {
   return { opacity, anim, ink };
 }
 
-function ElementView({ el, w, h, baseSize }: { el: FrameElement; w: number; h: number; baseSize: number }) {
+function ElementView({ el, w, h, baseSize }: { el: PlacedElement; w: number; h: number; baseSize: number }) {
   const size = el.scale * baseSize;
   const cx = el.x * w, cy = el.y * h;
   const url = frameElementUrl(el.img);

@@ -354,7 +354,6 @@ function Side({
 }) {
   const dim = voted && voted !== choice;
   const sf = card.sponsorFrame;             // a branded sponsor frame overrides the rarity band
-  const glow = sf ? sf.accentColor : rarityBase(rarity);
   const first = card.firstName;
   const BAND = 64;                          // thick bottom band = the badge / vote area
   const SHELF = 176;                        // element shelf: the band + spill up into the video
@@ -362,14 +361,17 @@ function Side({
   // The equipped badge's "living frame" elements ride the thick bottom band.
   // TEMP demo: fall back to the journaling pilot so it shows on any test fighter.
   const frameCode = card.frame?.code && FRAME_SPECS[card.frame.code] ? card.frame.code : "journal_keeper";
-  const frameTier = 4;                       // TODO: from the competitor's badge tier
+  const frameSpec = FRAME_SPECS[frameCode];
+  const frameValue = 140;                    // DEMO: journal entries (140 → 7 candles + book + quill)
+  // Base border material comes from the badge spec (e.g. old wood) when defined.
+  const glow = sf ? sf.accentColor : (frameSpec?.border?.glow ?? rarityBase(rarity));
   return (
     <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}>
       {/* custom frame: thin top + sides, a THICK bottom band (BAND) that the side
           borders squeeze into — the big customizable badge/sponsor area. */}
       <View style={{ flex: 1, shadowColor: glow, shadowOpacity: 0.6, shadowRadius: 26, shadowOffset: { width: 0, height: 0 } }}>
         <LinearGradient
-          colors={(sf ? [sf.accentColor, sf.accentColor] : rarityStops(rarity)) as ReturnType<typeof rarityStops>} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          colors={(sf ? [sf.accentColor, sf.accentColor] : (frameSpec?.border?.colors ?? rarityStops(rarity))) as ReturnType<typeof rarityStops>} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={{ flex: 1, borderRadius: 26, paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
         >
           {sf ? <AnimatedBorder animation={sf.animation} color={sf.accentColor} /> : null}
@@ -417,7 +419,7 @@ function Side({
         <View onLayout={(e) => { const wd = e.nativeEvent.layout.width; if (wd > 0) setBandW(wd); }} pointerEvents="none"
           style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: SHELF, zIndex: 20 }}>
           {/* elements sit on the band and spill up into the video (fighter is center-frame) */}
-          <FrameElements badgeCode={frameCode} tier={frameTier} w={bandW} h={SHELF} />
+          <FrameElements badgeCode={frameCode} value={frameValue} w={bandW} h={SHELF} />
         </View>
       ) : null}
 
