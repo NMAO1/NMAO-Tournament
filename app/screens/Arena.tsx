@@ -357,6 +357,7 @@ function Side({
   const glow = sf ? sf.accentColor : rarityBase(rarity);
   const first = card.firstName;
   const BAND = 64;                          // thick bottom band = the badge / vote area
+  const SHELF = 176;                        // element shelf: the band + spill up into the video
   const [bandW, setBandW] = useState(320);
   // The equipped badge's "living frame" elements ride the thick bottom band.
   // TEMP demo: fall back to the journaling pilot so it shows on any test fighter.
@@ -414,8 +415,9 @@ function Side({
           vote CTA). Skipped when a sponsor frame owns the band. */}
       {!sf ? (
         <View onLayout={(e) => { const wd = e.nativeEvent.layout.width; if (wd > 0) setBandW(wd); }} pointerEvents="none"
-          style={{ position: "absolute", left: 14, right: 14, bottom: 0, height: BAND, zIndex: 20, backgroundColor: "rgba(255,0,0,0.35)" }}>
-          <FrameElements badgeCode={frameCode} tier={frameTier} w={bandW} h={BAND} baseSize={BAND * 0.82} />
+          style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: SHELF, zIndex: 20 }}>
+          {/* elements sit on the band and spill up into the video (fighter is center-frame) */}
+          <FrameElements badgeCode={frameCode} tier={frameTier} w={bandW} h={SHELF} />
         </View>
       ) : null}
 

@@ -3,45 +3,35 @@ import { View, Text, Image, Animated, Easing } from "react-native";
 import { BadgeFrame, type FrameRarity } from "./BadgeFrame";
 import {
   FRAME_SPECS, elementsForTier, ELEMENT_GLYPH, frameElementUrl,
-  type FrameElement, type FramePos, type ElementAnim,
+  type FrameElement, type ElementAnim,
 } from "../lib/badgeFrames";
 
-// LivingFrame — a base rarity BadgeFrame with per-badge motif elements composited
-// on top, gated to the competitor's badge tier, each with optional subtle motion.
+// LivingFrame — a base rarity BadgeFrame with the badge's motif elements
+// composited on a bottom "shelf", gated to tier, each with optional motion.
 export function LivingFrame({ badgeCode, rarity, tier, w, h, radius = 18, children }:
   { badgeCode?: string; rarity: FrameRarity; tier: number; w: number; h: number; radius?: number; children?: ReactNode }) {
   const spec = badgeCode ? FRAME_SPECS[badgeCode] : undefined;
   const baseRarity = spec?.base ?? rarity;
+  const shelfH = h * 0.5; // bottom half = the shelf; elements may spill above it
   return (
     <View style={{ width: w, height: h }}>
       <BadgeFrame rarity={baseRarity} w={w} h={h} radius={radius}>{children}</BadgeFrame>
-      <FrameElements badgeCode={badgeCode} tier={tier} w={w} h={h} />
+      <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: shelfH }}>
+        <FrameElements badgeCode={badgeCode} tier={tier} w={w} h={shelfH} />
+      </View>
     </View>
   );
 }
 
-// Just the composited element layer — absolutely positioned within a w×h box.
-// Reused by LivingFrame (over the whole card) and by the Arena Side (over the
-// thick bottom BAND). `baseSize` overrides the auto element size for the band.
+// Just the composited element layer — placed within a w×h shelf box. Reused by
+// LivingFrame (over a card) and by the Arena Side (over the thick bottom band).
 export function FrameElements({ badgeCode, tier, w, h, baseSize }:
   { badgeCode?: string; tier: number; w: number; h: number; baseSize?: number }) {
   const spec = badgeCode ? FRAME_SPECS[badgeCode] : undefined;
   if (!spec) return null;
   const els = elementsForTier(spec, tier);
-  const bs = baseSize ?? Math.min(w, h) * 0.26;
+  const bs = baseSize ?? Math.min(w, h) * 0.46;
   return <>{els.map((el, i) => <ElementView key={`${el.img}-${el.tier}-${i}`} el={el} w={w} h={h} baseSize={bs} />)}</>;
-}
-
-function posStyle(pos: FramePos, w: number, h: number, size: number, pad: number) {
-  switch (pos) {
-    case "bottom-left":   return { left: pad, bottom: pad };
-    case "bottom-right":  return { right: pad, bottom: pad };
-    case "bottom-center": return { left: w / 2 - size / 2, bottom: pad };
-    case "top-left":      return { left: pad, top: pad };
-    case "top-right":     return { right: pad, top: pad };
-    case "top-center":    return { left: w / 2 - size / 2, top: pad };
-    default:              return { left: w / 2 - size / 2, top: h / 2 - size / 2 };
-  }
 }
 
 function useElementAnim(kind?: ElementAnim) {
@@ -66,33 +56,41 @@ function useElementAnim(kind?: ElementAnim) {
     }
   }, [kind, v, ink]);
 
-  const opacity = kind === "flicker" ? v.interpolate({ inputRange: [0, 1], outputRange: [0.78, 1] }) : 1;
-  const transform =
-    kind === "flicker" ? [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] }) }]
+  const opacity = kind === "flicker" ? v.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] }) : 1;
+  const anim =
+    kind === "flicker" ? [
+        { scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) },
+        { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-1, 1.5] }) },
+      ]
     : kind === "float" ? [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }]
     : kind === "write" ? [
-        { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-2, 3] }) },
-        { rotate: v.interpolate({ inputRange: [0, 1], outputRange: ["-5deg", "3deg"] }) },
+        { translateX: v.interpolate({ inputRange: [0, 1], outputRange: [-2, 2] }) },
+        { rotate: v.interpolate({ inputRange: [0, 1], outputRange: ["-3deg", "2deg"] }) },
       ]
     : [];
-  return { opacity, transform, ink };
+  return { opacity, anim, ink };
 }
 
 function ElementView({ el, w, h, baseSize }: { el: FrameElement; w: number; h: number; baseSize: number }) {
-  const size = (el.scale ?? 1) * baseSize;
-  const pad = size * 0.2;
-  const pos = posStyle(el.pos, w, h, size, pad);
+  const size = el.scale * baseSize;
+  const cx = el.x * w, cy = el.y * h;
   const url = frameElementUrl(el.img);
   const glyph = ELEMENT_GLYPH[el.img] ?? "◆";
   const a = useElementAnim(el.anim);
+  const base = el.rotate ? [{ rotate: `${el.rotate}deg` }] : [];
   return (
     <Animated.View pointerEvents="none"
-      style={{ position: "absolute", width: size, height: size, alignItems: "center", justifyContent: "center", opacity: a.opacity, transform: a.transform, ...pos }}>
+      style={{
+        position: "absolute", width: size, height: size, left: cx - size / 2, top: cy - size / 2,
+        alignItems: "center", justifyContent: "center", opacity: a.opacity,
+        transformOrigin: el.anim === "flicker" ? "50% 92%" : undefined,
+        transform: [...base, ...a.anim] as never,
+      }}>
       {url
         ? <Image source={{ uri: url }} style={{ width: size, height: size }} resizeMode="contain" />
         : <Text style={{ fontSize: size * 0.82 }}>{glyph}</Text>}
       {el.anim === "write"
-        ? <Animated.View style={{ position: "absolute", bottom: size * 0.06, width: size * 0.5, height: 2, borderRadius: 2, backgroundColor: "#e8d9b0", opacity: a.ink }} />
+        ? <Animated.View style={{ position: "absolute", bottom: size * 0.12, left: size * 0.2, width: size * 0.34, height: 2, borderRadius: 2, backgroundColor: "#e8d9b0", opacity: a.ink }} />
         : null}
     </Animated.View>
   );
