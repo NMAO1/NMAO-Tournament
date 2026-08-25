@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { BadgeFrame, type FrameRarity, type Motif, type GemKey } from "../components/BadgeFrame";
+import { LivingFrame } from "../components/LivingFrame";
+import { FRAME_SPECS } from "../lib/badgeFrames";
 import { DragonBand, type DragonTint } from "../components/DragonBand";
 
 // Frame Lab — a live on-device preview of the rarity → effect ladder plus the
@@ -19,6 +22,8 @@ const TIERS: { rarity: FrameRarity; motif?: Motif; gem?: GemKey; label: string; 
 
 export default function FrameLab({ onBack }: { onBack: () => void }) {
   const W = 150, H = 200;
+  const [tier, setTier] = useState(4);
+  const journal = FRAME_SPECS.journal_keeper;
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 44 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -28,6 +33,32 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
       <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 }}>
         The rarity ladder — each tier adds one legible layer. Parametric V1; per-badge specs and signature motifs layer on top.
       </Text>
+
+      {/* ── Living frames (V2): per-badge, evolving with tier. Placeholder glyphs
+          until the Firefly element art lands in the badge-frames bucket. ── */}
+      <View style={{ borderWidth: 1, borderColor: hues.amethyst.shadow, borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(163,43,247,0.06)" }}>
+        <Text style={{ color: hues.amethyst.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>Living Frames · V2 (per-badge, evolving)</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
+          The journaling badge grows with your tier — glyph placeholders stand in for the Firefly art. Step the tier to watch it evolve.
+        </Text>
+        <View style={{ alignItems: "center" }}>
+          <LivingFrame badgeCode="journal_keeper" rarity="rare" tier={tier} w={172} h={230} radius={18}>
+            <Sample label="Journal Keeper" />
+          </LivingFrame>
+          <Text style={{ color: hues.gold.hi, fontSize: 14, fontWeight: "800", marginTop: 12 }}>
+            Tier {tier} · {journal.tierLabels?.[tier - 1] ?? ""}
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+            {[1, 2, 3, 4].map((t) => (
+              <TouchableOpacity key={t} onPress={() => setTier(t)}
+                style={{ width: 44, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
+                  borderColor: tier === t ? hues.amethyst.base : neutrals.border, backgroundColor: tier === t ? "rgba(163,43,247,0.18)" : neutrals.surface }}>
+                <Text style={{ color: tier === t ? hues.amethyst.hi : neutrals.muted, fontWeight: "800", fontSize: 15 }}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>
         {TIERS.map((t) => (
