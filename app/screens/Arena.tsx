@@ -204,7 +204,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           onAudio={() => focusAudio("challenger")} onVote={() => vote("challenger")}
           onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
           onSafety={() => openSafety("challenger")}
-          demoFrame="first-gold" demoValue={30}
+          demoFrame="gem-series" demoValue={6}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
@@ -213,7 +213,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           onAudio={() => focusAudio("opponent")} onVote={() => vote("opponent")}
           onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
           onSafety={() => openSafety("opponent")}
-          demoFrame="first-silver" demoValue={18}
+          demoFrame="gem-series" demoValue={10}
         />
       </View>
 

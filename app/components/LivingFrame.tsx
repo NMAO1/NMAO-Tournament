@@ -42,12 +42,19 @@ export function FrameElements({ badgeCode, value, w, h, baseSize }:
     T = Math.min(T, ey - s / 2); B = Math.max(B, ey + s / 2);
   }
   const box = { x: Math.max(0, L), y: Math.max(0, T), w: Math.min(w, R) - Math.max(0, L), h: Math.min(h, B) - Math.max(0, T) };
+  // fx: master on/off, with optional per-effect overrides (e.g. duel border drops the glint)
+  const fxOn = spec.fx !== false;
+  const cfg = (typeof spec.fx === "object" && spec.fx) ? spec.fx : {};
+  const showGlow = fxOn && cfg.glow !== false;
+  const showGlint = fxOn && cfg.glint !== false;
+  const showSparkle = fxOn && cfg.sparkle !== false;
+  const stackIn = fxOn && cfg.stackIn !== false;
   return (
     <>
-      <GlowLayer color={glow} box={box} />
-      {els.map((el, i) => <ElementView key={`${el.img}-${i}`} el={el} w={w} h={h} baseSize={bs} index={i} />)}
-      <GlintSweep box={box} />
-      <Sparkles box={box} />
+      {showGlow ? <GlowLayer color={glow} box={box} /> : null}
+      {els.map((el, i) => <ElementView key={`${el.img}-${i}`} el={el} w={w} h={h} baseSize={bs} index={i} fx={stackIn} />)}
+      {showGlint ? <GlintSweep box={box} /> : null}
+      {showSparkle ? <Sparkles box={box} /> : null}
     </>
   );
 }
@@ -152,18 +159,19 @@ function useElementAnim(kind?: ElementAnim) {
   return { opacity, anim, ink };
 }
 
-function ElementView({ el, w, h, baseSize, index }: { el: PlacedElement; w: number; h: number; baseSize: number; index: number }) {
+function ElementView({ el, w, h, baseSize, index, fx }: { el: PlacedElement; w: number; h: number; baseSize: number; index: number; fx: boolean }) {
   const size = el.scale * baseSize;
   const cx = el.x * w, cy = el.y * h;
   const url = frameElementUrl(el.img);
   const glyph = ELEMENT_GLYPH[el.img] ?? "◆";
   const [imgFailed, setImgFailed] = useState(false);   // missing art → fall back to the glyph
   const a = useElementAnim(el.anim);
-  // stack-in: each element drops + settles on mount, staggered by index (coins pile up)
-  const enter = useRef(new Animated.Value(0)).current;
+  // stack-in: each element drops + settles on mount, staggered by index (coins pile up).
+  // fx=false (common frames) → appear instantly, no entrance/shadow.
+  const enter = useRef(new Animated.Value(fx ? 0 : 1)).current;
   useEffect(() => {
-    Animated.spring(enter, { toValue: 1, delay: Math.min(index * 22, 480), friction: 6, tension: 130, useNativeDriver: true }).start();
-  }, [enter, index]);
+    if (fx) Animated.spring(enter, { toValue: 1, delay: Math.min(index * 22, 480), friction: 6, tension: 130, useNativeDriver: true }).start();
+  }, [enter, index, fx]);
   const enterTY = enter.interpolate({ inputRange: [0, 1], outputRange: [-14, 0] });
   const enterScale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.65, 1] });
   const opacity = Animated.multiply(a.opacity, enter);
@@ -174,7 +182,7 @@ function ElementView({ el, w, h, baseSize, index }: { el: PlacedElement; w: numb
         position: "absolute", width: size, height: size, left: cx - size / 2, top: cy - size / 2,
         alignItems: "center", justifyContent: "center", opacity,
         transformOrigin: el.anim === "flicker" ? "50% 92%" : undefined,
-        shadowColor: "#000", shadowOpacity: 0.38, shadowRadius: 5, shadowOffset: { width: 0, height: 3 },
+        ...(fx ? { shadowColor: "#000", shadowOpacity: 0.38, shadowRadius: 5, shadowOffset: { width: 0, height: 3 } } : null),
         transform: [...base, { translateY: enterTY }, { scale: enterScale }, ...a.anim] as never,
       }}>
       {url && !imgFailed

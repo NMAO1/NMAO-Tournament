@@ -24,10 +24,16 @@ export type SpecElement = {
   // `perCol` (each new coin sits `coinDy` higher), columns spread by `colStep`,
   // centered — a growing "bank" of medals. Capped at `stackMax` coins.
   stackPer?: number; stackMax?: number; perCol?: number; colStep?: number; coinDy?: number;
+  // SERIES: place `value` items in a centered row, each a DIFFERENT image from
+  // `series` in order (e.g. a season gem per season completed). rowStep spacing.
+  series?: string[];
 };
 
 // border = the base frame material for this badge (overrides the rarity gradient).
-export type BadgeFrameSpec = { base: FrameRarity; label?: string; border?: { colors: string[]; glow?: string; texture?: string }; elements: SpecElement[] };
+// fx: master on/off (default on). Pass an object to disable individual effects
+// (e.g. { glint: false } keeps glow/sparkle/stack-in but drops the rolling shine).
+export type FxConfig = { glint?: boolean; glow?: boolean; sparkle?: boolean; stackIn?: boolean };
+export type BadgeFrameSpec = { base: FrameRarity; label?: string; border?: { colors: string[]; glow?: string; texture?: string }; elements: SpecElement[]; fx?: boolean | FxConfig };
 
 export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
   journal_keeper: {
@@ -52,6 +58,7 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
   duelist: {
     base: "epic",
     label: "Dedicated Duelist",
+    fx: { glint: false, glow: false, sparkle: false },   // steel border: only the stack-in entrance, no shine/glow/sparkle
     // forged steel — a tiled brushed-gunmetal grain (falls back to the gradient)
     border: { texture: "steel", colors: ["#20242b", "#4a515d", "#79828f", "#333a43", "#1b1e23"], glow: "#6d7f9c" },
     elements: [
@@ -88,13 +95,73 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
       { img: "coin_bronze", y: 0.90, scale: 0.52, stackPer: 1, stackMax: 40, perCol: 8, colStep: 0.095, coinDy: 0.036 },
     ],
   },
+
+  // ── FIRST STEPS · the common onboarding badges everyone earns first. One-time
+  // (no growth): a shared carved-JADE border + a single central emblem per badge.
+  // Common tier = just a colored border (no elements, no FX). The equipped-badge
+  // corner crest still shows which badge it is.
+  "first-step": {
+    base: "common", label: "The Initiate", fx: false,
+    border: { colors: ["#123723", "#1f5230", "#2e7d47", "#1f5230", "#123723"], glow: "#2e6b3f" },
+    elements: [],
+  },
+  "first-duel": {
+    base: "common", label: "The Challenger", fx: false,
+    border: { colors: ["#3a1114", "#6e1f24", "#a12f37", "#6e1f24", "#3a1114"], glow: "#b23a42" },
+    elements: [],
+  },
+  "first-bow": {
+    base: "common", label: "The Newly Sworn", fx: false,
+    border: { colors: ["#14122e", "#272357", "#3d379a", "#272357", "#14122e"], glow: "#4b45b8" },
+    elements: [],
+  },
+  "first-reveal": {
+    base: "common", label: "The Awakened", fx: false,
+    border: { colors: ["#3a1c06", "#6e3a10", "#c26a1e", "#6e3a10", "#3a1c06"], glow: "#e08a34" },
+    elements: [],
+  },
+  "first-reflection": {
+    base: "common", label: "The Introspect", fx: false,
+    border: { colors: ["#08302e", "#12595a", "#1e8a86", "#12595a", "#08302e"], glow: "#3ab5ad" },
+    elements: [],
+  },
+  "first-vote": {
+    base: "common", label: "The Voter", fx: false,
+    border: { colors: ["#3a0e33", "#6e1d60", "#a92f92", "#6e1d60", "#3a0e33"], glow: "#c94bb0" },
+    elements: [],
+  },
+  "teammate": {
+    base: "common", label: "The Ally", fx: false,
+    border: { colors: ["#0a2438", "#134a6e", "#2080b0", "#134a6e", "#0a2438"], glow: "#3aa0d8" },
+    elements: [],
+  },
+
+  // ── GEM SERIES · a season gem per season completed (badge codes gem-s1…gem-s10).
+  // Shared across all gem-sN codes: a growing collection, one colored gem per
+  // season in order, on a dark jewel-box border so the colors pop.
+  "gem-series": {
+    base: "epic", label: "Gem Keeper",
+    border: { colors: ["#100c1c", "#241f3a", "#3a3258", "#241f3a", "#100c1c"], glow: "#9a8ae0" },
+    elements: [
+      { img: "gem", y: 0.84, scale: 0.54, rowStep: 0.089,
+        series: ["gem_sapphire", "gem_amethyst", "gem_ruby", "gem_emerald", "gem_coral", "gem_onyx", "gem_rose", "gem_turquoise", "gem_peridot", "gem_platinum"] },
+    ],
+  },
 };
 
 // Expand a spec against a progress value into concrete positioned elements.
 export function resolveElements(spec: BadgeFrameSpec, value: number): PlacedElement[] {
   const out: PlacedElement[] = [];
   for (const el of spec.elements) {
-    if (el.stackPer) {
+    if (el.series) {
+      const n = Math.min(value, el.series.length);
+      const step = el.rowStep ?? 0.09;
+      const startX = 0.5 - (n - 1) * step / 2;
+      for (let i = 0; i < n; i++) {
+        const x = n <= 1 ? 0.5 : startX + i * step;
+        out.push({ img: el.series[i], x, y: el.y, scale: el.scale, rotate: el.rotate });
+      }
+    } else if (el.stackPer) {
       const total = Math.min(Math.floor(value / el.stackPer), el.stackMax ?? 40);
       const perCol = el.perCol ?? 8;
       const cols = Math.max(1, Math.ceil(total / perCol));
@@ -129,6 +196,9 @@ export const ELEMENT_GLYPH: Record<string, string> = {
   laurel: "🌿", crown: "👑", gem: "💎", sword: "⚔️", shield: "🛡️", star: "⭐", medal: "🏅", chain: "⛓️",
   gold_medal: "🥇", silver_medal: "🥈", bronze_medal: "🥉",
   coin_gold: "🪙", coin_silver: "🪙", coin_bronze: "🪙",
+  footprints: "👣", fist: "👊", bow: "🙏", sunrise: "🌅", lotus: "🪷", ballot: "🗳️", allies: "🤝",
+  gem: "💎", gem_sapphire: "💎", gem_amethyst: "💎", gem_ruby: "💎", gem_emerald: "💎", gem_coral: "💎",
+  gem_onyx: "💎", gem_rose: "💎", gem_turquoise: "💎", gem_peridot: "💎", gem_platinum: "💎",
 };
 
 // Real element art from the public badge-frames bucket (?v busts the image cache
@@ -136,5 +206,5 @@ export const ELEMENT_GLYPH: Record<string, string> = {
 export function frameElementUrl(img: string): string | null {
   const base = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!base) return null;
-  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=10`;
+  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=12`;
 }
