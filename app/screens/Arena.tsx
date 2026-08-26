@@ -6,7 +6,7 @@ import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
 import { FrameElements } from "../components/LivingFrame";
-import { FRAME_SPECS } from "../lib/badgeFrames";
+import { FRAME_SPECS, frameElementUrl } from "../lib/badgeFrames";
 import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, reportDuel, blockCompetitor, type FaceOff, type Choice, type Card, type Sponsor, type FrameAnim } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
 import { sponsorClick, sponsorAdWatch } from "../lib/store";
@@ -204,6 +204,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           onAudio={() => focusAudio("challenger")} onVote={() => vote("challenger")}
           onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
           onSafety={() => openSafety("challenger")}
+          demoFrame="first-gold" demoValue={30}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
@@ -212,6 +213,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           onAudio={() => focusAudio("opponent")} onVote={() => vote("opponent")}
           onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
           onSafety={() => openSafety("opponent")}
+          demoFrame="first-silver" demoValue={18}
         />
       </View>
 
@@ -347,10 +349,12 @@ function AnimatedBorder({ animation, color, radius = 26 }: { animation: FrameAni
 
 function Side({
   card, choice, rarity, active, unlocked, voted, player, hasVideo, onAudio, onVote, onCrest, onSafety,
+  demoFrame, demoValue,
 }: {
   card: Card; choice: Choice; rarity: "common" | "rare" | "epic" | "legendary";
   active: boolean; unlocked: boolean; voted: Choice | null;
   player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void; onSafety: () => void;
+  demoFrame?: string; demoValue?: number;
 }) {
   const dim = voted && voted !== choice;
   const sf = card.sponsorFrame;             // a branded sponsor frame overrides the rarity band
@@ -360,20 +364,23 @@ function Side({
   const [bandW, setBandW] = useState(320);
   // The equipped badge's "living frame" elements ride the thick bottom band.
   // TEMP demo: fall back to the journaling pilot so it shows on any test fighter.
-  const frameCode = card.frame?.code && FRAME_SPECS[card.frame.code] ? card.frame.code : "journal_keeper";
+  const frameCode = demoFrame && FRAME_SPECS[demoFrame] ? demoFrame
+    : (card.frame?.code && FRAME_SPECS[card.frame.code] ? card.frame.code : "journal_keeper");
   const frameSpec = FRAME_SPECS[frameCode];
-  const frameValue = 140;                    // DEMO: journal entries (140 → 7 candles + book + quill)
+  const frameValue = demoValue ?? 140;       // DEMO progress value for the living frame
   // Base border material comes from the badge spec (e.g. old wood) when defined.
   const glow = sf ? sf.accentColor : (frameSpec?.border?.glow ?? rarityBase(rarity));
+  const borderTexture = !sf && frameSpec?.border?.texture ? frameElementUrl(frameSpec.border.texture) : null;
   return (
     <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}>
       {/* custom frame: thin top + sides, a THICK bottom band (BAND) that the side
           borders squeeze into — the big customizable badge/sponsor area. */}
       <View style={{ flex: 1, shadowColor: glow, shadowOpacity: 0.6, shadowRadius: 26, shadowOffset: { width: 0, height: 0 } }}>
         <LinearGradient
-          colors={(sf ? [sf.accentColor, sf.accentColor] : (frameSpec?.border?.colors ?? rarityStops(rarity))) as ReturnType<typeof rarityStops>} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={{ flex: 1, borderRadius: 26, paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
+          colors={(borderTexture ? ["rgba(0,0,0,0)", "rgba(0,0,0,0)"] : sf ? [sf.accentColor, sf.accentColor] : (frameSpec?.border?.colors ?? rarityStops(rarity))) as ReturnType<typeof rarityStops>} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{ flex: 1, borderRadius: 26, overflow: "hidden", paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
         >
+          {borderTexture ? <Image source={{ uri: borderTexture }} resizeMode="repeat" style={StyleSheet.absoluteFill} /> : null}
           {sf ? <AnimatedBorder animation={sf.animation} color={sf.accentColor} /> : null}
           <TouchableOpacity activeOpacity={0.95} onPress={onAudio} style={{ flex: 1 }}>
             <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
@@ -423,15 +430,13 @@ function Side({
         </View>
       ) : null}
 
-      {/* vote CTA lives ON the thick bottom band (which IS the badge border) */}
-      <TouchableOpacity
-        activeOpacity={0.85} onPress={onVote} disabled={!unlocked || !!voted}
-        style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: BAND, alignItems: "center", justifyContent: "center", opacity: unlocked || voted ? 1 : 0.55 }}
-      >
-        <Text style={{ color: "#0c0a06", fontWeight: "900", fontSize: 16, letterSpacing: 1.5, textTransform: "uppercase" }}>
-          {voted === choice ? "✓ Voted" : `Vote ${first}`}
-        </Text>
-      </TouchableOpacity>
+      {/* clear vote pill — floats in the lower-right of the VIDEO, ABOVE the band,
+          so the bottom border stays clear for the crest imagery + animations */}
+      <VotePill
+        label={voted === choice ? "✓ Voted" : "Vote"}
+        onPress={onVote} disabled={!unlocked || !!voted} dimmed={!unlocked && !voted}
+        choice={choice} bandH={BAND}
+      />
 
       {/* worn crest — a single inset "dragonball" imprint, mirrored to the outer
           lower corner (challenger → left, opponent → right) for a balanced look;
@@ -464,6 +469,26 @@ function CrestInset({ frame, corner, onPress }: { frame: Crest; corner: "left" |
       </View>
       {/* glossy top highlight → reads as a set "dragonball" sphere */}
       <View pointerEvents="none" style={{ position: "absolute", top: 5, left: D * 0.26, width: D * 0.48, height: D * 0.3, borderRadius: D / 2, backgroundColor: "rgba(255,255,255,0.20)" }} />
+    </TouchableOpacity>
+  );
+}
+
+// A clear gold vote pill, floated into the lower-OUTER corner of the video (above
+// the band): bottom-left for the left fighter, bottom-right for the right — keeping
+// the bottom border free for the crest imagery + animations.
+function VotePill({ label, onPress, disabled, dimmed, choice, bandH }:
+  { label: string; onPress: () => void; disabled: boolean; dimmed: boolean; choice: Choice; bandH: number }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress} disabled={disabled} activeOpacity={0.85}
+      style={{ position: "absolute", ...(choice === "challenger" ? { left: 12 } : { right: 12 }), bottom: bandH, zIndex: 30, opacity: dimmed ? 0.55 : 1 }}
+    >
+      <LinearGradient
+        colors={[hues.gold.hi, "#c69329"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: "rgba(255,244,214,0.75)", shadowColor: "#000", shadowOpacity: 0.55, shadowRadius: 7, shadowOffset: { width: 0, height: 2 } }}
+      >
+        <Text style={{ color: "#1a1206", fontWeight: "900", fontSize: 14.5, letterSpacing: 1, textTransform: "uppercase" }}>{label}</Text>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }
