@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NMAO — Badge Rules</title>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  const SUPABASE_URL = 'https://oxzuavpyoetchwebdejp.supabase.co';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94enVhdnB5b2V0Y2h3ZWJkZWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgyNjUsImV4cCI6MjEwMTU0NDI2NX0.SEBXeo_FqsyqV8xS5dwaGymXI6mYPy8-9uMAgaX4fhg';
+  window.__mc = { createClient, SUPABASE_URL, ANON };
+</script>
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b;
+    --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
+    --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22;
+    --ruby:#FF2E3B; --amethyst:#A32BF7; --sapphire:#1F7BFF;
+    --success:#5DCAA5; --danger:#E07070;
+    --spectrum:linear-gradient(180deg,#1F7BFF 0%,#A32BF7 50%,#FF2E3B 100%);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#141220 0%,var(--bg) 60%);color:var(--text);
+       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;padding:22px}
+  .wrap{max-width:1040px;margin:0 auto}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block}
+  .btn:hover{border-color:#3a3a40}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
+  .btn.sm{padding:5px 9px;font-size:12px}
+  .hide{display:none!important}
+  input,select,textarea{font-family:inherit}
+
+  .login{max-width:360px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .login h1{font-size:18px;margin:0 0 4px}
+  .login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .login label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+  .login input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+  .login .btn{width:100%;margin-top:16px;justify-content:center;text-align:center}
+  .msg{font-size:12.5px;margin-top:10px;min-height:16px}
+  .msg.err{color:var(--danger)} .msg.ok{color:var(--success)}
+
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F5F0E8 0 50%,#141210 0 100%);border:1px solid var(--gold)}
+  .brand h1{font-size:16px;margin:0;letter-spacing:.02em}
+  .brand small{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .actions{display:flex;gap:8px;align-items:center}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:18px}
+  .card > .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd h2{font-size:14px;margin:0;display:flex;align-items:center;gap:9px}
+  .hd .sub{font-size:12px;color:var(--muted);max-width:480px;text-align:right}
+  .rail{width:4px;height:15px;border-radius:2px;background:var(--spectrum)}
+  .pad{padding:16px 18px}
+
+  select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px;font-size:14px}
+  .field{margin:16px 0 0}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+  textarea{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px;font-size:13.5px;line-height:1.55;resize:vertical}
+  textarea.mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 2px}
+  .chip{font-size:10.5px;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .chip.name{color:var(--text);border-color:#3a3a40;text-transform:none;font-size:12px;font-weight:600}
+  .save-row{display:flex;justify-content:flex-end;margin-top:14px}
+  .hint{color:var(--muted2);font-size:11.5px;margin-top:7px;line-height:1.5}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line)}
+  td{padding:7px 12px;border-bottom:1px solid #202024;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  td.code{font-family:ui-monospace,Menlo,monospace;color:var(--muted)}
+  td input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:7px;padding:7px 9px;font-size:13px}
+  .num{max-width:100px}
+  .rowbtns{display:flex;gap:6px;justify-content:flex-end}
+
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);
+         border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px}
+  .toast.err{border-color:#4a2b2b;color:#E9A0A0} .toast.ok{border-color:#2b4a3a;color:#a9f0c1}
+  .foot-note{margin-top:12px;color:var(--muted2);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div class="login" id="loginCard">
+    <h1 class="serif">Badge Rules</h1>
+    <p>Sign in with your NMAO staff account.</p>
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" />
+    <div id="pwWrap"><label>Password</label><input id="password" type="password" autocomplete="current-password" /></div>
+    <div id="codeWrap" class="hide"><label>6-digit code (emailed)</label><input id="code" inputmode="numeric" maxlength="6" /></div>
+    <button class="btn gold" id="loginBtn">Sign in</button>
+    <button class="btn" id="codeToggle" style="width:100%;margin-top:8px">Email me a code instead</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- CONSOLE -->
+  <div id="console" class="hide">
+    <header>
+      <div class="brand"><span class="yy"></span>
+        <div><h1 class="serif">Badge Rules</h1><small>Mission Control</small></div></div>
+      <div class="actions">
+        <a class="btn" href="./config.html">← Config</a>
+        <a class="btn" href="./live.html">Live console</a>
+        <button class="btn" id="signoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <!-- BADGE EDITOR -->
+    <div class="card">
+      <div class="hd">
+        <h2><span class="rail"></span>Badges — earn rules</h2>
+        <div class="sub">Edit the player-facing "how to earn" text and the machine-readable rule. The award engine reads these live — no app or engine deploy.</div>
+      </div>
+      <div class="pad">
+        <select id="badgePick"><option value="">— pick a badge —</option></select>
+        <div id="editor" class="hide">
+          <div class="chips" id="bChips"></div>
+          <div class="field">
+            <label>How to earn — shown to competitors in the app</label>
+            <textarea id="bDesc" rows="3" placeholder="e.g. Complete 10, then 25, then 50 duels."></textarea>
+          </div>
+          <div class="field">
+            <label>Earn rule — machine-readable JSON (trigger, levels, thresholds, criterion)</label>
+            <textarea id="bRule" class="mono" rows="8" spellcheck="false"></textarea>
+            <div class="hint">The engine reads keys like <code>levels</code>, <code>high_above</code>, <code>criterion</code>, <code>trigger</code>. Some shared numeric thresholds instead live in the table below (e.g. streaks, vote counts). Keep the wording above in sync with the numbers here.</div>
+          </div>
+          <div class="save-row"><button class="btn gold" id="saveBadge">Save badge</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SHARED THRESHOLDS -->
+    <div class="card">
+      <div class="hd">
+        <h2><span class="rail"></span>Shared thresholds</h2>
+        <div class="sub">Numeric thresholds several badges share (dueling_award_config). The award engine reads these live.</div>
+      </div>
+      <table>
+        <thead><tr><th style="width:190px">Key</th><th>What it controls</th><th style="width:130px">Value</th><th style="width:90px"></th></tr></thead>
+        <tbody id="cfgBody"></tbody>
+      </table>
+    </div>
+
+    <div class="foot-note">Writes are staff-gated (SECURITY DEFINER · admin_save_badge / admin_save_award_config). Tournament suite — separate product from the membership platform.</div>
+  </div>
+</div>
+
+<script type="module">
+const { createClient, SUPABASE_URL, ANON } = window.__mc;
+const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function setMsg(id, t, cls){ const el=$(id); el.textContent=t; el.className='msg '+(cls||''); }
+let toastT;
+function toast(t, cls){ let el=document.querySelector('.toast'); if(!el){el=document.createElement('div');document.body.appendChild(el);} el.className='toast '+(cls||''); el.textContent=t; clearTimeout(toastT); toastT=setTimeout(()=>el.remove(), 3000); }
+
+// ---------- auth (same flow as the other consoles) ----------
+let codeMode = false;
+$('codeToggle').onclick = async () => {
+  const email = $('email').value.trim();
+  if (codeMode) { codeMode=false; $('pwWrap').classList.remove('hide'); $('codeWrap').classList.add('hide'); $('codeToggle').textContent='Email me a code instead'; $('loginBtn').textContent='Sign in'; return; }
+  if (!email) return setMsg('loginMsg','Enter your email first.','err');
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+  if (error) return setMsg('loginMsg', error.message, 'err');
+  codeMode=true; $('pwWrap').classList.add('hide'); $('codeWrap').classList.remove('hide');
+  $('codeToggle').textContent='Use password instead'; $('loginBtn').textContent='Verify code';
+  setMsg('loginMsg','Code sent — check your email.','ok');
+};
+$('loginBtn').onclick = async () => {
+  const email = $('email').value.trim();
+  $('loginBtn').disabled = true;
+  try {
+    if (codeMode) { const { error } = await sb.auth.verifyOtp({ email, token: $('code').value.trim(), type:'email' }); if (error) throw error; }
+    else { const { error } = await sb.auth.signInWithPassword({ email, password: $('password').value }); if (error) throw error; }
+    await afterLogin();
+  } catch(e){ setMsg('loginMsg', e.message || 'Sign-in failed.', 'err'); }
+  finally { $('loginBtn').disabled = false; }
+};
+$('signoutBtn').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function afterLogin(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if (!user) return setMsg('loginMsg','Session expired — sign in again.','err');
+  const { data: staff } = await sb.from('staff').select('id').eq('auth_user_id', user.id).maybeSingle();
+  if (!staff) return setMsg('loginMsg','This account is not NMAO staff.','err');
+  $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
+  await Promise.all([loadBadges(), loadConfig()]);
+}
+
+// ---------- badges ----------
+let badgeMap = {};
+async function loadBadges(){
+  const { data, error } = await sb.rpc('admin_badges');
+  if (error) return toast(error.message,'err');
+  badgeMap = {};
+  const groups = {};
+  (data||[]).forEach(b => { badgeMap[b.code] = b; (groups[b.category||'Other'] ??= []).push(b); });
+  let html = '<option value="">— pick a badge —</option>';
+  Object.keys(groups).forEach(cat => {
+    html += `<optgroup label="${esc(cat)}">`;
+    groups[cat].forEach(b => { html += `<option value="${esc(b.code)}">${esc(b.name)}${b.active===false?' (inactive)':''}</option>`; });
+    html += '</optgroup>';
+  });
+  $('badgePick').innerHTML = html;
+}
+$('badgePick').onchange = () => {
+  const b = badgeMap[$('badgePick').value];
+  if (!b){ $('editor').classList.add('hide'); return; }
+  $('editor').classList.remove('hide');
+  $('bChips').innerHTML =
+    `<span class="chip name">${esc(b.name)}</span>` +
+    `<span class="chip">${esc(b.code)}</span>` +
+    `<span class="chip">${esc(b.rarity||'—')}</span>` +
+    (b.tiered ? '<span class="chip">tiered</span>' : '') +
+    (b.hidden ? '<span class="chip">hidden</span>' : '');
+  $('bDesc').value = b.description || '';
+  $('bRule').value = b.earn_rule ? JSON.stringify(b.earn_rule, null, 2) : '';
+};
+$('saveBadge').onclick = async () => {
+  const code = $('badgePick').value; if (!code) return;
+  let ruleObj = null;
+  const raw = $('bRule').value.trim();
+  if (raw) { try { ruleObj = JSON.parse(raw); } catch(e){ return toast('Earn rule must be valid JSON: '+e.message, 'err'); } }
+  $('saveBadge').disabled = true;
+  const { error } = await sb.rpc('admin_save_badge', { p_code: code, p_description: $('bDesc').value, p_earn_rule: ruleObj });
+  $('saveBadge').disabled = false;
+  if (error) return toast(error.message,'err');
+  toast('Saved — the app + engine read it live','ok');
+  await loadBadges(); $('badgePick').value = code;
+};
+
+// ---------- shared thresholds ----------
+async function loadConfig(){
+  const { data, error } = await sb.rpc('admin_award_config');
+  if (error) return toast(error.message,'err');
+  $('cfgBody').innerHTML = (data||[]).map(c => `<tr>
+    <td class="code">${esc(c.key)}</td>
+    <td>${esc(c.note||'')}</td>
+    <td><input class="num" data-f="num" type="number" step="any" value="${esc(c.num)}"/></td>
+    <td class="rowbtns"><button class="btn gold sm" data-key="${esc(c.key)}">Save</button></td>
+  </tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted)">No shared thresholds.</td></tr>';
+}
+$('cfgBody').addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('button'); if (!btn) return;
+  const tr = btn.closest('tr'); const v = tr.querySelector('[data-f="num"]').value;
+  if (v === '' || isNaN(Number(v))) return toast('Value must be a number','err');
+  btn.disabled = true;
+  const { error } = await sb.rpc('admin_save_award_config', { p_key: btn.dataset.key, p_num: Number(v) });
+  btn.disabled = false;
+  error ? toast(error.message,'err') : toast('Threshold saved','ok');
+});
+
+// resume session
+(async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
+</script>
+</body>
+</html>
