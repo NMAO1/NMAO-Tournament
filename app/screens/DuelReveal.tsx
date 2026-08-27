@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, Image, Animated } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { neutrals, hues } from "@nmao/design-tokens";
+import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { duelReveal, type Reveal, type Card, type DuelType } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
+import { initSounds, play, setPlaysInSilentMode } from "../lib/sound";
 
 type Outcome = "win" | "deadlock" | "loss" | "spectator";
 
@@ -17,6 +19,12 @@ export default function DuelReveal({ duelId, myId, onClose }: { duelId: string; 
   const [failed, setFailed] = useState(false);
 
   useEffect(() => { duelReveal(duelId).then((r) => (r ? setRev(r) : setFailed(true))); }, [duelId]);
+  // Sound: init + respect the silent switch for duels (unlike the always-plays
+  // monthly ceremony); restore the default on exit so the ceremony is unaffected.
+  useEffect(() => {
+    initSounds().then(() => setPlaysInSilentMode(false));
+    return () => { setPlaysInSilentMode(true); };
+  }, []);
   // light tick on step change — the Result step (1) fires its own outcome-aware haptic
   useEffect(() => { if (step === 1) return; try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ } }, [step]);
 
@@ -48,17 +56,25 @@ export default function DuelReveal({ duelId, myId, onClose }: { duelId: string; 
   ];
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#060504" }}>
+    <View style={{ flex: 1, backgroundColor: "#080611" }}>
+      {/* spectrum progress rail (regal blue→purple→red) */}
       <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingTop: 50 }}>
         {steps.map((_, i) => (
-          <View key={i} style={{ flex: 1, height: 3, borderRadius: 3, marginHorizontal: 2, backgroundColor: i <= step ? hues.gold.base : "rgba(255,255,255,0.15)" }} />
+          i <= step
+            ? <LinearGradient key={i} colors={spectrumStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ flex: 1, height: 3, borderRadius: 3, marginHorizontal: 2 }} />
+            : <View key={i} style={{ flex: 1, height: 3, borderRadius: 3, marginHorizontal: 2, backgroundColor: "rgba(255,255,255,0.15)" }} />
         ))}
       </View>
-      <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20 }}>{steps[step]}</View>
+      {/* bento card — a spectrum hairline border around a regal dark panel */}
+      <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 18 }}>
+        <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: 26, padding: 1.5 }}>
+          <View style={{ borderRadius: 25, backgroundColor: "#0c0a16", paddingVertical: 30, paddingHorizontal: 16 }}>{steps[step]}</View>
+        </LinearGradient>
+      </View>
       <View style={{ flexDirection: "row", justifyContent: "center", paddingBottom: 34 }}>
         {step > 0 ? <Ghost label="‹ Back" onPress={() => setStep((s) => s - 1)} /> : <View style={{ width: 104 }} />}
         <View style={{ width: 12 }} />
-        {step < steps.length - 1 ? <Gold label="Next ›" onPress={() => setStep((s) => s + 1)} /> : <Gold label="Done" onPress={onClose} />}
+        {step < steps.length - 1 ? <Spectrum label="Next ›" onPress={() => setStep((s) => s + 1)} /> : <Spectrum label="Done" onPress={onClose} />}
       </View>
     </View>
   );
@@ -141,6 +157,7 @@ function Result({ outcome, me, them, winnerName, ratingBefore, ratingAfter }:
   const s = useRef(new Animated.Value(0)).current;
   const glow = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    play("riser"); // tension builds through the suspense beat…
     const t = setTimeout(() => {
       setRevealed(true);
       try {
@@ -148,6 +165,9 @@ function Result({ outcome, me, them, winnerName, ratingBefore, ratingAfter }:
           ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success;
         Haptics.notificationAsync(kind);
       } catch { /* optional */ }
+      // …then the outcome sting lands with the emblem: win = triumphant, loss/
+      // deadlock = a gentle "soft" (never a defeat buzzer), spectator = neutral.
+      play(outcome === "win" ? "win" : outcome === "spectator" ? "reveal" : "soft");
       Animated.spring(s, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
       if (outcome === "win") Animated.spring(glow, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }).start();
     }, 750);
@@ -225,18 +245,18 @@ function Onward({ outcome, onDone }: { outcome: Outcome; onDone: () => void }) {
       <Text style={{ color: hues.gold.hi, fontSize: 15, fontStyle: "italic", textAlign: "center", maxWidth: 280 }}>&ldquo;{line}&rdquo;</Text>
       <Text style={{ color: hues.amethyst.hi, fontSize: 12, textAlign: "center", marginTop: 14, maxWidth: 280 }}>✦ Your badges &amp; medals await the monthly reveal.</Text>
       <View style={{ marginTop: 22, alignSelf: "stretch" }}>
-        <Gold label={cta} full onPress={onDone} />
+        <Spectrum label={cta} full onPress={onDone} />
       </View>
     </View>
   );
 }
 
-function Gold({ label, onPress, full }: { label: string; onPress: () => void; full?: boolean }) {
+function Spectrum({ label, onPress, full }: { label: string; onPress: () => void; full?: boolean }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ minWidth: full ? undefined : 104 }}>
-      <View style={{ borderRadius: 11, paddingVertical: 12, paddingHorizontal: 18, alignItems: "center", backgroundColor: hues.gold.base }}>
-        <Text style={{ color: "#141210", fontWeight: "800", fontSize: 13 }}>{label}</Text>
-      </View>
+      <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ borderRadius: 11, paddingVertical: 12, paddingHorizontal: 18, alignItems: "center" }}>
+        <Text style={{ color: "#fff", fontWeight: "800", fontSize: 13 }}>{label}</Text>
+      </LinearGradient>
     </TouchableOpacity>
   );
 }

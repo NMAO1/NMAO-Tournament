@@ -30,6 +30,14 @@ export async function initSounds(): Promise<void> {
   } catch { /* silent */ }
 }
 
+// Toggle whether sounds play through the phone's silent switch. The monthly
+// ceremony wants true (a showpiece); the duel reveal sets false on entry and
+// restores true on exit, so it respects silent mode without changing the default.
+export async function setPlaysInSilentMode(v: boolean): Promise<void> {
+  if (!ExpoAudio) return;
+  try { await ExpoAudio.setAudioModeAsync({ playsInSilentMode: v }); } catch { /* silent */ }
+}
+
 export async function play(key: Key): Promise<void> {
   if (!ExpoAudio) return;
   try {
