@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Image } from "react-native";
+import * as Haptics from "expo-haptics";
 import { neutrals, hues, rarityBase, type MedalType } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
+import { BadgeFrame } from "../components/BadgeFrame";
 import { SpectrumText } from "../components/SpectrumText";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
@@ -30,9 +32,20 @@ export default function Achievements() {
     if (activeId) loadVault(activeId).then(setVault); // reveal-only: the ceremony marks badges seen, not opening Honors
   }, [activeId]);
 
+  // open a badge → a light tick of feedback (reward haptics)
+  function openBadge(b: VaultBadge) {
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
+    setSelBadge(b);
+  }
+
   async function equip(b: VaultBadge) {
     if (!me || !b.earned) return;
     const next = vault?.equipped === b.code ? null : b.code;
+    // equipping = a satisfying success thunk; removing = a lighter tick
+    try {
+      if (next) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch { /* optional */ }
     await equipFrame(me, next);
     setVault((v) => (v ? { ...v, equipped: next } : v));
   }
@@ -41,17 +54,22 @@ export default function Achievements() {
     return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
   }
 
-  // Reveal-only: a badge shows in the vault once it's been unveiled at a reveal
-  // (seen=true). Earned-but-unrevealed badges stay hidden — teased below, then the
-  // ceremony is genuinely the first time the competitor sees them.
-  const earnedBadges = Object.values(
-    vault.badges.filter((b) => b.earned && b.seen).reduce<Record<string, VaultBadge>>((acc, b) => {
-      const cur = acc[b.code];
-      if (!cur || Number(b.tier ?? 0) > Number(cur.tier ?? 0)) acc[b.code] = b;
-      return acc;
-    }, {})
-  );
-  const earned = earnedBadges.length;
+  // Every badge, deduped by code (keep the highest EARNED tier, else the base).
+  // A badge reads "unlocked" only once REVEALED (earned && seen) — an earned-but-
+  // unseen badge still shows as a locked silhouette so the ceremony stays its first
+  // reveal. Locked badges render as greyed goals to chase (the whole vault, always).
+  const byCode = vault.badges.reduce<Record<string, VaultBadge>>((acc, b) => {
+    const cur = acc[b.code];
+    const better = !cur
+      || (b.earned && !cur.earned)
+      || (b.earned === cur.earned && Number(b.tier ?? 0) > Number(cur.tier ?? 0));
+    if (better) acc[b.code] = b;
+    return acc;
+  }, {});
+  const isUnlocked = (b: VaultBadge) => b.earned && b.seen;
+  const allBadges = Object.values(byCode).sort((a, b) => Number(isUnlocked(b)) - Number(isUnlocked(a)));
+  const earned = allBadges.filter(isUnlocked).length;
+  const total = allBadges.length;
   // Distinct badges earned but not yet revealed (across tiers) — the teaser count.
   const pendingReveal = new Set(vault.badges.filter((b) => b.earned && !b.seen).map((b) => b.code)).size;
   // Map the season's earned medals onto the 8 medallion rounds (R1–R8); rest are ghost slots.
@@ -67,7 +85,9 @@ export default function Achievements() {
         <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.3, marginTop: 4 }}>{filled} / 8 rounds{season ? ` · ${season}` : ""}</Text>
       </View>
 
-      <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>{earned === 0 ? "Badges stay hidden until earned — compete to reveal them." : `${earned} badge${earned === 1 ? "" : "s"} earned. Tap one to wear its frame.`}</Text>
+      <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>
+        <Text style={{ color: hues.gold.hi, fontWeight: "800" }}>{earned} of {total}</Text> badges earned{earned > 0 ? " — tap one to wear its frame." : " — compete to unlock them."}
+      </Text>
 
       {pendingReveal > 0 ? (
         <View style={{ marginTop: 10, padding: 14, borderRadius: 14, backgroundColor: "rgba(230,185,63,0.08)", borderWidth: 1, borderColor: hues.gold.shadow, flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -90,24 +110,30 @@ export default function Achievements() {
         </>
       ) : null}
 
-      {earned > 0 ? (
+      {total > 0 ? (
         <>
           <Label t="Badge vault" />
           <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center" }}>
-            {earnedBadges.map((b) => {
+            {allBadges.map((b) => {
+          const u = isUnlocked(b);
           const equipped = vault.equipped === b.code;
           return (
-            <TouchableOpacity key={`${b.code}-${b.tier ?? "base"}`} onPress={() => setSelBadge(b)} activeOpacity={b.earned ? 0.7 : 1} style={{ width: "25%", alignItems: "center", marginBottom: 14, opacity: b.earned ? 1 : 0.4 }}>
-              <View style={{ padding: 7, borderRadius: 16, backgroundColor: equipped ? "rgba(230,185,63,0.08)" : "#141216", borderWidth: 1, borderColor: equipped ? hues.gold.base : b.earned ? rarityBase(b.rarity) + "66" : neutrals.border }}>
-                <Frame rarity={b.rarity} size="mini" radius={30} glow={b.earned}>
+            <TouchableOpacity key={b.code} onPress={() => openBadge(b)} activeOpacity={0.7} style={{ width: "25%", alignItems: "center", marginBottom: 14, opacity: u ? 1 : 0.5 }}>
+              <View style={{ padding: 7, borderRadius: 16, backgroundColor: equipped ? "rgba(230,185,63,0.08)" : "#141216", borderWidth: 1, borderColor: equipped ? hues.gold.base : u ? rarityBase(b.rarity) + "66" : neutrals.border }}>
+                <Frame rarity={b.rarity} size="mini" radius={30} glow={u}>
                   <View style={{ width: 50, height: 50, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
                     {emblemUrl(b.emblemKey) ? (
-                      <Image source={{ uri: emblemUrl(b.emblemKey)! }} style={{ width: 50, height: 50 }} resizeMode="contain" />
+                      <Image source={{ uri: emblemUrl(b.emblemKey)! }} style={{ width: 50, height: 50 }} resizeMode="contain" tintColor={u ? undefined : "#4a4750"} />
                     ) : (
-                      <Text style={{ color: b.earned ? "#EFC24E" : neutrals.muted2, fontSize: 18 }}>◆</Text>
+                      <Text style={{ color: u ? "#EFC24E" : neutrals.muted2, fontSize: 18 }}>◆</Text>
                     )}
                   </View>
                 </Frame>
+                {!u ? (
+                  <View pointerEvents="none" style={{ position: "absolute", right: 4, bottom: 4, width: 17, height: 17, borderRadius: 9, backgroundColor: "rgba(8,6,4,0.82)", alignItems: "center", justifyContent: "center" }}>
+                    <Text style={{ fontSize: 9 }}>🔒</Text>
+                  </View>
+                ) : null}
               </View>
               <Text style={{ color: equipped ? hues.gold.hi : neutrals.muted2, fontSize: 8, marginTop: 6, textAlign: "center", fontWeight: equipped ? "800" : "400" }} numberOfLines={2}>
                 {equipped ? "★ " : ""}{b.name}
@@ -125,15 +151,15 @@ export default function Achievements() {
         {selBadge ? (
           <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: "#161618", borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderColor: "#2a2a2e", padding: 22, paddingBottom: 34, alignItems: "center" }}>
             <View style={{ width: 40, height: 4, borderRadius: 3, backgroundColor: "#3a3a3e", marginBottom: 16 }} />
-            <Frame rarity={selBadge.rarity} size="mini" radius={40} glow>
-              <View style={{ width: 88, height: 88, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
+            <BadgeFrame rarity={selBadge.rarity} w={112} h={112} radius={40}>
+              <View style={{ flex: 1, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
                 {emblemUrl(selBadge.emblemKey) ? (
-                  <Image source={{ uri: emblemUrl(selBadge.emblemKey)! }} style={{ width: 88, height: 88 }} resizeMode="contain" />
+                  <Image source={{ uri: emblemUrl(selBadge.emblemKey)! }} style={{ width: 84, height: 84 }} resizeMode="contain" tintColor={isUnlocked(selBadge) ? undefined : "#4a4750"} />
                 ) : (
                   <Text style={{ color: "#EFC24E", fontSize: 32 }}>◆</Text>
                 )}
               </View>
-            </Frame>
+            </BadgeFrame>
             <Text style={{ color: neutrals.text, fontSize: 20, fontWeight: "800", marginTop: 14 }}>{selBadge.name}</Text>
             <Text style={{ color: rarityBase(selBadge.rarity), fontSize: 11, letterSpacing: 2, fontWeight: "800", textTransform: "uppercase", marginTop: 3 }}>
               {RARITY_LABEL[selBadge.rarity] ?? selBadge.rarity}{selBadge.tiered && selBadge.tier ? ` · Tier ${selBadge.tier}` : ""}
@@ -144,12 +170,20 @@ export default function Achievements() {
                 <Text style={{ color: neutrals.muted, fontSize: 14, textAlign: "center", marginTop: 6, lineHeight: 20 }}>{selBadge.description}</Text>
               </View>
             ) : null}
-            <Text style={{ color: "#5DCAA5", fontSize: 12, fontWeight: "700", marginTop: 14 }}>✓ Earned</Text>
-            <TouchableOpacity onPress={() => equip(selBadge)} activeOpacity={0.85} style={{ marginTop: 16, alignSelf: "stretch" }}>
-              <View style={{ borderRadius: 12, paddingVertical: 13, alignItems: "center", backgroundColor: equipped ? "rgba(230,185,63,0.12)" : hues.gold.base, borderWidth: 1, borderColor: hues.gold.base }}>
-                <Text style={{ color: equipped ? hues.gold.hi : "#141210", fontWeight: "800", fontSize: 14 }}>{equipped ? "★ Equipped — tap to remove" : "Equip this frame"}</Text>
+            {isUnlocked(selBadge) ? (
+              <>
+                <Text style={{ color: "#5DCAA5", fontSize: 12, fontWeight: "700", marginTop: 14 }}>✓ Earned</Text>
+                <TouchableOpacity onPress={() => equip(selBadge)} activeOpacity={0.85} style={{ marginTop: 16, alignSelf: "stretch" }}>
+                  <View style={{ borderRadius: 12, paddingVertical: 13, alignItems: "center", backgroundColor: equipped ? "rgba(230,185,63,0.12)" : hues.gold.base, borderWidth: 1, borderColor: hues.gold.base }}>
+                    <Text style={{ color: equipped ? hues.gold.hi : "#141210", fontWeight: "800", fontSize: 14 }}>{equipped ? "★ Equipped — tap to remove" : "Equip this frame"}</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <View style={{ marginTop: 16, alignSelf: "stretch", borderRadius: 12, paddingVertical: 13, alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: neutrals.border }}>
+                <Text style={{ color: neutrals.muted, fontWeight: "800", fontSize: 13 }}>🔒 Not yet earned</Text>
               </View>
-            </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={() => setSelBadge(null)} style={{ marginTop: 12 }}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Close</Text></TouchableOpacity>
           </TouchableOpacity>
         ) : null}

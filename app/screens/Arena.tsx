@@ -120,6 +120,14 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   }
 
   const unlocked = watched >= WATCH_GOAL && !noVideos;
+  // vote-unlock payoff — a success haptic the moment the watch-gate fills (once)
+  const unlockedOnce = useRef(false);
+  useEffect(() => {
+    if (unlocked && !unlockedOnce.current) {
+      unlockedOnce.current = true;
+      try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch { /* optional */ }
+    }
+  }, [unlocked]);
 
   async function vote(choice: Choice) {
     if (!unlocked || voting || voted) return;
@@ -204,7 +212,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           onAudio={() => focusAudio("challenger")} onVote={() => vote("challenger")}
           onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
           onSafety={() => openSafety("challenger")}
-          demoFrame="gem-series" demoValue={6}
+          demoFrame="journal_keeper" demoValue={120}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
@@ -213,7 +221,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
           onAudio={() => focusAudio("opponent")} onVote={() => vote("opponent")}
           onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
           onSafety={() => openSafety("opponent")}
-          demoFrame="gem-series" demoValue={10}
+          demoFrame="duelist" demoValue={100}
         />
       </View>
 
@@ -478,17 +486,32 @@ function CrestInset({ frame, corner, onPress }: { frame: Crest; corner: "left" |
 // the bottom border free for the crest imagery + animations.
 function VotePill({ label, onPress, disabled, dimmed, choice, bandH }:
   { label: string; onPress: () => void; disabled: boolean; dimmed: boolean; choice: Choice; bandH: number }) {
+  // when the watch-gate opens (disabled true→false) the pill lights up gold and
+  // gives a quick attention pulse — the visual half of the vote-unlock payoff.
+  const pulse = useRef(new Animated.Value(1)).current;
+  const wasDisabled = useRef(disabled);
+  useEffect(() => {
+    if (wasDisabled.current && !disabled) {
+      Animated.sequence([
+        Animated.spring(pulse, { toValue: 1.14, friction: 4, tension: 220, useNativeDriver: true }),
+        Animated.spring(pulse, { toValue: 1, friction: 5, tension: 160, useNativeDriver: true }),
+      ]).start();
+    }
+    wasDisabled.current = disabled;
+  }, [disabled, pulse]);
   return (
     <TouchableOpacity
       onPress={onPress} disabled={disabled} activeOpacity={0.85}
       style={{ position: "absolute", ...(choice === "challenger" ? { left: 12 } : { right: 12 }), bottom: bandH, zIndex: 30, opacity: dimmed ? 0.55 : 1 }}
     >
-      <LinearGradient
-        colors={[hues.gold.hi, "#c69329"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-        style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: "rgba(255,244,214,0.75)", shadowColor: "#000", shadowOpacity: 0.55, shadowRadius: 7, shadowOffset: { width: 0, height: 2 } }}
-      >
-        <Text style={{ color: "#1a1206", fontWeight: "900", fontSize: 14.5, letterSpacing: 1, textTransform: "uppercase" }}>{label}</Text>
-      </LinearGradient>
+      <Animated.View style={{ transform: [{ scale: pulse }] }}>
+        <LinearGradient
+          colors={[hues.gold.hi, "#c69329"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+          style={{ paddingHorizontal: 18, paddingVertical: 9, borderRadius: 999, borderWidth: 1.5, borderColor: "rgba(255,244,214,0.75)", shadowColor: disabled ? "#000" : hues.gold.hi, shadowOpacity: disabled ? 0.55 : 0.95, shadowRadius: disabled ? 7 : 13, shadowOffset: { width: 0, height: disabled ? 2 : 0 } }}
+        >
+          <Text style={{ color: "#1a1206", fontWeight: "900", fontSize: 14.5, letterSpacing: 1, textTransform: "uppercase" }}>{label}</Text>
+        </LinearGradient>
+      </Animated.View>
     </TouchableOpacity>
   );
 }

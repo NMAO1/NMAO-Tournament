@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { uploadDuelVideo } from "../lib/upload";
@@ -48,7 +49,7 @@ export default function Duel() {
   async function refresh() { if (!me) return; setRefreshing(true); await load(me); setRefreshing(false); }
   async function runSearch(text: string) { setSearch(text); if (me) setQueue(await voteQueue(me, text.trim())); }
 
-  async function openChallenge() { if (!me) return; setChallenging(true); if (events.length === 0) setEvents(await duelEvents()); }
+  async function openChallenge() { if (!me) return; try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } setChallenging(true); if (events.length === 0) setEvents(await duelEvents()); }
   async function request(ev: DuelEvent) {
     if (!me) return;
     setBusyId(ev.code);

@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { View, Text, TouchableOpacity, ActivityIndicator, Image, Animated } from "react-native";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
@@ -17,7 +17,8 @@ export default function DuelReveal({ duelId, myId, onClose }: { duelId: string; 
   const [failed, setFailed] = useState(false);
 
   useEffect(() => { duelReveal(duelId).then((r) => (r ? setRev(r) : setFailed(true))); }, [duelId]);
-  useEffect(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ } }, [step]);
+  // light tick on step change — the Result step (1) fires its own outcome-aware haptic
+  useEffect(() => { if (step === 1) return; try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ } }, [step]);
 
   if (failed) return <Center><Text style={{ color: neutrals.muted, textAlign: "center" }}>This duel isn’t ready to reveal yet.</Text><Ghost label="Close" onPress={onClose} /></Center>;
   if (!rev) return <Center><ActivityIndicator color={neutrals.muted} /></Center>;
@@ -117,11 +118,26 @@ function Result({ outcome, me, them }: { outcome: Outcome; me: Card; them: Card 
     loss: { emblem: "↑", head: "Well fought.", sub: `${them.firstName} took this round — but every duel sharpens your edge.` },
     spectator: { emblem: "🏆", head: `${them.firstName === me.firstName ? "" : ""}The winner`, sub: "The community has decided." },
   }[outcome];
+  // the payoff moment: the emblem springs in (overshoot) with an outcome-aware
+  // haptic — a Success "thunk" for a win, a Warning double-tap for loss/deadlock.
+  const s = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    try {
+      const kind = outcome === "loss" || outcome === "deadlock"
+        ? Haptics.NotificationFeedbackType.Warning
+        : Haptics.NotificationFeedbackType.Success;
+      Haptics.notificationAsync(kind);
+    } catch { /* optional */ }
+    Animated.spring(s, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
+  }, [s, outcome]);
+  const scale = s.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
   return (
     <View style={{ alignItems: "center" }}>
-      <Text style={{ fontSize: 40, marginBottom: 10 }}>{map.emblem}</Text>
-      <Text style={{ color: neutrals.text, fontSize: 24, fontWeight: "800" }}>{map.head}</Text>
-      <Text style={{ color: hues.gold.hi, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 10, maxWidth: 280, lineHeight: 20 }}>{map.sub}</Text>
+      <Animated.Text style={{ fontSize: 40, marginBottom: 10, opacity: s, transform: [{ scale }] }}>{map.emblem}</Animated.Text>
+      <Animated.View style={{ alignItems: "center", opacity: s }}>
+        <Text style={{ color: neutrals.text, fontSize: 24, fontWeight: "800" }}>{map.head}</Text>
+        <Text style={{ color: hues.gold.hi, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 10, maxWidth: 280, lineHeight: 20 }}>{map.sub}</Text>
+      </Animated.View>
     </View>
   );
 }
