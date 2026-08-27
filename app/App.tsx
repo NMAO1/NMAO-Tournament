@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, Modal, Linking } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import type { Session } from "@supabase/supabase-js";
 import { neutrals, hues } from "@nmao/design-tokens";
@@ -11,6 +12,7 @@ import Login from "./screens/Login";
 import Signup from "./screens/Signup";
 import Onboard from "./screens/Onboard";
 import InviteRedeem from "./screens/InviteRedeem";
+import Intro from "./screens/Intro";
 import Compete from "./screens/Compete";
 import Duel from "./screens/Duel";
 import Achievements from "./screens/Achievements";
@@ -134,6 +136,10 @@ export default function App() {
   const [hasComp, setHasComp] = useState<boolean | undefined>(undefined);
   const [authView, setAuthView] = useState<"login" | "signup">("login");
   const [redeemToken, setRedeemToken] = useState<string | null>(null);
+  const [seenIntro, setSeenIntro] = useState<boolean | undefined>(undefined);
+
+  // First-run "how it works" — shown once per device (SecureStore flag).
+  useEffect(() => { SecureStore.getItemAsync("nmao_seen_intro_v1").then((v) => setSeenIntro(v === "1")).catch(() => setSeenIntro(true)); }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -171,6 +177,8 @@ export default function App() {
   else if (redeemToken) body = <InviteRedeem token={redeemToken} onDone={() => { setRedeemToken(null); setHasComp(true); }} onCancel={() => setRedeemToken(null)} />;
   else if (hasComp === undefined) body = spinner;
   else if (!hasComp) body = <Onboard onDone={() => setHasComp(true)} />;
+  else if (seenIntro === undefined) body = spinner;
+  else if (!seenIntro) body = <Intro onDone={() => { SecureStore.setItemAsync("nmao_seen_intro_v1", "1").catch(() => {}); setSeenIntro(true); }} />;
   else body = <MainTabs />;
 
   return (

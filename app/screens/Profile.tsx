@@ -88,7 +88,10 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
           ) : null}
         </View>
         <Text style={{ color: neutrals.text, fontSize: 22, fontWeight: "800", marginTop: 12 }}>{info.firstName}{info.lastName ? ` ${info.lastName[0]}.` : ""}</Text>
-        <Text style={{ color: neutrals.muted2, fontSize: 12, textTransform: "capitalize" }}>{[RANK(info.rank), info.style, info.school?.name].filter(Boolean).join(" · ")}</Text>
+        {info.equippedBadgeTitle ? (
+          <Text style={{ color: rarityBase(frameRarity), fontSize: 12, fontWeight: "800", fontStyle: "italic", letterSpacing: 0.5, marginTop: 3 }}>{info.equippedBadgeTitle}</Text>
+        ) : null}
+        <Text style={{ color: neutrals.muted2, fontSize: 12, textTransform: "capitalize", marginTop: 2 }}>{[RANK(info.rank), info.style, info.school?.name].filter(Boolean).join(" · ")}</Text>
         <View style={{ flexDirection: "row", marginTop: 14 }}>
           <TouchableOpacity onPress={() => setSub("rules")} activeOpacity={0.7}>
             <Stat v={info.rating != null ? String(info.rating) : "1200"} l="Dueling rating" />
