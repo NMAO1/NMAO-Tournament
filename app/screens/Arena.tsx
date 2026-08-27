@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Animated, ActivityIndicator, Image, Dimen
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
 import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
-import { neutrals, hues, rarityStops, rarityBase, spectrumStops } from "@nmao/design-tokens";
+import { neutrals, hues, rarityStops, rarityBase, spectrumStops, type Rarity } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
 import { FrameElements } from "../components/LivingFrame";
 import { FRAME_SPECS, frameElementUrl } from "../lib/badgeFrames";
@@ -370,7 +370,7 @@ function Side({
   card, choice, rarity, active, unlocked, voted, watchLeft, player, hasVideo, onAudio, onVote, onCrest, onSafety,
   demoFrame, demoValue,
 }: {
-  card: Card; choice: Choice; rarity: "common" | "rare" | "epic" | "legendary";
+  card: Card; choice: Choice; rarity: Rarity;
   active: boolean; unlocked: boolean; voted: Choice | null; watchLeft: number;
   player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void; onSafety: () => void;
   demoFrame?: string; demoValue?: number;

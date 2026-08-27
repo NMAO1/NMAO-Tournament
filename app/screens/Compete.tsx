@@ -10,6 +10,7 @@ import { myCompetitors } from "../lib/competitors";
 import { getActiveCompetitorId, setActiveCompetitorId } from "../lib/activeCompetitor";
 import { creditSummary } from "../lib/pricing";
 import { competeDashboard, formatCountdown, CompeteDashboard, CompeteEvent, CompeteRound, CompeteRating } from "../lib/compete";
+import { HeaderBell } from "../components/HeaderBell";
 import { latestUnseenMonthly, markMonthlySeen, MonthlyReveal as MonthlyRevealData } from "../lib/notifications";
 import MonthlyReveal from "./MonthlyReveal";
 import BuyEntry from "./BuyEntry";
@@ -31,7 +32,7 @@ const EVENTS = [
 const prettyBracket = (b: string) => b.replace("_plus", "+").replace("_", "–");
 const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 
-export default function Compete() {
+export default function Compete({ unread = 0, onBell }: { unread?: number; onBell?: () => void }) {
   const [comps, setComps] = useState<Competitor[]>([]);
   const [competitorId, setCompetitorId] = useState<string | null>(null);
   const [event, setEvent] = useState<string | null>(null);
@@ -247,9 +248,12 @@ export default function Compete() {
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 48 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
         <Text style={{ color: neutrals.text, fontSize: 26, fontWeight: "700" }}>Compete</Text>
-        <TouchableOpacity onPress={() => supabase.auth.signOut()}>
-          <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+          <HeaderBell unread={unread} onPress={onBell} />
+          <TouchableOpacity onPress={() => supabase.auth.signOut()}>
+            <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {dash?.round ? (
         <RoundBanner round={dash.round} nowTs={nowTs} />

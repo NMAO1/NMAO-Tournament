@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, RefreshControl, Modal, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -59,7 +59,14 @@ export default function Duel() {
   }, [activeId, load]);
 
   async function refresh() { if (!me) return; setRefreshing(true); await load(me); setRefreshing(false); }
-  async function runSearch(text: string) { setSearch(text); if (me) setQueue(await voteQueue(me, text.trim())); }
+  // Debounce the vote-queue search so it fires ~300ms after typing stops, not on
+  // every keystroke.
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function runSearch(text: string) {
+    setSearch(text);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => { if (me) voteQueue(me, text.trim()).then(setQueue); }, 300);
+  }
 
   async function openChallenge() { if (!me) return; try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } setChallenging(true); if (events.length === 0) setEvents(await duelEvents()); }
   async function request(ev: DuelEvent) {
@@ -226,7 +233,8 @@ function ActiveCard({ d, busy, onRespond, onUpload }: { d: ActiveDuel; busy: boo
 
       {d.status === "accepted" && !d.myVideoIn ? (
         <TouchableOpacity onPress={() => onUpload(d)} disabled={busy} style={{ marginTop: 10, borderRadius: 10, overflow: "hidden" }}>
-          <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 11, alignItems: "center" }}>
+          <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+            {busy ? <ActivityIndicator color="#fff" size="small" /> : null}
             <Text style={{ color: "#fff", fontWeight: "800", fontSize: 12 }}>{busy ? "Uploading…" : "⬆ Upload your form"}</Text>
           </LinearGradient>
         </TouchableOpacity>

@@ -12,7 +12,7 @@ export type DuelType = string;
 export type Choice = "challenger" | "opponent";
 
 function asRarity(r: string | null): Rarity {
-  return r === "legendary" || r === "epic" || r === "rare" || r === "common" ? r : "common";
+  return r === "legendary" || r === "epic" || r === "rare" || r === "uncommon" || r === "common" ? r : "common";
 }
 
 // ---- weekly duel allowance (duel_week_status) ----

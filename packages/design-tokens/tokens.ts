@@ -10,6 +10,7 @@ export const hues = {
   amethyst: { hi: '#C982FF', base: '#A32BF7', shadow: '#6712C4' }, // purple
   sapphire: { hi: '#66A9FF', base: '#1F7BFF', shadow: '#0B3FD6' }, // blue
   gold:     { hi: '#FFE488', base: '#E6B93F', shadow: '#9C7A22' }, // accent / CTA / medals
+  emerald:  { hi: '#6FE3A8', base: '#17B368', shadow: '#0B7A43' }, // green — uncommon rarity
 } as const;
 export type Hue = keyof typeof hues;
 
@@ -65,8 +66,8 @@ export function glow(h: Hue, alpha = 0.35): string {
 // Rarity → collectible-frame / medal treatment (dueling).
 // common uses a neutral "steel"; rare/epic/legendary map to the hue set.
 // ---------------------------------------------------------------------
-export type Rarity = 'common' | 'rare' | 'epic' | 'legendary';
-export const rarityHue = { rare: 'sapphire', epic: 'amethyst', legendary: 'gold' } as const;
+export type Rarity = 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+export const rarityHue = { uncommon: 'emerald', rare: 'sapphire', epic: 'amethyst', legendary: 'gold' } as const;
 export const steel = { hi: '#D7D2C7', base: '#8E877A', shadow: '#4B463D' } as const;
 
 /** The 3 metal stops for a rarity (expo-linear-gradient colors). */

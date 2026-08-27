@@ -6,7 +6,7 @@ export type VaultBadge = { code: string; name: string; description: string | nul
 export type VaultMedal = { tier: string; place: number | null; event: string | null };
 export type Vault = { equipped: string | null; badges: VaultBadge[]; medals: VaultMedal[] };
 
-const asRarity = (r: unknown): Rarity => (r === "legendary" || r === "epic" || r === "rare" || r === "common" ? r : "common");
+const asRarity = (r: unknown): Rarity => (r === "legendary" || r === "epic" || r === "rare" || r === "uncommon" || r === "common" ? r : "common");
 
 export async function loadVault(competitorId: string): Promise<Vault> {
   const { data } = await supabase.rpc("badge_vault", { p_competitor_id: competitorId });

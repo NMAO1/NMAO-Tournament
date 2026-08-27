@@ -87,11 +87,11 @@ function MainTabs() {
       ) : null}
 
       <View style={{ flex: 1 }}>
-        {tab === "compete" ? <Compete /> : null}
+        {tab === "compete" ? <Compete unread={unread} onBell={() => setAlertsOpen(true)} /> : null}
         {tab === "duel" ? <Duel /> : null}
         {tab === "achievements" ? <Achievements /> : null}
         {tab === "leaderboard" ? <Leaderboard /> : null}
-        {tab === "profile" ? <Profile /> : null}
+        {tab === "profile" ? <Profile unread={unread} onBell={() => setAlertsOpen(true)} /> : null}
       </View>
 
       <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: neutrals.border, backgroundColor: "#0b0b0c", paddingTop: 8, paddingBottom: 26 }}>

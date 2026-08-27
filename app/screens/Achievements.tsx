@@ -8,10 +8,19 @@ import { SpectrumText } from "../components/SpectrumText";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
-import { loadVault, equipFrame, emblemUrl, type Vault, type VaultBadge } from "../lib/vault";
+import { loadVault, equipFrame, emblemUrl, type Vault, type VaultBadge, type VaultMedal } from "../lib/vault";
 import { useSeasonLabel } from "../lib/season";
 
-const RARITY_LABEL: Record<string, string> = { legendary: "Legendary", epic: "Epic", rare: "Rare", common: "Common" };
+const RARITY_LABEL: Record<string, string> = { legendary: "Legendary", epic: "Epic", rare: "Rare", uncommon: "Uncommon", common: "Common" };
+
+// Event code → display name (medals store the code, e.g. "trad_forms").
+const EVENT_NAMES: Record<string, string> = {
+  trad_forms: "Traditional Forms", open_forms: "Open Forms",
+  trad_weapons: "Traditional Weapons", open_weapons: "Open Weapons",
+  creative_forms: "Creative Forms", creative_weapons: "Creative Weapons",
+};
+const eventName = (e: string | null): string =>
+  e ? (EVENT_NAMES[e] ?? e.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())) : "";
 
 const asMedal = (t: string): MedalType => (t === "gold" || t === "silver" || t === "bronze" || t === "participation" ? t : "participation");
 const asTier = (t: string): Tier => (t === "gold" || t === "silver" || t === "bronze" ? t : "part");
@@ -25,6 +34,7 @@ export default function Achievements() {
   const [me, setMe] = useState<string | null>(null);
   const [vault, setVault] = useState<Vault | null>(null);
   const [selBadge, setSelBadge] = useState<VaultBadge | null>(null);
+  const [selMedal, setSelMedal] = useState<VaultMedal | null>(null);
 
   const { activeId } = useActiveCompetitor();
   useEffect(() => {
@@ -72,17 +82,19 @@ export default function Achievements() {
   const total = allBadges.length;
   // Distinct badges earned but not yet revealed (across tiers) — the teaser count.
   const pendingReveal = new Set(vault.badges.filter((b) => b.earned && !b.seen).map((b) => b.code)).size;
-  // Map the season's earned medals onto the 8 medallion rounds (R1–R8); rest are ghost slots.
+  // Map the season's earned medals onto the 8 medallion rounds (R1–R8), with the
+  // 9th medal (the finale, Round 9) as the center keystone; rest are ghost slots.
   const medTiers: (Tier | null)[] = Array.from({ length: 8 }, (_, i) => (vault.medals[i] ? asTier(vault.medals[i].tier) : null));
-  const filled = medTiers.filter(Boolean).length;
+  const centerTier: Tier | null = vault.medals[8] ? asTier(vault.medals[8].tier) : null;
+  const filled = medTiers.filter(Boolean).length + (centerTier ? 1 : 0);
   const equipped = selBadge ? vault.equipped === selBadge.code : false;
   return (
     <>
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingBottom: 34 }}>
       <Label t="Your Season Medallion" />
       <View style={{ alignItems: "center", marginBottom: 10 }}>
-        <Medallion tiers={medTiers} season={SEASON} size={280} />
-        <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.3, marginTop: 4 }}>{filled} / 8 rounds{season ? ` · ${season}` : ""}</Text>
+        <Medallion tiers={medTiers} season={SEASON} size={280} centerTier={centerTier} />
+        <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.3, marginTop: 4 }}>{filled} / 9 rounds{season ? ` · ${season}` : ""}</Text>
       </View>
 
       <Text style={{ color: neutrals.muted, marginBottom: 4, lineHeight: 20 }}>
@@ -101,10 +113,10 @@ export default function Achievements() {
           <Label t="Medal case" />
           <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
             {vault.medals.map((m, i) => (
-              <View key={i} style={{ alignItems: "center", width: "25%", marginBottom: 12 }}>
+              <TouchableOpacity key={i} onPress={() => setSelMedal(m)} activeOpacity={0.7} style={{ alignItems: "center", width: "25%", marginBottom: 12 }}>
                 <Medal type={asMedal(m.tier)} place={m.place} size={50} />
-                <Text style={{ color: neutrals.muted2, fontSize: 8, marginTop: 6, textAlign: "center" }} numberOfLines={1}>{m.event ?? m.tier}</Text>
-              </View>
+                <Text style={{ color: neutrals.muted2, fontSize: 8, marginTop: 6, textAlign: "center" }} numberOfLines={2}>{eventName(m.event) || m.tier}</Text>
+              </TouchableOpacity>
             ))}
           </View>
         </>
@@ -185,6 +197,22 @@ export default function Achievements() {
               </View>
             )}
             <TouchableOpacity onPress={() => setSelBadge(null)} style={{ marginTop: 12 }}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Close</Text></TouchableOpacity>
+          </TouchableOpacity>
+        ) : null}
+      </TouchableOpacity>
+    </Modal>
+
+    <Modal visible={!!selMedal} transparent animationType="slide" onRequestClose={() => setSelMedal(null)}>
+      <TouchableOpacity activeOpacity={1} onPress={() => setSelMedal(null)} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.62)", justifyContent: "flex-end" }}>
+        {selMedal ? (
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: "#161618", borderTopLeftRadius: 24, borderTopRightRadius: 24, borderTopWidth: 1, borderColor: "#2a2a2e", padding: 22, paddingBottom: 34, alignItems: "center" }}>
+            <View style={{ width: 40, height: 4, borderRadius: 3, backgroundColor: "#3a3a3e", marginBottom: 16 }} />
+            <Medal type={asMedal(selMedal.tier)} place={selMedal.place} size={96} />
+            <Text style={{ color: neutrals.text, fontSize: 20, fontWeight: "800", marginTop: 14 }}>{eventName(selMedal.event) || "Medal"}</Text>
+            <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, fontWeight: "800", textTransform: "uppercase", marginTop: 3 }}>
+              {selMedal.place ? `${selMedal.place === 1 ? "1st" : selMedal.place === 2 ? "2nd" : selMedal.place === 3 ? "3rd" : `${selMedal.place}th`} place · ` : ""}{selMedal.tier}
+            </Text>
+            <TouchableOpacity onPress={() => setSelMedal(null)} style={{ marginTop: 18 }}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Close</Text></TouchableOpacity>
           </TouchableOpacity>
         ) : null}
       </TouchableOpacity>

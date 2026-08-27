@@ -1,7 +1,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Switch, TextInput, Alert } from "react-native";
-import { neutrals, hues } from "@nmao/design-tokens";
+import { neutrals, hues, rarityBase, type Rarity } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
+import { HeaderBell } from "../components/HeaderBell";
+import { emblemUrl } from "../lib/badges";
 import { supabase } from "../lib/supabase";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { loadProfile, loadNotifPrefs, setNotifPref, type ProfileInfo } from "../lib/profile";
@@ -17,6 +19,17 @@ import { myBlocked, unblockCompetitor, type BlockedCompetitor } from "../lib/due
 type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount" | "blocked";
 const RANK = (r: string | null) => (r ? r.replace("_", " ") : "");
 
+// #11 profile frame: the equipped badge's rarity wins; otherwise fall back to the
+// competitor's belt rank so the ring still signals standing (never a flat gold).
+function beltRarity(rank: string | null): Rarity {
+  switch (rank) {
+    case "black_belt": return "legendary";
+    case "advanced": return "epic";
+    case "intermediate": return "rare";
+    default: return "common";
+  }
+}
+
 const NOTIF_TYPES = [
   { type: "challenge_received", label: "New challenges" },
   { type: "duel_result", label: "Duel results" },
@@ -26,7 +39,7 @@ const NOTIF_TYPES = [
   { type: "reveal_ready", label: "Monthly reveal" },
 ];
 
-export default function Profile() {
+export default function Profile({ unread = 0, onBell }: { unread?: number; onBell?: () => void }) {
   const [me, setMe] = useState<string | null>(null);
   const [info, setInfo] = useState<ProfileInfo | null>(null);
   const [sub, setSub] = useState<Sub>(null);
@@ -50,15 +63,30 @@ export default function Profile() {
   if (!info) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
 
   const initials = `${info.firstName?.[0] ?? ""}${info.lastName?.[0] ?? ""}`.toUpperCase();
+  const frameRarity: Rarity = info.equippedBadgeRarity ?? beltRarity(info.rank);
+  const badgeEmblem = info.equippedBadgeEmblem ? emblemUrl(info.equippedBadgeEmblem) : null;
   return (
+   <View style={{ flex: 1, backgroundColor: neutrals.bg }}>
+    {/* alerts bell — this screen renders its own header, so the app bell is added here */}
+    <View style={{ position: "absolute", top: 54, right: 18, zIndex: 10 }}>
+      <HeaderBell unread={unread} onPress={onBell} />
+    </View>
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 34 }}>
       {/* header */}
       <View style={{ alignItems: "center", marginBottom: 20 }}>
-        <Frame rarity="legendary" size="mini" radius={999}>
-          <View style={{ width: 84, height: 84, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
-            {info.photo ? <Image source={{ uri: info.photo }} style={{ width: 84, height: 84 }} /> : <Text style={{ color: hues.gold.hi, fontSize: 28, fontWeight: "800" }}>{initials}</Text>}
-          </View>
-        </Frame>
+        <View>
+          <Frame rarity={frameRarity} size="mini" radius={999}>
+            <View style={{ width: 84, height: 84, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
+              {info.photo ? <Image source={{ uri: info.photo }} style={{ width: 84, height: 84 }} /> : <Text style={{ color: hues.gold.hi, fontSize: 28, fontWeight: "800" }}>{initials}</Text>}
+            </View>
+          </Frame>
+          {/* equipped badge crest, tucked at the avatar's lower-right */}
+          {badgeEmblem ? (
+            <View style={{ position: "absolute", bottom: -2, right: -2, width: 30, height: 30, borderRadius: 15, borderWidth: 2, borderColor: rarityBase(frameRarity), backgroundColor: "#0b0805", overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+              <Image source={{ uri: badgeEmblem }} style={{ width: 30, height: 30 }} resizeMode="cover" />
+            </View>
+          ) : null}
+        </View>
         <Text style={{ color: neutrals.text, fontSize: 22, fontWeight: "800", marginTop: 12 }}>{info.firstName}{info.lastName ? ` ${info.lastName[0]}.` : ""}</Text>
         <Text style={{ color: neutrals.muted2, fontSize: 12, textTransform: "capitalize" }}>{[RANK(info.rank), info.style, info.school?.name].filter(Boolean).join(" · ")}</Text>
         <View style={{ flexDirection: "row", marginTop: 14 }}>
@@ -92,6 +120,7 @@ export default function Profile() {
         <Text style={{ color: "#8a6b6b", fontSize: 12 }}>Delete account</Text>
       </TouchableOpacity>
     </ScrollView>
+   </View>
   );
 }
 
@@ -216,7 +245,12 @@ function NotifPanel({ competitorId, onBack }: { competitorId: string; onBack: ()
   useEffect(() => { loadNotifPrefs().then((list) => { const m: Record<string, boolean> = {}; list.forEach((p) => (m[p.type] = p.enabled)); setPrefs(m); }); }, []);
   async function toggle(type: string, next: boolean) {
     setPrefs((p) => ({ ...(p ?? {}), [type]: next }));
-    await setNotifPref(competitorId, type, next);
+    try {
+      await setNotifPref(competitorId, type, next);
+    } catch {
+      setPrefs((p) => ({ ...(p ?? {}), [type]: !next })); // revert — the save didn't stick
+      Alert.alert("Couldn't save", "That change didn't save — check your connection and try again.");
+    }
   }
   return (
     <Panel title="Notifications" onBack={onBack}>
