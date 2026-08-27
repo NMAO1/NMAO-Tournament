@@ -7,6 +7,7 @@ import { Frame } from "../components/Frame";
 import { duelReveal, type Reveal, type Card, type DuelType } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
 import { initSounds, play, setPlaysInSilentMode } from "../lib/sound";
+import { frameElementUrl } from "../lib/badgeFrames";
 
 type Outcome = "win" | "deadlock" | "loss" | "spectator";
 
@@ -152,6 +153,7 @@ function Result({ outcome, me, them, winnerName, ratingBefore, ratingAfter }:
     loss: { emblem: "↑", head: "Well fought.", sub: `${them.firstName} took this round — but every duel sharpens your edge.` },
     spectator: { emblem: "🏆", head: winnerName ? `${winnerName} wins` : "The winner", sub: "The community has decided." },
   }[outcome];
+  const crownUrl = frameElementUrl("crown"); // the crafted gold crown replaces 👑 on a win
   // Suspense: hold a beat ("the crowd has decided…") before the payoff lands.
   const [revealed, setRevealed] = useState(false);
   const s = useRef(new Animated.Value(0)).current;
@@ -188,7 +190,11 @@ function Result({ outcome, me, them, winnerName, ratingBefore, ratingAfter }:
         {outcome === "win" ? (
           <Animated.View pointerEvents="none" style={{ position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: hues.gold.base, opacity: glowOp, transform: [{ scale: glowScale }] }} />
         ) : null}
-        <Animated.Text style={{ fontSize: 40, opacity: s, transform: [{ scale }] }}>{map.emblem}</Animated.Text>
+        {outcome === "win" && crownUrl ? (
+          <Animated.Image source={{ uri: crownUrl }} resizeMode="contain" style={{ width: 112, height: 74, opacity: s, transform: [{ scale }] }} />
+        ) : (
+          <Animated.Text style={{ fontSize: 40, opacity: s, transform: [{ scale }] }}>{map.emblem}</Animated.Text>
+        )}
       </View>
       <Animated.View style={{ alignItems: "center", opacity: s }}>
         <Text style={{ color: neutrals.text, fontSize: 24, fontWeight: "800" }}>{map.head}</Text>
