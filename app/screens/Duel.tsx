@@ -7,10 +7,11 @@ import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { uploadDuelVideo } from "../lib/upload";
 import {
-  weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo, myDuelStanding,
-  type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent, type DuelStanding,
+  weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo, myDuelStanding, myDuelResults,
+  type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent, type DuelStanding, type DuelResult,
 } from "../lib/duel";
 import Arena from "./Arena";
+import DuelReveal from "./DuelReveal";
 import { useSeasonLabel } from "../lib/season";
 import { formatCountdown } from "../lib/compete";
 
@@ -27,6 +28,8 @@ export default function Duel() {
   const [nowTs, setNowTs] = useState(Date.now());
   const [active, setActive] = useState<ActiveDuel[]>([]);
   const [queue, setQueue] = useState<QueueDuel[]>([]);
+  const [results, setResults] = useState<DuelResult[]>([]);
+  const [openResult, setOpenResult] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,8 +39,8 @@ export default function Duel() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (id: string) => {
-    const [w, a, q, st] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, ""), myDuelStanding(id)]);
-    setWeek(w); setActive(a); setQueue(q); setStanding(st);
+    const [w, a, q, st, res] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, ""), myDuelStanding(id), myDuelResults(id)]);
+    setWeek(w); setActive(a); setQueue(q); setStanding(st); setResults(res);
   }, []);
 
   // tick the "next slot" countdown once a second, only while the weekly limit is
@@ -176,6 +179,13 @@ export default function Duel() {
       {active.map((d) => <ActiveCard key={d.id} d={d} busy={busyId === d.id} onRespond={respond} onUpload={upload} />)}
       {active.length === 0 && !challenging ? <Text style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 4 }}>No active duels. Challenge a rival to begin.</Text> : null}
 
+      {results.length > 0 ? (
+        <>
+          <SectionLabel left="Recent results" right={`${results.length}`} />
+          {results.map((r) => <ResultCard key={r.duelId} r={r} onPress={() => setOpenResult(r.duelId)} />)}
+        </>
+      ) : null}
+
       <SectionLabel left="Vote queue" right={`${queue.length} waiting`} />
       <View style={{ flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.04)", borderWidth: 1, borderColor: neutrals.border, borderRadius: 9, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 8 }}>
         <Text style={{ color: neutrals.muted2, marginRight: 6 }}>⌕</Text>
@@ -196,7 +206,31 @@ export default function Duel() {
         <Arena duelId={openDuel} voterId={me} closesVoteAt={queue.find((q) => q.duelId === openDuel)?.closesVoteAt ?? null} onClose={(voted) => { setOpenDuel(null); if (voted && me) load(me); }} />
       ) : null}
     </Modal>
+
+    <Modal visible={!!openResult} animationType="fade" onRequestClose={() => setOpenResult(null)}>
+      {openResult && me ? <DuelReveal duelId={openResult} myId={me} onClose={() => setOpenResult(null)} /> : null}
+    </Modal>
     </>
+  );
+}
+
+// A closed-duel row: outcome pill + revealed opponent + event. Tapping replays the
+// full reveal (so the payoff is reachable in-app, not only via a push).
+function ResultCard({ r, onPress }: { r: DuelResult; onPress: () => void }) {
+  const tone = r.outcome === "win" ? { c: hues.gold.hi, bg: "rgba(230,185,63,0.10)", bd: hues.gold.shadow, label: "WON" }
+    : r.outcome === "loss" ? { c: "#E9A0A0", bg: "rgba(224,112,112,0.10)", bd: "#5a2b2b", label: "LOST" }
+    : { c: neutrals.muted, bg: "rgba(255,255,255,0.05)", bd: neutrals.border, label: "DRAW" };
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, backgroundColor: neutrals.surface, paddingVertical: 11, paddingHorizontal: 12, marginBottom: 8 }}>
+      <View style={{ borderWidth: 1, borderColor: tone.bd, backgroundColor: tone.bg, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4, marginRight: 11 }}>
+        <Text style={{ color: tone.c, fontSize: 10, fontWeight: "900", letterSpacing: 1 }}>{tone.label}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: neutrals.text, fontSize: 13, fontWeight: "700" }} numberOfLines={1}>vs {r.opponentName}</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 11, marginTop: 1 }}>{r.event}</Text>
+      </View>
+      <Text style={{ color: hues.gold.hi, fontSize: 12, fontWeight: "700" }}>Replay ›</Text>
+    </TouchableOpacity>
   );
 }
 

@@ -34,10 +34,15 @@ export default function DuelReveal({ duelId, myId, onClose }: { duelId: string; 
   const myVotes = participant && !iAmChallenger ? rev.opponentVotes : rev.challengerVotes;
   const theirVotes = participant && !iAmChallenger ? rev.challengerVotes : rev.opponentVotes;
   const myBackers = participant && !iAmChallenger ? rev.opponentBackers : rev.challengerBackers;
+  // the viewer's own rating movement (participants only; null for old/draw duels)
+  const myRatingBefore = participant ? (iAmChallenger ? rev.challengerRatingBefore : rev.opponentRatingBefore) : null;
+  const myRatingAfter = participant ? (iAmChallenger ? rev.challengerRatingAfter : rev.opponentRatingAfter) : null;
+  const winnerName = rev.winnerId === rev.challenger.competitorId ? rev.challenger.firstName
+    : rev.winnerId === rev.opponent.competitorId ? rev.opponent.firstName : null;
 
   const steps = [
     <FaceOff key="f" a={rev.challenger} b={rev.opponent} type={rev.type} />,
-    <Result key="r" outcome={outcome} me={me} them={them} />,
+    <Result key="r" outcome={outcome} me={me} them={them} winnerName={winnerName} ratingBefore={myRatingBefore} ratingAfter={myRatingAfter} />,
     <Tally key="t" mine={myVotes} theirs={theirVotes} backers={myBackers} meName={me.firstName} themName={them.firstName} spectator={outcome === "spectator"} />,
     <Onward key="o" outcome={outcome} onDone={onClose} />,
   ];
@@ -111,32 +116,76 @@ function Row({ l, label, r }: { l: string; label: string; r: string }) {
   );
 }
 
-function Result({ outcome, me, them }: { outcome: Outcome; me: Card; them: Card }) {
+// A JS-driven integer count-up (non-native driver so we can read the value).
+function CountUp({ from, to, duration = 1100, style }: { from: number; to: number; duration?: number; style?: object }) {
+  const [val, setVal] = useState(from);
+  useEffect(() => {
+    const av = new Animated.Value(0);
+    const id = av.addListener(({ value }) => setVal(Math.round(from + (to - from) * value)));
+    Animated.timing(av, { toValue: 1, duration, useNativeDriver: false }).start();
+    return () => av.removeListener(id);
+  }, [from, to, duration]);
+  return <Text style={style}>{val}</Text>;
+}
+
+function Result({ outcome, me, them, winnerName, ratingBefore, ratingAfter }:
+  { outcome: Outcome; me: Card; them: Card; winnerName: string | null; ratingBefore: number | null; ratingAfter: number | null }) {
   const map = {
     win: { emblem: "👑", head: "Congratulations", sub: "The people have spoken and named you victorious." },
     deadlock: { emblem: "⚔️", head: "Deadlock", sub: "Too close to call — a rivalry worth settling." },
     loss: { emblem: "↑", head: "Well fought.", sub: `${them.firstName} took this round — but every duel sharpens your edge.` },
-    spectator: { emblem: "🏆", head: `${them.firstName === me.firstName ? "" : ""}The winner`, sub: "The community has decided." },
+    spectator: { emblem: "🏆", head: winnerName ? `${winnerName} wins` : "The winner", sub: "The community has decided." },
   }[outcome];
-  // the payoff moment: the emblem springs in (overshoot) with an outcome-aware
-  // haptic — a Success "thunk" for a win, a Warning double-tap for loss/deadlock.
+  // Suspense: hold a beat ("the crowd has decided…") before the payoff lands.
+  const [revealed, setRevealed] = useState(false);
   const s = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    try {
-      const kind = outcome === "loss" || outcome === "deadlock"
-        ? Haptics.NotificationFeedbackType.Warning
-        : Haptics.NotificationFeedbackType.Success;
-      Haptics.notificationAsync(kind);
-    } catch { /* optional */ }
-    Animated.spring(s, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
-  }, [s, outcome]);
+    const t = setTimeout(() => {
+      setRevealed(true);
+      try {
+        const kind = outcome === "loss" || outcome === "deadlock"
+          ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success;
+        Haptics.notificationAsync(kind);
+      } catch { /* optional */ }
+      Animated.spring(s, { toValue: 1, friction: 5, tension: 130, useNativeDriver: true }).start();
+      if (outcome === "win") Animated.spring(glow, { toValue: 1, friction: 6, tension: 60, useNativeDriver: true }).start();
+    }, 750);
+    return () => clearTimeout(t);
+  }, [s, glow, outcome]);
   const scale = s.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] });
+  const glowScale = glow.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1.8] });
+  const glowOp = glow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.5] });
+
+  if (!revealed) {
+    return <View style={{ alignItems: "center" }}><Text style={{ color: neutrals.muted, fontSize: 13, letterSpacing: 2, textTransform: "uppercase" }}>The crowd has decided…</Text></View>;
+  }
+  const delta = ratingBefore != null && ratingAfter != null ? ratingAfter - ratingBefore : null;
+  const up = (delta ?? 0) >= 0;
   return (
     <View style={{ alignItems: "center" }}>
-      <Animated.Text style={{ fontSize: 40, marginBottom: 10, opacity: s, transform: [{ scale }] }}>{map.emblem}</Animated.Text>
+      <View style={{ alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+        {outcome === "win" ? (
+          <Animated.View pointerEvents="none" style={{ position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: hues.gold.base, opacity: glowOp, transform: [{ scale: glowScale }] }} />
+        ) : null}
+        <Animated.Text style={{ fontSize: 40, opacity: s, transform: [{ scale }] }}>{map.emblem}</Animated.Text>
+      </View>
       <Animated.View style={{ alignItems: "center", opacity: s }}>
         <Text style={{ color: neutrals.text, fontSize: 24, fontWeight: "800" }}>{map.head}</Text>
         <Text style={{ color: hues.gold.hi, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 10, maxWidth: 280, lineHeight: 20 }}>{map.sub}</Text>
+        {delta != null && ratingBefore != null && ratingAfter != null ? (
+          <View style={{ alignItems: "center", marginTop: 20 }}>
+            <Text style={{ color: neutrals.muted2, fontSize: 9, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Your dueling rating</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <Text style={{ color: neutrals.muted, fontSize: 16, fontWeight: "700" }}>{ratingBefore}</Text>
+              <Text style={{ color: neutrals.muted2, fontSize: 14 }}>→</Text>
+              <CountUp from={ratingBefore} to={ratingAfter} style={{ color: neutrals.text, fontSize: 26, fontWeight: "900" }} />
+              <View style={{ backgroundColor: (up ? hues.emerald.base : hues.ruby.base) + "22", borderColor: up ? hues.emerald.base : hues.ruby.base, borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                <Text style={{ color: up ? hues.emerald.hi : hues.ruby.hi, fontSize: 13, fontWeight: "800" }}>{up ? "▲ +" : "▼ "}{delta}</Text>
+              </View>
+            </View>
+          </View>
+        ) : null}
       </Animated.View>
     </View>
   );
@@ -145,18 +194,23 @@ function Result({ outcome, me, them }: { outcome: Outcome; me: Card; them: Card 
 function Tally({ mine, theirs, backers, meName, themName, spectator }: { mine: number; theirs: number; backers: number; meName: string; themName: string; spectator: boolean }) {
   const total = Math.max(1, mine + theirs);
   const pct = Math.round((mine / total) * 100);
+  // sweep-fill the bar as the numbers count up — the tally was hidden all through
+  // voting, so the unveil earns a little motion.
+  const fill = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.timing(fill, { toValue: 1, duration: 950, useNativeDriver: false }).start(); }, [fill]);
+  const width = fill.interpolate({ inputRange: [0, 1], outputRange: ["0%", `${pct}%`] });
   return (
     <View style={{ alignItems: "center" }}>
       <Text style={{ color: hues.gold.hi, fontSize: 10, letterSpacing: 2, textTransform: "uppercase", marginBottom: 14 }}>The tally, revealed</Text>
       <View style={{ width: 260, height: 26, borderRadius: 8, backgroundColor: "rgba(255,255,255,0.06)", overflow: "hidden", flexDirection: "row", borderWidth: 1, borderColor: neutrals.border }}>
-        <View style={{ width: `${pct}%`, backgroundColor: hues.gold.base }} />
+        <Animated.View style={{ width, backgroundColor: hues.gold.base }} />
       </View>
       <View style={{ flexDirection: "row", justifyContent: "space-between", width: 260, marginTop: 8 }}>
-        <Text style={{ color: hues.gold.hi, fontWeight: "800" }}>{spectator ? meName : "You"} · {mine}</Text>
+        <Text style={{ color: hues.gold.hi, fontWeight: "800" }}>{spectator ? meName : "You"} · <CountUp from={0} to={mine} duration={950} style={{ color: hues.gold.hi, fontWeight: "800" }} /></Text>
         <Text style={{ color: neutrals.muted2 }}>{theirs} · {themName}</Text>
       </View>
       <Text style={{ color: neutrals.text, fontSize: 14, marginTop: 20 }}>
-        <Text style={{ color: hues.gold.hi, fontWeight: "800", fontSize: 20 }}>{backers}</Text> competitors backed {spectator ? meName : "you"}
+        <CountUp from={0} to={backers} duration={950} style={{ color: hues.gold.hi, fontWeight: "800", fontSize: 20 }} /> competitors backed {spectator ? meName : "you"}
       </Text>
     </View>
   );

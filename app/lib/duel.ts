@@ -175,7 +175,11 @@ export type Reveal = FaceOff & {
   winnerId: string | null;
   challengerVotes: number; opponentVotes: number; totalVotes: number;
   challengerBackers: number; opponentBackers: number;
+  // per-side rating movement at settlement (null for old/draw/no_contest duels)
+  challengerRatingBefore: number | null; challengerRatingAfter: number | null;
+  opponentRatingBefore: number | null; opponentRatingAfter: number | null;
 };
+const numOrNull = (v: unknown): number | null => (v === null || v === undefined ? null : Number(v));
 export async function duelReveal(duelId: string): Promise<Reveal | null> {
   const { data, error } = await supabase.rpc("duel_reveal", { p_duel_id: duelId });
   if (error || !data) return null;
@@ -186,7 +190,18 @@ export async function duelReveal(duelId: string): Promise<Reveal | null> {
     result: (j.result as Reveal["result"]) ?? null, winnerId: (j.winner_id as string) ?? null,
     challengerVotes: Number(j.challenger_votes ?? 0), opponentVotes: Number(j.opponent_votes ?? 0), totalVotes: Number(j.total_votes ?? 0),
     challengerBackers: Number(j.challenger_backers ?? 0), opponentBackers: Number(j.opponent_backers ?? 0),
+    challengerRatingBefore: numOrNull(j.challenger_rating_before), challengerRatingAfter: numOrNull(j.challenger_rating_after),
+    opponentRatingBefore: numOrNull(j.opponent_rating_before), opponentRatingAfter: numOrNull(j.opponent_rating_after),
   };
+}
+
+// ---- my closed duels (reveal reachable in-app, not only via push) ----
+export type DuelResult = { duelId: string; event: string; type: string; result: string | null; outcome: "win" | "loss" | "draw"; opponentName: string; resolvedAt: string | null };
+export async function myDuelResults(competitorId: string, limit = 20): Promise<DuelResult[]> {
+  const { data, error } = await supabase.rpc("my_duel_results", { p_competitor_id: competitorId, p_limit: limit });
+  if (error || !data) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any[]).map((r) => ({ duelId: r.duel_id, event: r.event, type: r.type, result: r.result ?? null, outcome: r.outcome, opponentName: r.opponent_name, resolvedAt: r.resolved_at ?? null }));
 }
 
 // ---- sponsor ad (duel_sponsor) — one weighted-random active sponsor, or null.
