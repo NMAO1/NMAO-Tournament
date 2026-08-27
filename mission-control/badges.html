@@ -66,6 +66,14 @@
   .chip.name{color:var(--text);border-color:#3a3a40;text-transform:none;font-size:12px;font-weight:600}
   .save-row{display:flex;justify-content:flex-end;margin-top:14px}
   .hint{color:var(--muted2);font-size:11.5px;margin-top:7px;line-height:1.5}
+  .pickrow{display:flex;gap:10px;align-items:center}
+  .pickrow select{flex:1}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+  .field input[type=text],.field input[type=number],.field input:not([type]){width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:10px 11px;font-size:13.5px}
+  .field input:read-only{opacity:.55}
+  .field.flags{display:flex;flex-direction:column;justify-content:center}
+  .field.flags .ck{display:inline-flex;align-items:center;gap:7px;color:var(--text);font-size:13px;margin:3px 0}
+  .field.flags input{accent-color:var(--gold);width:auto}
 
   table{width:100%;border-collapse:collapse;font-size:13px}
   th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line)}
@@ -117,9 +125,26 @@
         <div class="sub">Edit the player-facing "how to earn" text and the machine-readable rule. The award engine reads these live — no app or engine deploy.</div>
       </div>
       <div class="pad">
-        <select id="badgePick"><option value="">— pick a badge —</option></select>
+        <div class="pickrow">
+          <select id="badgePick"><option value="">— pick a badge to edit —</option></select>
+          <button class="btn gold" id="newBadge">+ New badge</button>
+        </div>
+        <datalist id="catList"></datalist>
         <div id="editor" class="hide">
-          <div class="chips" id="bChips"></div>
+          <div class="grid2" style="margin-top:16px">
+            <div class="field"><label>Code — stable key, lowercase-hyphen</label><input id="bCode" placeholder="e.g. iron-heart" /></div>
+            <div class="field"><label>Name — shown in the app</label><input id="bName" placeholder="Display name" /></div>
+            <div class="field"><label>Category</label><input id="bCat" list="catList" placeholder="e.g. Dueling" /></div>
+            <div class="field"><label>Rarity</label><select id="bRarity"><option>common</option><option>uncommon</option><option>rare</option><option>epic</option><option>legendary</option></select></div>
+            <div class="field"><label>Emblem key — art in the badge-emblems bucket (optional)</label><input id="bEmblem" placeholder="defaults to the code" /></div>
+            <div class="field"><label>Sort order</label><input id="bSort" type="number" placeholder="0" /></div>
+            <div class="field"><label>Honorific title (optional)</label><input id="bTitle" placeholder="e.g. The Untouchable" /></div>
+            <div class="field flags"><label>Flags</label>
+              <label class="ck"><input type="checkbox" id="bTiered" /> Tiered (has levels I/II/III)</label>
+              <label class="ck"><input type="checkbox" id="bActive" checked /> Active</label>
+              <label class="ck"><input type="checkbox" id="bHidden" /> Hidden (surprise — not shown until earned)</label>
+            </div>
+          </div>
           <div class="field">
             <label>How to earn — shown to competitors in the app</label>
             <textarea id="bDesc" rows="3" placeholder="e.g. Complete 10, then 25, then 50 duels."></textarea>
@@ -127,7 +152,7 @@
           <div class="field">
             <label>Earn rule — machine-readable JSON (trigger, levels, thresholds, criterion)</label>
             <textarea id="bRule" class="mono" rows="8" spellcheck="false"></textarea>
-            <div class="hint">The engine reads keys like <code>levels</code>, <code>high_above</code>, <code>criterion</code>, <code>trigger</code>. Some shared numeric thresholds instead live in the table below (e.g. streaks, vote counts). Keep the wording above in sync with the numbers here.</div>
+            <div class="hint">The engine reads keys like <code>levels</code>, <code>high_above</code>, <code>criterion</code>, <code>trigger</code>. Some shared thresholds live in the table below. <b>New badges:</b> defining one here sets its art, wording &amp; rule — but a brand-new trigger/mechanic still needs award-engine support to auto-grant.</div>
           </div>
           <div class="save-row"><button class="btn gold" id="saveBadge">Save badge</button></div>
         </div>
@@ -198,40 +223,62 @@ async function loadBadges(){
   const { data, error } = await sb.rpc('admin_badges');
   if (error) return toast(error.message,'err');
   badgeMap = {};
-  const groups = {};
-  (data||[]).forEach(b => { badgeMap[b.code] = b; (groups[b.category||'Other'] ??= []).push(b); });
-  let html = '<option value="">— pick a badge —</option>';
+  const groups = {}; const cats = new Set();
+  (data||[]).forEach(b => { badgeMap[b.code] = b; if (b.category) cats.add(b.category); (groups[b.category||'Other'] ??= []).push(b); });
+  let html = '<option value="">— pick a badge to edit —</option>';
   Object.keys(groups).forEach(cat => {
     html += `<optgroup label="${esc(cat)}">`;
     groups[cat].forEach(b => { html += `<option value="${esc(b.code)}">${esc(b.name)}${b.active===false?' (inactive)':''}</option>`; });
     html += '</optgroup>';
   });
   $('badgePick').innerHTML = html;
+  $('catList').innerHTML = [...cats].sort().map(c => `<option value="${esc(c)}">`).join('');
+}
+function fillEditor(b, isNew){
+  $('editor').classList.remove('hide');
+  const code = $('bCode'); code.value = b.code || ''; code.readOnly = !isNew;
+  $('bName').value = b.name || '';
+  $('bCat').value = b.category || '';
+  $('bRarity').value = b.rarity || 'common';
+  $('bEmblem').value = b.emblem_key || '';
+  $('bSort').value = (b.sort_order ?? '');
+  $('bTitle').value = b.title || '';
+  $('bTiered').checked = !!b.tiered;
+  $('bActive').checked = b.active !== false;
+  $('bHidden').checked = !!b.hidden;
+  $('bDesc').value = b.description || '';
+  $('bRule').value = b.earn_rule ? JSON.stringify(b.earn_rule, null, 2) : '';
 }
 $('badgePick').onchange = () => {
   const b = badgeMap[$('badgePick').value];
   if (!b){ $('editor').classList.add('hide'); return; }
-  $('editor').classList.remove('hide');
-  $('bChips').innerHTML =
-    `<span class="chip name">${esc(b.name)}</span>` +
-    `<span class="chip">${esc(b.code)}</span>` +
-    `<span class="chip">${esc(b.rarity||'—')}</span>` +
-    (b.tiered ? '<span class="chip">tiered</span>' : '') +
-    (b.hidden ? '<span class="chip">hidden</span>' : '');
-  $('bDesc').value = b.description || '';
-  $('bRule').value = b.earn_rule ? JSON.stringify(b.earn_rule, null, 2) : '';
+  fillEditor(b, false);
+};
+$('newBadge').onclick = () => {
+  $('badgePick').value = '';
+  fillEditor({ rarity: 'common', active: true }, true);
+  $('bCode').focus();
 };
 $('saveBadge').onclick = async () => {
-  const code = $('badgePick').value; if (!code) return;
+  const code = $('bCode').value.trim();
+  if (!code) return toast('Code required','err');
+  if (!$('bName').value.trim()) return toast('Name required','err');
   let ruleObj = null;
   const raw = $('bRule').value.trim();
   if (raw) { try { ruleObj = JSON.parse(raw); } catch(e){ return toast('Earn rule must be valid JSON: '+e.message, 'err'); } }
+  const sort = $('bSort').value.trim();
   $('saveBadge').disabled = true;
-  const { error } = await sb.rpc('admin_save_badge', { p_code: code, p_description: $('bDesc').value, p_earn_rule: ruleObj });
+  const { error } = await sb.rpc('admin_upsert_badge', {
+    p_code: code, p_name: $('bName').value.trim(), p_category: $('bCat').value.trim() || null,
+    p_rarity: $('bRarity').value, p_tiered: $('bTiered').checked, p_hidden: $('bHidden').checked,
+    p_active: $('bActive').checked, p_title: $('bTitle').value.trim() || null,
+    p_emblem_key: $('bEmblem').value.trim() || null, p_sort_order: sort === '' ? null : Number(sort),
+    p_description: $('bDesc').value, p_earn_rule: ruleObj,
+  });
   $('saveBadge').disabled = false;
   if (error) return toast(error.message,'err');
   toast('Saved — the app + engine read it live','ok');
-  await loadBadges(); $('badgePick').value = code;
+  await loadBadges(); $('badgePick').value = badgeMap[code] ? code : '';
 };
 
 // ---------- shared thresholds ----------
