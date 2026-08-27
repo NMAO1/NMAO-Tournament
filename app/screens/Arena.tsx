@@ -11,6 +11,7 @@ import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, report
 import { useSeasonLabel } from "../lib/season";
 import { sponsorClick, sponsorAdWatch } from "../lib/store";
 import { useTitleSponsor } from "../lib/title";
+import { formatCountdown } from "../lib/compete";
 
 // A worn frame/crest (equipped badge) — what the crest popover reveals.
 type Crest = NonNullable<Card["frame"]>;
@@ -32,7 +33,7 @@ type Urls = { challenger: string | null; opponent: string | null };
 // event code (open_forms) → display label (Open Forms)
 const evName = (t: string) => t.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-export default function Arena({ duelId, voterId, onClose }: { duelId: string; voterId: string; onClose: (voted?: boolean) => void }) {
+export default function Arena({ duelId, voterId, closesVoteAt, onClose }: { duelId: string; voterId: string; closesVoteAt?: string | null; onClose: (voted?: boolean) => void }) {
   const [face, setFace] = useState<FaceOff | null>(null);
   // tale → (sponsor, if one is available) → ring
   const [phase, setPhase] = useState<"tale" | "sponsor" | "ring">("tale");
@@ -46,6 +47,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
   const [voted, setVoted] = useState<Choice | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [crest, setCrest] = useState<CrestAnchor | null>(null);
+  const [nowTs, setNowTs] = useState(Date.now()); // ticks the "closes in" countdown
   const flash = useRef(new Animated.Value(0)).current;
 
   // one player per side; both roll SIMULTANEOUSLY so the two forms can be
@@ -129,6 +131,15 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
     }
   }, [unlocked]);
 
+  // tick the vote-close countdown once a second while in the ring (only when we
+  // know the close time and the duel is still open).
+  const showCloses = phase === "ring" && !!closesVoteAt && !voted;
+  useEffect(() => {
+    if (!showCloses) return;
+    const t = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [showCloses]);
+
   async function vote(choice: Choice) {
     if (!unlocked || voting || voted) return;
     setVoting(true);
@@ -207,7 +218,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
       <View style={{ flex: 1, flexDirection: "row" }}>
         <Side
           card={face.challenger} choice="challenger" rarity={face.challenger.frame?.rarity ?? "legendary"}
-          active={active === "challenger"} unlocked={unlocked} voted={voted}
+          active={active === "challenger"} unlocked={unlocked} voted={voted} watchLeft={Math.max(0, Math.ceil(WATCH_GOAL - watched))}
           player={chPlayer} hasVideo={!!urls.challenger}
           onAudio={() => focusAudio("challenger")} onVote={() => vote("challenger")}
           onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
@@ -216,7 +227,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
-          active={active === "opponent"} unlocked={unlocked} voted={voted}
+          active={active === "opponent"} unlocked={unlocked} voted={voted} watchLeft={Math.max(0, Math.ceil(WATCH_GOAL - watched))}
           player={opPlayer} hasVideo={!!urls.opponent}
           onAudio={() => focusAudio("opponent")} onVote={() => vote("opponent")}
           onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
@@ -257,7 +268,7 @@ export default function Arena({ duelId, voterId, onClose }: { duelId: string; vo
       {/* hidden-tally note overlay (bottom centre, between the two vote CTAs) */}
       <View pointerEvents="none" style={{ position: "absolute", bottom: 8, left: 0, right: 0, alignItems: "center" }}>
         <Text style={{ color: neutrals.muted, fontSize: 10, textShadowColor: "#000", textShadowRadius: 5 }}>
-          {voted ? "Vote counted — tally reveals when the duel closes" : `👁 Tally hidden · closes ${closesIn(face)}`}
+          {voted ? "Vote counted — tally reveals when the duel closes" : `👁 Tally hidden · ${closesLabel(face, closesVoteAt, nowTs)}`}
         </Text>
         {err ? <Text style={{ color: hues.ruby.hi, fontSize: 11, marginTop: 4 }}>{err}</Text> : null}
       </View>
@@ -356,11 +367,11 @@ function AnimatedBorder({ animation, color, radius = 26 }: { animation: FrameAni
 }
 
 function Side({
-  card, choice, rarity, active, unlocked, voted, player, hasVideo, onAudio, onVote, onCrest, onSafety,
+  card, choice, rarity, active, unlocked, voted, watchLeft, player, hasVideo, onAudio, onVote, onCrest, onSafety,
   demoFrame, demoValue,
 }: {
   card: Card; choice: Choice; rarity: "common" | "rare" | "epic" | "legendary";
-  active: boolean; unlocked: boolean; voted: Choice | null;
+  active: boolean; unlocked: boolean; voted: Choice | null; watchLeft: number;
   player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void; onSafety: () => void;
   demoFrame?: string; demoValue?: number;
 }) {
@@ -441,7 +452,7 @@ function Side({
       {/* clear vote pill — floats in the lower-right of the VIDEO, ABOVE the band,
           so the bottom border stays clear for the crest imagery + animations */}
       <VotePill
-        label={voted === choice ? "✓ Voted" : "Vote"}
+        label={voted === choice ? "✓ Voted" : unlocked ? "Vote" : `🔒 Watch ${watchLeft}s`}
         onPress={onVote} disabled={!unlocked || !!voted} dimmed={!unlocked && !voted}
         choice={choice} bandH={BAND}
       />
@@ -537,8 +548,14 @@ function VsBadge() {
   );
 }
 
-function closesIn(face: FaceOff): string {
-  return face.status === "voting" ? "soon" : "—";
+// The "closes in …" line under the ring. Uses the real vote-close time when the
+// caller passed one (from the vote-queue row); otherwise degrades gracefully.
+function closesLabel(face: FaceOff, closesVoteAt: string | null | undefined, nowTs: number): string {
+  if (closesVoteAt) {
+    const cd = formatCountdown(closesVoteAt, nowTs);
+    return cd === "Closed" ? "closing now" : `closes in ${cd}`;
+  }
+  return face.status === "voting" ? "closes soon" : "—";
 }
 
 // ── "Tale of the Path" — the fight-card face-off before the ring (spec §2a) ──

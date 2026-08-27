@@ -7,11 +7,12 @@ import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { uploadDuelVideo } from "../lib/upload";
 import {
-  weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo,
-  type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent,
+  weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo, myDuelStanding,
+  type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent, type DuelStanding,
 } from "../lib/duel";
 import Arena from "./Arena";
 import { useSeasonLabel } from "../lib/season";
+import { formatCountdown } from "../lib/compete";
 
 const EXPORT_PRESET = ImagePicker.VideoExportPreset.H264_1920x1080;
 const prettyErr = (e?: string) => (e ? e.replace(/^.*?:\s*/, "") : "Please try again.");
@@ -22,6 +23,8 @@ export default function Duel() {
   const season = useSeasonLabel();
   const [me, setMe] = useState<string | null>(null);
   const [week, setWeek] = useState<WeekStatus | null>(null);
+  const [standing, setStanding] = useState<DuelStanding | null>(null);
+  const [nowTs, setNowTs] = useState(Date.now());
   const [active, setActive] = useState<ActiveDuel[]>([]);
   const [queue, setQueue] = useState<QueueDuel[]>([]);
   const [search, setSearch] = useState("");
@@ -33,9 +36,18 @@ export default function Duel() {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async (id: string) => {
-    const [w, a, q] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, "")]);
-    setWeek(w); setActive(a); setQueue(q);
+    const [w, a, q, st] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, ""), myDuelStanding(id)]);
+    setWeek(w); setActive(a); setQueue(q); setStanding(st);
   }, []);
+
+  // tick the "next slot" countdown once a second, only while the weekly limit is
+  // reached and a reset time is known (otherwise there's nothing counting down).
+  const showNextSlot = week?.remaining === 0 && !!week?.nextSlotAt;
+  useEffect(() => {
+    if (!showNextSlot) return;
+    const t = setInterval(() => setNowTs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, [showNextSlot]);
 
   const { activeId } = useActiveCompetitor();
   useEffect(() => {
@@ -97,6 +109,22 @@ export default function Duel() {
       contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={neutrals.muted} />}
     >
+      {standing ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "baseline", borderWidth: 1, borderColor: neutrals.border, borderRadius: 999, backgroundColor: "rgba(31,123,255,0.10)", paddingVertical: 5, paddingHorizontal: 11 }}>
+            <Text style={{ color: hues.sapphire.hi, fontSize: 14, fontWeight: "900" }}>{standing.rating}</Text>
+            <Text style={{ color: neutrals.muted2, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase", marginLeft: 5 }}>Dueling rating</Text>
+          </View>
+          {standing.streak > 0 ? (
+            <View style={{ flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: "rgba(230,185,63,0.4)", borderRadius: 999, backgroundColor: "rgba(230,185,63,0.10)", paddingVertical: 5, paddingHorizontal: 10 }}>
+              <Text style={{ fontSize: 12 }}>🔥</Text>
+              <Text style={{ color: hues.gold.hi, fontSize: 12, fontWeight: "800", marginLeft: 4 }}>{standing.streak}</Text>
+              <Text style={{ color: neutrals.muted2, fontSize: 9, letterSpacing: 0.8, textTransform: "uppercase", marginLeft: 5 }}>win streak</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+
       {week ? (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: neutrals.border, borderRadius: 10, backgroundColor: "rgba(230,185,63,0.06)", paddingVertical: 8, paddingHorizontal: 12, marginBottom: 6 }}>
           <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 0.5, textTransform: "uppercase", fontWeight: "700" }}>
@@ -116,7 +144,7 @@ export default function Duel() {
           <Text style={{ color: "#fff", fontWeight: "800", letterSpacing: 0.5 }}>⚔  Challenge</Text>
         </LinearGradient>
       </TouchableOpacity>
-      {week?.remaining === 0 ? <Text style={{ color: neutrals.muted2, fontSize: 11, textAlign: "center", marginBottom: 6 }}>Weekly limit reached — resets soon.</Text> : null}
+      {week?.remaining === 0 ? <Text style={{ color: neutrals.muted2, fontSize: 11, textAlign: "center", marginBottom: 6 }}>Weekly limit reached — {week.nextSlotAt ? `next duel in ${formatCountdown(week.nextSlotAt, nowTs)}` : "resets soon"}.</Text> : null}
 
       {challenging ? (
         <View style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, padding: 12, marginTop: 6, marginBottom: 6 }}>
@@ -158,7 +186,7 @@ export default function Duel() {
       onRequestClose={() => setOpenDuel(null)}
     >
       {openDuel && me ? (
-        <Arena duelId={openDuel} voterId={me} onClose={(voted) => { setOpenDuel(null); if (voted && me) load(me); }} />
+        <Arena duelId={openDuel} voterId={me} closesVoteAt={queue.find((q) => q.duelId === openDuel)?.closesVoteAt ?? null} onClose={(voted) => { setOpenDuel(null); if (voted && me) load(me); }} />
       ) : null}
     </Modal>
     </>

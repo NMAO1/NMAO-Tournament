@@ -24,6 +24,16 @@ export async function weekStatus(competitorId: string): Promise<WeekStatus> {
   return { used: r.used, limit: r.weekly_limit, remaining: r.remaining, nextSlotAt: r.next_slot_at };
 }
 
+// ---- my dueling standing (rating + streak for the Duel hub chip) ----
+export type DuelStanding = { rating: number; wins: number; streak: number; bestStreak: number };
+export async function myDuelStanding(competitorId: string): Promise<DuelStanding | null> {
+  const { data } = await supabase.from("duel_ratings").select("rating, wins, streak, best_streak").eq("competitor_id", competitorId).maybeSingle();
+  if (!data) return null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = data as any;
+  return { rating: Number(d.rating ?? 1200), wins: Number(d.wins ?? 0), streak: Number(d.streak ?? 0), bestStreak: Number(d.best_streak ?? 0) };
+}
+
 // ---- vote queue (duel_vote_queue: frames + search) ----
 export type QueueSide = {
   id: string; name: string; school: string | null; video: string | null; photo: string | null;

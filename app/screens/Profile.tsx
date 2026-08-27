@@ -62,10 +62,15 @@ export default function Profile() {
         <Text style={{ color: neutrals.text, fontSize: 22, fontWeight: "800", marginTop: 12 }}>{info.firstName}{info.lastName ? ` ${info.lastName[0]}.` : ""}</Text>
         <Text style={{ color: neutrals.muted2, fontSize: 12, textTransform: "capitalize" }}>{[RANK(info.rank), info.style, info.school?.name].filter(Boolean).join(" · ")}</Text>
         <View style={{ flexDirection: "row", marginTop: 14 }}>
-          <Stat v={info.rating != null ? String(info.rating) : "—"} l="Rating" />
+          <TouchableOpacity onPress={() => setSub("rules")} activeOpacity={0.7}>
+            <Stat v={info.rating != null ? String(info.rating) : "1200"} l="Dueling rating" />
+          </TouchableOpacity>
           <Stat v={String(info.wins)} l="Duel wins" />
           <Stat v={String(info.streak)} l="Streak" />
         </View>
+        <TouchableOpacity onPress={() => setSub("rules")} activeOpacity={0.7} style={{ marginTop: 8 }}>
+          <Text style={{ color: neutrals.muted2, fontSize: 10.5 }}>Starts at 1200 · tap to see how rating works ›</Text>
+        </TouchableOpacity>
       </View>
 
       <Row icon="📓" label="Journal" onPress={() => setSub("journal")} />

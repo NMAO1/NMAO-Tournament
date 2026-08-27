@@ -116,10 +116,25 @@ export default function Leaderboard() {
             </ScrollView>
             {rows == null ? <Loading /> : rows.length === 0 ? <Empty /> : (() => {
               const showMove = scope === "global" && division === "all" && bracket === "all" && sort === "rating";
-              return rows.map((r, i) => {
-                const raw = sortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
-                return <LbRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={sortDef.unit} sub={sortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelD(r)} />;
-              });
+              const fmtVal = (r: LbRow) => { const raw = sortDef.get(r); return raw >= 1000 ? raw.toLocaleString() : String(raw); };
+              // The RPC appends the caller's own row when they rank past the top 50,
+              // so we can pin a "your rank" row below a gap divider.
+              const me = rows.find((r) => r.you);
+              const pinnedYou = me && me.rank > 50 ? me : null;
+              const listRows = pinnedYou ? rows.filter((r) => !r.you) : rows;
+              return (
+                <>
+                  {listRows.map((r, i) => (
+                    <LbRowView key={r.competitorId} rank={i + 1} row={r} value={fmtVal(r)} unit={sortDef.unit} sub={sortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelD(r)} />
+                  ))}
+                  {pinnedYou ? (
+                    <>
+                      <Text style={{ color: neutrals.muted2, textAlign: "center", fontSize: 15, marginVertical: 1 }}>⋯</Text>
+                      <LbRowView rank={pinnedYou.rank} row={pinnedYou} value={fmtVal(pinnedYou)} unit={sortDef.unit} sub={sortDef.sub(pinnedYou)} move={moveOf(pinnedYou.prevRank, pinnedYou.rank, showMove)} onPress={() => setSelD(pinnedYou)} />
+                    </>
+                  ) : null}
+                </>
+              );
             })()}
           </>
         ) : board === "schools" ? (

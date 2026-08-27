@@ -197,7 +197,7 @@ export const ELEMENT_GLYPH: Record<string, string> = {
   gold_medal: "🥇", silver_medal: "🥈", bronze_medal: "🥉",
   coin_gold: "🪙", coin_silver: "🪙", coin_bronze: "🪙",
   footprints: "👣", fist: "👊", bow: "🙏", sunrise: "🌅", lotus: "🪷", ballot: "🗳️", allies: "🤝",
-  gem: "💎", gem_sapphire: "💎", gem_amethyst: "💎", gem_ruby: "💎", gem_emerald: "💎", gem_coral: "💎",
+  gem_sapphire: "💎", gem_amethyst: "💎", gem_ruby: "💎", gem_emerald: "💎", gem_coral: "💎",
   gem_onyx: "💎", gem_rose: "💎", gem_turquoise: "💎", gem_peridot: "💎", gem_platinum: "💎",
 };
 
