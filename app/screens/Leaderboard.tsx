@@ -97,10 +97,24 @@ export default function Leaderboard() {
             {trows == null ? <Loading /> : trows.length === 0 ? <Empty note="No tournament medals yet — compete in the next round." /> : (() => {
               // Movement basis is the all-time, all-filters snapshot, so only surface arrows on that canonical view.
               const showMove = tscope === "all" && division === "all" && bracket === "all" && event === "all" && tsort === "points";
-              return trows.map((r, i) => {
-                const raw = tsortDef.get(r); const val = raw >= 1000 ? raw.toLocaleString() : String(raw);
-                return <TourRowView key={r.competitorId} rank={i + 1} row={r} value={val} unit={tsortDef.unit} sub={tsortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelT(r)} />;
-              });
+              const fmtVal = (r: TourRow) => { const raw = tsortDef.get(r); return raw >= 1000 ? raw.toLocaleString() : String(raw); };
+              // Pin the caller's own row when they rank past the top 50 of the selected filters.
+              const me = trows.find((r) => r.you);
+              const pinnedYou = me && me.rank > 50 ? me : null;
+              const listRows = pinnedYou ? trows.filter((r) => !r.you) : trows;
+              return (
+                <>
+                  {listRows.map((r, i) => (
+                    <TourRowView key={r.competitorId} rank={i + 1} row={r} value={fmtVal(r)} unit={tsortDef.unit} sub={tsortDef.sub(r)} move={moveOf(r.prevRank, i + 1, showMove)} onPress={() => setSelT(r)} />
+                  ))}
+                  {pinnedYou ? (
+                    <>
+                      <Text style={{ color: neutrals.muted2, textAlign: "center", fontSize: 15, marginVertical: 1 }}>⋯</Text>
+                      <TourRowView rank={pinnedYou.rank} row={pinnedYou} value={fmtVal(pinnedYou)} unit={tsortDef.unit} sub={tsortDef.sub(pinnedYou)} move={moveOf(pinnedYou.prevRank, pinnedYou.rank, showMove)} onPress={() => setSelT(pinnedYou)} />
+                    </>
+                  ) : null}
+                </>
+              );
             })()}
           </>
         ) : board === "duelists" ? (
@@ -148,7 +162,22 @@ export default function Leaderboard() {
             {schools == null ? <Loading /> : schools.length === 0 ? <Empty note="No school standings yet — medals feed the dojo board." /> : schools.map((s, i) => <SchoolRowView key={s.schoolId} rank={i + 1} row={s} />)}
           </>
         ) : (
-          vote == null ? <Loading /> : vote.length === 0 ? <Empty /> : vote.map((r) => <VoterRowView key={r.rank} r={r} />)
+          vote == null ? <Loading /> : vote.length === 0 ? <Empty /> : (() => {
+            const me = vote.find((r) => r.you);
+            const pinnedYou = me && me.rank > 50 ? me : null;
+            const listRows = pinnedYou ? vote.filter((r) => !r.you) : vote;
+            return (
+              <>
+                {listRows.map((r) => <VoterRowView key={r.rank} r={r} />)}
+                {pinnedYou ? (
+                  <>
+                    <Text style={{ color: neutrals.muted2, textAlign: "center", fontSize: 15, marginVertical: 1 }}>⋯</Text>
+                    <VoterRowView r={pinnedYou} />
+                  </>
+                ) : null}
+              </>
+            );
+          })()
         )}
       </ScrollView>
 
