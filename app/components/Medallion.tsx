@@ -1,9 +1,10 @@
 import { useMemo } from "react";
 import { Canvas, Group, Path, Circle, RadialGradient, Skia, vec } from "@shopify/react-native-skia";
 
-// Digital twin of the physical Season Medallion: 8 wave pieces (rounds R1–R8) ringing a
-// fixed keystone center (R9), each rendering its slice of the ONE printed yin-yang in that
-// piece's earned metal (or white+season for participation). Unearned rounds render as ghosts.
+// Digital twin of the physical Season Medallion: 8 segment pieces (rounds R1–R8) ringing a
+// center keystone (R9) — the keystone follows the SAME rules as the segments (finished by its
+// round's earned place), each rendering its slice of the ONE printed yin-yang in that piece's
+// earned metal (or white+season for participation). Unearned rounds render as ghosts.
 const C = 170, R = 138, RIN = 52, RC = 48, NW = 8, STEP = (2 * Math.PI) / NW, h = R / 2;
 const EYR = R * 0.14;
 const P = (r: number, a: number): [number, number] => [C + r * Math.cos(a), C + r * Math.sin(a)];
@@ -58,11 +59,11 @@ export function Medallion({ tiers, season, size = 300, centerTier = null }: {
       <Group>
         <Group clip={clip!}>
           <Circle cx={C} cy={C} r={R}><RadialGradient c={hi} r={R} colors={lt} /></Circle>
-          <Group transform={[{ translateX: 2 * C }, { scaleX: -1 }]}>
-            <Path path={paths.taijitu}><RadialGradient c={hi} r={R} colors={dk} /></Path>
-          </Group>
-          <Circle cx={C} cy={C - h} r={EYR} color={dk[1]} />
-          <Circle cx={C} cy={C + h} r={EYR} color={lt[1]} />
+          {/* dark lobe on the RIGHT, light on the LEFT (matches the physical spec) */}
+          <Path path={paths.taijitu}><RadialGradient c={hi} r={R} colors={dk} /></Path>
+          {/* eyes take the season accent: top = season color, bottom = white */}
+          <Circle cx={C} cy={C - h} r={EYR} color={season.b} />
+          <Circle cx={C} cy={C + h} r={EYR} color="#FFFFFF" />
         </Group>
         <Path path={clip!} style="stroke" strokeWidth={1.2} color="#0b0b0d" />
       </Group>
