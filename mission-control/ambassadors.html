@@ -132,7 +132,7 @@
     <div class="card">
       <div class="hd"><h2><span class="rail"></span>Ambassadors <span id="count" class="pill tier"></span></h2>
         <div class="sub">Each ambassador, their referral links, and the schools attributed to them.</div></div>
-      <table><thead><tr><th>Ambassador</th><th style="width:110px">Tier</th><th style="width:90px">Status</th><th style="width:80px">Schools</th><th style="width:110px"></th></tr></thead>
+      <table><thead><tr><th>Ambassador</th><th style="width:96px">Tier</th><th style="width:80px">Status</th><th style="width:70px">Schools</th><th style="width:90px">Payouts</th><th></th></tr></thead>
         <tbody id="body"></tbody></table>
     </div>
 
@@ -148,7 +148,15 @@ const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, auto
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function setMsg(id,t,cls){ const el=$(id); el.textContent=t; el.className='msg '+(cls||''); }
-let toastT; function toast(t,cls){ let el=document.querySelector('.toast'); if(!el){el=document.createElement('div');document.body.appendChild(el);} el.className='toast '+(cls||''); el.textContent=t; clearTimeout(toastT); toastT=setTimeout(()=>el.remove(),3800); }
+let toastT; function toast(t,cls){ let el=document.getElementById('__toast'); if(!el){el=document.createElement('div');el.id='__toast';document.body.appendChild(el);} el.className='toast '+(cls||''); el.textContent=t; clearTimeout(toastT); toastT=setTimeout(()=>{el.remove();},3800); }
+function showLink(label, link){
+  const w=document.createElement('div'); w.className='toast ok'; w.style.maxWidth='660px';
+  w.innerHTML=`<div style="margin-bottom:6px">${esc(label)}</div><div class="link"><span>${esc(link)}</span></div>`+
+    `<div style="text-align:right;margin-top:8px"><button class="btn sm" id="cpL">Copy</button> <button class="btn sm" id="clL">Close</button></div>`;
+  document.body.appendChild(w);
+  w.querySelector('#cpL').onclick=()=>{ navigator.clipboard.writeText(link); toast('Copied.','ok'); };
+  w.querySelector('#clL').onclick=()=>w.remove();
+}
 
 async function ef(fn, body){
   const { data:{ session } } = await sb.auth.getSession();
@@ -202,10 +210,10 @@ async function load(){
 
 function render(){
   const b=$('body');
-  if(!partners.length){ b.innerHTML=`<tr><td colspan="5" class="empty">No ambassadors yet — create one above.</td></tr>`; return; }
+  if(!partners.length){ b.innerHTML=`<tr><td colspan="6" class="empty">No ambassadors yet — create one above.</td></tr>`; return; }
   b.innerHTML = partners.map(p=>{
     const schools=(p.schools||[]);
-    const detail = expanded===p.id ? `<tr class="detail"><td colspan="5">
+    const detail = expanded===p.id ? `<tr class="detail"><td colspan="6">
       <div class="link"><span>${esc(p.referral_links.member)}</span><button class="btn sm" data-act="copy" data-v="${esc(p.referral_links.member)}">Copy</button></div>
       <div class="link"><span>${esc(p.referral_links.tournament)}</span><button class="btn sm" data-act="copy" data-v="${esc(p.referral_links.tournament)}">Copy</button></div>
       <div class="schools">${schools.length? 'Schools: '+schools.map(s=>`<span class="s">${esc(s.school_name||s.member_school_id)}</span>`).join(', ') : 'No schools attributed yet.'}</div>
@@ -215,7 +223,13 @@ function render(){
       <td><span class="pill tier">${esc(String(p.tier||'').replace('_',' '))}</span></td>
       <td><span class="pill ${esc(p.status)}">${esc(p.status)}</span></td>
       <td>${schools.length}</td>
-      <td class="rowbtns"><button class="btn gold sm" data-act="kit" data-id="${esc(p.id)}">Kit</button><button class="btn sm" data-act="toggle" data-id="${esc(p.id)}">${expanded===p.id?'Hide':'Details'}</button></td>
+      <td>${p.payouts_enabled?'<span class="pill active">ready</span>':'<span class="pill paused">not set</span>'}</td>
+      <td class="rowbtns">
+        <button class="btn sm" data-act="pconnect" data-id="${esc(p.id)}">${p.payouts_enabled?'Re-link':'Connect'}</button>
+        <button class="btn sm" data-act="pstatus" data-id="${esc(p.id)}">Check</button>
+        <button class="btn gold sm" data-act="kit" data-id="${esc(p.id)}">Kit</button>
+        <button class="btn sm" data-act="toggle" data-id="${esc(p.id)}">${expanded===p.id?'Hide':'Details'}</button>
+      </td>
     </tr>${detail}`;
   }).join('');
 }
@@ -249,12 +263,23 @@ $('assignBtn').onclick = async () => {
   finally{ $('assignBtn').disabled=false; }
 };
 
-document.addEventListener('click', (e)=>{
+document.addEventListener('click', async (e)=>{
   const btn=e.target.closest('[data-act]'); if(!btn) return;
-  const act=btn.dataset.act;
-  if(act==='toggle'){ expanded = expanded===btn.dataset.id ? null : btn.dataset.id; render(); }
-  else if(act==='copy'){ navigator.clipboard.writeText(btn.dataset.v); toast('Copied.','ok'); }
-  else if(act==='kit'){ openKit(btn.dataset.id); }
+  const act=btn.dataset.act, id=btn.dataset.id;
+  if(act==='toggle'){ expanded = expanded===id ? null : id; render(); return; }
+  if(act==='copy'){ navigator.clipboard.writeText(btn.dataset.v); toast('Copied.','ok'); return; }
+  if(act==='kit'){ openKit(id); return; }
+  if(act==='pconnect'){ btn.disabled=true; try{
+      const j=await ef('connect-onboard-partner',{ partner_id:id, action:'link', return_url:location.href });
+      if(!j.ok) throw new Error(j.error);
+      showLink('Send this Stripe payout-onboarding link to the ambassador:', j.url);
+    }catch(err){ toast(err.message||'Could not create link.','err'); } finally{ btn.disabled=false; } return; }
+  if(act==='pstatus'){ btn.disabled=true; try{
+      const j=await ef('connect-onboard-partner',{ partner_id:id, action:'status' });
+      if(!j.ok) throw new Error(j.error);
+      toast(j.payouts_enabled?'Payouts ready ✓':('Not finished — details submitted: '+(j.details_submitted?'yes':'no')), j.payouts_enabled?'ok':'err');
+      await load();
+    }catch(err){ toast(err.message||'Status check failed.','err'); } finally{ btn.disabled=false; } return; }
 });
 
 // ---------- QR / Ambassador Kit (client-side canvas → PNG + JPG) ----------
