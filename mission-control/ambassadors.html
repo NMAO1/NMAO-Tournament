@@ -297,7 +297,7 @@ document.addEventListener('click', async (e)=>{
       await load();
     }catch(err){ toast(err.message||'Payout run failed.','err'); } finally{ btn.disabled=false; } return; }
   if(act==='pconnect'){ btn.disabled=true; try{
-      const j=await ef('connect-onboard-partner',{ partner_id:id, action:'link', return_url:location.href });
+      const j=await ef('connect-onboard-partner',{ partner_id:id, action:'link' }); // no return_url -> EF public default (league.nmao.us), never the staff-gated MC page
       if(!j.ok) throw new Error(j.error);
       showLink('Send this Stripe payout-onboarding link to the ambassador:', j.url);
     }catch(err){ toast(err.message||'Could not create link.','err'); } finally{ btn.disabled=false; } return; }
