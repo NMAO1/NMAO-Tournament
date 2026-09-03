@@ -10,7 +10,7 @@
   const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94enVhdnB5b2V0Y2h3ZWJkZWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgyNjUsImV4cCI6MjEwMTU0NDI2NX0.SEBXeo_FqsyqV8xS5dwaGymXI6mYPy8-9uMAgaX4fhg';
   window.__mc = { createClient, SUPABASE_URL, ANON };
 </script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<script src="./qrcode-generator.js"></script>
 <style>
   :root{ --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b; --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
     --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22; --success:#5DCAA5; --danger:#E07070;
@@ -138,6 +138,8 @@
 
     <div class="foot-note">Staff-gated · Tournament suite. Payouts (the $1/entry + 10% school override) attach to these ambassadors in the next phases.</div>
   </div>
+
+  <div id="kitModal" class="modal hide"></div>
 </div>
 
 <script type="module">
@@ -252,7 +254,99 @@ document.addEventListener('click', (e)=>{
   const act=btn.dataset.act;
   if(act==='toggle'){ expanded = expanded===btn.dataset.id ? null : btn.dataset.id; render(); }
   else if(act==='copy'){ navigator.clipboard.writeText(btn.dataset.v); toast('Copied.','ok'); }
+  else if(act==='kit'){ openKit(btn.dataset.id); }
 });
+
+// ---------- QR / Ambassador Kit (client-side canvas → PNG + JPG) ----------
+async function qrImg(url, px){
+  const qr = qrcode(0, 'H'); qr.addData(url); qr.make();
+  const cell = Math.max(2, Math.round(px / (qr.getModuleCount() + 4)));  // +4 = 2-module quiet zone
+  const im = new Image(); im.src = qr.createDataURL(cell, 2); await im.decode(); return im;
+}
+function bg(ctx,w,h){ ctx.fillStyle='#0b0c10'; ctx.fillRect(0,0,w,h);
+  const g=ctx.createRadialGradient(w/2,-60,50,w/2,-60,Math.max(w,h)*1.15); g.addColorStop(0,'#171a24'); g.addColorStop(1,'#0b0c10'); ctx.fillStyle=g; ctx.fillRect(0,0,w,h); }
+function qrTile(ctx,x,y,s){ ctx.save(); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.roundRect(x-18,y-18,s+36,s+36,22); ctx.fill(); ctx.restore(); }
+function ls(ctx,v){ if(ctx.letterSpacing!==undefined) ctx.letterSpacing=v; }
+function wrapText(ctx,text,cx,y,maxw,lh){ const words=text.split(' '); let line=''; const lines=[];
+  for(const w of words){ const t=line?line+' '+w:w; if(ctx.measureText(t).width>maxw){ lines.push(line); line=w; } else line=t; }
+  if(line) lines.push(line); lines.forEach((ln,i)=>ctx.fillText(ln,cx,y+i*lh)); }
+
+async function cardSeparate(kind,p){
+  const url = kind==='member'?p.referral_links.member:p.referral_links.tournament;
+  const accent = kind==='member'?'#3a8dff':'#ff4d63';
+  const label  = kind==='member'?'BRING A SCHOOL':'ENTER THE LEAGUE';
+  const title  = kind==='member'?'Membership Platform':'Tournament';
+  const cv=document.createElement('canvas'); cv.width=1080; cv.height=1080; const ctx=cv.getContext('2d');
+  bg(ctx,1080,1080); ctx.textAlign='center';
+  ctx.fillStyle='#9aa0b0'; ctx.font='700 20px Arial'; ls(ctx,'6px'); ctx.fillText('NMAO AMBASSADOR',540,86); ls(ctx,'0px');
+  ctx.fillStyle='#8b57ff'; ctx.font='800 40px Arial'; ls(ctx,'8px'); ctx.fillText('NMAO',540,146); ls(ctx,'0px');
+  ctx.fillStyle=accent; ctx.fillRect(540-32,178,64,6);
+  ctx.fillStyle='#8b90a0'; ctx.font='700 20px Arial'; ls(ctx,'3px'); ctx.fillText(label,540,234); ls(ctx,'0px');
+  ctx.fillStyle='#f3efe7'; ctx.font='800 46px Georgia'; ctx.fillText(title,540,292);
+  ctx.fillStyle='#c4c9d6'; ctx.font='400 22px Arial'; ctx.fillText('Scan to join — credited to '+p.name,540,334);
+  const s=556, x=(1080-s)/2, y=388; qrTile(ctx,x,y,s);
+  ctx.imageSmoothingEnabled=false; const im=await qrImg(url,s); ctx.drawImage(im,x,y,s,s);
+  ctx.fillStyle='#9fb6e0'; ctx.font='400 24px monospace'; ctx.fillText(url.replace('https://',''),540,y+s+72);
+  ctx.fillStyle='#7c8296'; ctx.font='400 18px Arial'; ctx.fillText(p.name+' · code '+p.slug,540,1042);
+  return cv;
+}
+async function cardCombined(p){
+  const cv=document.createElement('canvas'); cv.width=1080; cv.height=1350; const ctx=cv.getContext('2d');
+  bg(ctx,1080,1350); ctx.textAlign='center';
+  ctx.fillStyle='#9aa0b0'; ctx.font='700 20px Arial'; ls(ctx,'6px'); ctx.fillText('NMAO AMBASSADOR',540,92); ls(ctx,'0px');
+  ctx.fillStyle='#8b57ff'; ctx.font='800 44px Arial'; ls(ctx,'8px'); ctx.fillText('NMAO',540,152); ls(ctx,'0px');
+  ctx.fillStyle='#f3efe7'; ctx.font='800 50px Georgia'; ctx.fillText(p.name,540,228);
+  ctx.fillStyle='#c4c9d6'; ctx.font='400 22px Arial'; ctx.fillText('Scan to join — any signup is credited to you.',540,272);
+  const s=420, gap=60, totalW=s*2+gap, x0=(1080-totalW)/2, y=396;
+  const cols=[['BRING A SCHOOL','Membership',p.referral_links.member,'#3a8dff',x0],
+              ['ENTER THE LEAGUE','Tournament',p.referral_links.tournament,'#ff4d63',x0+s+gap]];
+  for(const [lbl,tt,url,accent,x] of cols){
+    ctx.fillStyle=accent; ctx.fillRect(x+s/2-26,y-70,52,5);
+    ctx.fillStyle='#8b90a0'; ctx.font='700 15px Arial'; ls(ctx,'2px'); ctx.fillText(lbl,x+s/2,y-40); ls(ctx,'0px');
+    ctx.fillStyle='#f3efe7'; ctx.font='800 26px Georgia'; ctx.fillText(tt,x+s/2,y-8);
+    qrTile(ctx,x,y,s); ctx.imageSmoothingEnabled=false; const im=await qrImg(url,s); ctx.drawImage(im,x,y,s,s);
+    ctx.fillStyle='#9fb6e0'; ctx.font='400 17px monospace'; ctx.fillText(url.replace('https://',''),x+s/2,y+s+44);
+  }
+  ctx.fillStyle='#c4c9d6'; ctx.font='400 25px Arial';
+  wrapText(ctx,'$1 per competitor, every event — plus a share of every school you bring, for as long as they stay.',540,y+s+128,880,34);
+  ctx.fillStyle='#7c8296'; ctx.font='400 18px Arial'; ctx.fillText('NMAO — National Martial Arts Organization · code '+p.slug,540,1312);
+  return cv;
+}
+function dlCanvas(canvas, fname, jpg){
+  canvas.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=fname;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1500); },
+    jpg?'image/jpeg':'image/png', jpg?0.92:undefined);
+}
+async function openKit(id){
+  const p = partners.find(x=>x.id===id); if(!p) return;
+  if(typeof qrcode==='undefined'){ toast('QR library not loaded.','err'); return; }
+  const m=$('kitModal'); m.classList.remove('hide');
+  m.innerHTML = `<div class="sheet"><div class="shd">
+      <div><h3>${esc(p.name)} — Ambassador Kit</h3><div class="mut">?p=${esc(p.slug)} · download &amp; share</div></div>
+      <button class="btn" id="kitClose">Close</button></div>
+      <div class="kits">
+        <div class="kit"><canvas class="th" id="thCombined"></canvas><div class="kl">Full kit (both QRs)</div>
+          <div class="dls"><button class="btn sm" data-dl="combined" data-fmt="png">PNG</button><button class="btn sm" data-dl="combined" data-fmt="jpg">JPG</button></div></div>
+        <div class="kit"><canvas class="th" id="thMember"></canvas><div class="kl">Membership QR</div>
+          <div class="dls"><button class="btn sm" data-dl="member" data-fmt="png">PNG</button><button class="btn sm" data-dl="member" data-fmt="jpg">JPG</button></div></div>
+        <div class="kit"><canvas class="th" id="thTournament"></canvas><div class="kl">Tournament QR</div>
+          <div class="dls"><button class="btn sm" data-dl="tournament" data-fmt="png">PNG</button><button class="btn sm" data-dl="tournament" data-fmt="jpg">JPG</button></div></div>
+      </div></div>`;
+  const close=()=>{ m.classList.add('hide'); m.innerHTML=''; };
+  $('kitClose').onclick=close; m.onclick=(e)=>{ if(e.target===m) close(); };
+  try{
+    const cards = { combined: await cardCombined(p), member: await cardSeparate('member',p), tournament: await cardSeparate('tournament',p) };
+    for(const [k,elid] of [['combined','thCombined'],['member','thMember'],['tournament','thTournament']]){
+      const th=document.getElementById(elid); if(!th) continue; const c=cards[k];
+      th.width=c.width; th.height=c.height; th.getContext('2d').drawImage(c,0,0);
+    }
+    m.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>{
+      const jpg=b.dataset.fmt==='jpg';
+      dlCanvas(cards[b.dataset.dl], `NMAO-${p.slug}-${b.dataset.dl}.${jpg?'jpg':'png'}`, jpg);
+      toast('Downloading '+b.dataset.dl+' ('+b.dataset.fmt.toUpperCase()+').','ok');
+    });
+  }catch(err){ toast('Could not build kit: '+(err.message||err),'err'); }
+}
 
 (async () => { const { data:{ session } } = await sb.auth.getSession(); if(session) await afterLogin(); })();
 </script>
