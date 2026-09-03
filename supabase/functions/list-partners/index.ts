@@ -49,9 +49,29 @@ Deno.serve(async (req) => {
     const byP: Record<string, any[]> = {};
     for (const a of attrs) (byP[a.partner_id] = byP[a.partner_id] || []).push(a);
 
+    // earnings summary (competitor $1/entry override) per partner
+    const { data: pe } = await svc.from("partner_event_payouts").select("partner_id, amount_cents, status");
+    const earn: Record<string, { paid: number; pending: number }> = {};
+    for (const r of (pe || [])) {
+      const e = earn[(r as any).partner_id] = earn[(r as any).partner_id] || { paid: 0, pending: 0 };
+      if ((r as any).status === "paid") e.paid += (r as any).amount_cents || 0;
+      else if ((r as any).status === "pending") e.pending += (r as any).amount_cents || 0;
+    }
+
+    // school override (10% of collected platform fee) earnings per partner
+    const { data: ps } = await svc.from("partner_school_payouts").select("partner_id, amount_cents, status");
+    const searn: Record<string, { paid: number; pending: number }> = {};
+    for (const r of (ps || [])) {
+      const e = searn[(r as any).partner_id] = searn[(r as any).partner_id] || { paid: 0, pending: 0 };
+      if ((r as any).status === "paid") e.paid += (r as any).amount_cents || 0;
+      else if ((r as any).status === "pending") e.pending += (r as any).amount_cents || 0;
+    }
+
     const out = (partners || []).map((p: any) => ({
       ...p,
       schools: byP[p.id] || [],
+      earnings: earn[p.id] || { paid: 0, pending: 0 },
+      school_earnings: searn[p.id] || { paid: 0, pending: 0 },
       referral_links: {
         member:     "https://join.nmao.us/?p=" + p.slug,
         tournament: "https://league.nmao.us/?p=" + p.slug,

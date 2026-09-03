@@ -131,12 +131,16 @@
 
     <div class="card">
       <div class="hd"><h2><span class="rail"></span>Ambassadors <span id="count" class="pill tier"></span></h2>
-        <div class="sub">Each ambassador, their referral links, and the schools attributed to them.</div></div>
+        <div class="actions">
+          <button class="btn sm" data-act="accrue">Accrue entries</button>
+          <button class="btn sm" data-act="accrueschool">Accrue 10% (last mo.)</button>
+          <button class="btn gold sm" data-act="paypending">Pay pending</button>
+        </div></div>
       <table><thead><tr><th>Ambassador</th><th style="width:96px">Tier</th><th style="width:80px">Status</th><th style="width:70px">Schools</th><th style="width:90px">Payouts</th><th></th></tr></thead>
         <tbody id="body"></tbody></table>
     </div>
 
-    <div class="foot-note">Staff-gated · Tournament suite. Payouts (the $1/entry + 10% school override) attach to these ambassadors in the next phases.</div>
+    <div class="foot-note">Staff-gated · Tournament suite. Payouts: <b>Accrue entries</b> books $1 per paid entry; <b>Accrue 10%</b> books 10% of last month's collected platform fee per attributed school (flag-gated); <b>Pay pending</b> reconciles refunds and sends all pending Stripe transfers.</div>
   </div>
 
   <div id="kitModal" class="modal hide"></div>
@@ -217,6 +221,8 @@ function render(){
       <div class="link"><span>${esc(p.referral_links.member)}</span><button class="btn sm" data-act="copy" data-v="${esc(p.referral_links.member)}">Copy</button></div>
       <div class="link"><span>${esc(p.referral_links.tournament)}</span><button class="btn sm" data-act="copy" data-v="${esc(p.referral_links.tournament)}">Copy</button></div>
       <div class="schools">${schools.length? 'Schools: '+schools.map(s=>`<span class="s">${esc(s.school_name||s.member_school_id)}</span>`).join(', ') : 'No schools attributed yet.'}</div>
+      <div class="schools">Competitor override: <span class="s">$${((p.earnings?.paid||0)/100).toFixed(0)} paid</span> · <span class="s">$${((p.earnings?.pending||0)/100).toFixed(0)} pending</span></div>
+      <div class="schools">School override (10%): <span class="s">$${((p.school_earnings?.paid||0)/100).toFixed(2)} paid</span> · <span class="s">$${((p.school_earnings?.pending||0)/100).toFixed(2)} pending</span></div>
     </td></tr>` : '';
     return `<tr>
       <td class="name"><b>${esc(p.name)}</b><small class="slug">?p=${esc(p.slug)}${p.email?' · '+esc(p.email):''}</small></td>
@@ -269,6 +275,26 @@ document.addEventListener('click', async (e)=>{
   if(act==='toggle'){ expanded = expanded===id ? null : id; render(); return; }
   if(act==='copy'){ navigator.clipboard.writeText(btn.dataset.v); toast('Copied.','ok'); return; }
   if(act==='kit'){ openKit(id); return; }
+  if(act==='accrue'){ btn.disabled=true; try{
+      const j=await ef('accrue-partner-payouts',{});
+      if(!j.ok) throw new Error(j.error);
+      toast('Accrued '+j.accrued+' new payout(s) · scanned '+j.scanned+' paid entries.','ok');
+      await load();
+    }catch(err){ toast(err.message||'Accrue failed.','err'); } finally{ btn.disabled=false; } return; }
+  if(act==='accrueschool'){ btn.disabled=true; try{
+      const j=await ef('accrue-partner-school-payouts',{});
+      if(!j.ok) throw new Error(j.error);
+      if(j.disabled) toast('School override is OFF (flag partner_school_override_enabled).','err');
+      else toast('Accrued '+j.accrued+' school payout(s) for '+j.period+' · '+j.schools+' school(s) with fees.','ok');
+      await load();
+    }catch(err){ toast(err.message||'Accrue failed.','err'); } finally{ btn.disabled=false; } return; }
+  if(act==='paypending'){ if(!confirm('Pay all pending ambassador payouts (entry $1 + 10% school override, and reverse any refunded) now?')) return;
+    btn.disabled=true; try{
+      const j=await ef('pay-partners',{});
+      if(!j.ok) throw new Error(j.error);
+      toast(`Paid ${j.paid} entry · ${j.school_paid||0} school · reversed ${j.reversed} · pending ${j.pending}/${j.school_pending||0}${(j.skipped||j.school_skipped)?' · skipped '+((j.skipped||0)+(j.school_skipped||0)):''}.`, 'ok');
+      await load();
+    }catch(err){ toast(err.message||'Payout run failed.','err'); } finally{ btn.disabled=false; } return; }
   if(act==='pconnect'){ btn.disabled=true; try{
       const j=await ef('connect-onboard-partner',{ partner_id:id, action:'link', return_url:location.href });
       if(!j.ok) throw new Error(j.error);
