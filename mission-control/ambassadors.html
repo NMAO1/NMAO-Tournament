@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NMAO — Ambassadors</title>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  const SUPABASE_URL = 'https://oxzuavpyoetchwebdejp.supabase.co';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94enVhdnB5b2V0Y2h3ZWJkZWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgyNjUsImV4cCI6MjEwMTU0NDI2NX0.SEBXeo_FqsyqV8xS5dwaGymXI6mYPy8-9uMAgaX4fhg';
+  window.__mc = { createClient, SUPABASE_URL, ANON };
+</script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<style>
+  :root{ --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b; --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
+    --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22; --success:#5DCAA5; --danger:#E07070;
+    --spectrum:linear-gradient(180deg,#1F7BFF 0%,#A32BF7 50%,#FF2E3B 100%); }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#141220 0%,var(--bg) 60%);color:var(--text);
+       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;padding:22px}
+  .wrap{max-width:1060px;margin:0 auto}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer}
+  .btn:hover{border-color:#3a3a40}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
+  .btn.sm{padding:5px 9px;font-size:12px}
+  .hide{display:none!important}
+  .login{max-width:360px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .login h1{font-size:18px;margin:0 0 4px} .login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .login label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+  .login input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+  .login .btn{width:100%;margin-top:16px;justify-content:center;text-align:center}
+  .msg{font-size:12.5px;margin-top:10px;min-height:16px} .msg.err{color:var(--danger)} .msg.ok{color:var(--success)}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F5F0E8 0 50%,#141210 0 100%);border:1px solid var(--gold)}
+  .brand h1{font-size:16px;margin:0} .brand small{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:18px}
+  .card > .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+  .hd h2{font-size:14px;margin:0;display:flex;align-items:center;gap:9px}
+  .hd .sub{font-size:12px;color:var(--muted);max-width:520px;text-align:right}
+  .rail{width:4px;height:15px;border-radius:2px;background:var(--spectrum)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:600;padding:9px 14px;border-bottom:1px solid var(--line)}
+  td{padding:10px 14px;border-bottom:1px solid #202024;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  .empty{padding:22px;color:var(--muted2);text-align:center;font-size:13px}
+  .rowbtns{display:flex;gap:6px;justify-content:flex-end}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;text-transform:capitalize}
+  .pill.active{background:rgba(93,202,165,.14);color:#a9f0c1;border:1px solid #2b4a3a}
+  .pill.paused{background:rgba(230,185,63,.14);color:var(--gold-soft);border:1px solid var(--gold-deep)}
+  .pill.disabled{background:rgba(224,112,112,.12);color:#E9A0A0;border:1px solid #4a2b2b}
+  .pill.tier{background:rgba(31,123,255,.14);color:#8Fc0ff;border:1px solid #2a5aa0}
+  .name b{font-size:13.5px} .name small{display:block;color:var(--muted);font-size:11.5px}
+  .form{display:flex;flex-wrap:wrap;gap:10px;padding:14px 18px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .field input,.field select{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:13px;min-width:180px}
+  .slug{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--muted)}
+  .detail{background:#101013;border-top:1px solid var(--line)} .detail td{padding:12px 18px}
+  .link{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--muted);word-break:break-all;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;margin-top:6px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .schools{margin-top:8px;font-size:12.5px;color:var(--muted)} .schools .s{color:var(--text)}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:560px}
+  .toast.err{border-color:#4a2b2b;color:#E9A0A0} .toast.ok{border-color:#2b4a3a;color:#a9f0c1}
+  .foot-note{margin-top:12px;color:var(--muted2);font-size:11.5px;text-align:center}
+  .modal{position:fixed;inset:0;background:rgba(4,5,8,.72);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow:auto;z-index:50}
+  .sheet{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:820px;width:100%;padding:22px}
+  .sheet .shd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .sheet h3{margin:0;font-size:16px} .sheet .mut{color:var(--muted);font-size:12.5px}
+  .kits{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:640px){.kits{grid-template-columns:1fr}}
+  .kit{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .kit .th{width:100%;aspect-ratio:1;border-radius:8px;background:#0b0c10;display:block}
+  .kit .kl{font-size:12px;color:var(--muted);margin:9px 0 8px;font-weight:600}
+  .kit .dls{display:flex;gap:6px;justify-content:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="login" id="loginCard">
+    <h1 class="serif">Ambassadors</h1>
+    <p>Sign in with your NMAO staff account.</p>
+    <label>Email</label><input id="email" type="email" autocomplete="username" />
+    <div id="pwWrap"><label>Password</label><input id="password" type="password" autocomplete="current-password" /></div>
+    <div id="codeWrap" class="hide"><label>6-digit code (emailed)</label><input id="code" inputmode="numeric" maxlength="6" /></div>
+    <button class="btn gold" id="loginBtn">Sign in</button>
+    <button class="btn" id="codeToggle" style="width:100%;margin-top:8px">Email me a code instead</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="console" class="hide">
+    <header>
+      <div class="brand"><span class="yy"></span><div><h1 class="serif">Ambassadors</h1><small>Mission Control</small></div></div>
+      <div class="actions">
+        <a class="btn" href="./live.html">← Live console</a>
+        <a class="btn" href="./judges.html">Judges</a>
+        <a class="btn" href="./sponsors.html">Sponsors</a>
+        <a class="btn" href="./config.html">Config</a>
+        <button class="btn" id="signoutBtn">Sign out</button>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="hd"><h2><span class="rail"></span>New ambassador</h2>
+        <div class="sub">Creates the ambassador + mints their referral slug and the two signup links (member + tournament).</div></div>
+      <div class="form">
+        <div class="field"><label>Name</label><input id="cName" placeholder="e.g. Grandmaster Lee" /></div>
+        <div class="field"><label>Email</label><input id="cEmail" type="email" placeholder="optional" /></div>
+        <div class="field"><label>Tier</label><select id="cTier">
+          <option value="ambassador">Ambassador</option>
+          <option value="regional_director">Regional Director</option>
+          <option value="founding">Founding Ambassador</option>
+        </select></div>
+        <button class="btn gold" id="createBtn">Create ambassador</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><h2><span class="rail"></span>Attribute a school</h2>
+        <div class="sub">Locks a school to an ambassador (first-touch override). Use the Membership school ID.</div></div>
+      <div class="form">
+        <div class="field"><label>Ambassador</label><select id="aPartner"></select></div>
+        <div class="field"><label>Membership school ID</label><input id="aSchoolId" placeholder="uuid" style="min-width:290px" /></div>
+        <div class="field"><label>School name</label><input id="aSchoolName" placeholder="label (optional)" /></div>
+        <div class="field"><label>Reason</label><input id="aReason" placeholder="e.g. phone onboarding" /></div>
+        <button class="btn gold" id="assignBtn">Attribute</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="hd"><h2><span class="rail"></span>Ambassadors <span id="count" class="pill tier"></span></h2>
+        <div class="sub">Each ambassador, their referral links, and the schools attributed to them.</div></div>
+      <table><thead><tr><th>Ambassador</th><th style="width:110px">Tier</th><th style="width:90px">Status</th><th style="width:80px">Schools</th><th style="width:110px"></th></tr></thead>
+        <tbody id="body"></tbody></table>
+    </div>
+
+    <div class="foot-note">Staff-gated · Tournament suite. Payouts (the $1/entry + 10% school override) attach to these ambassadors in the next phases.</div>
+  </div>
+</div>
+
+<script type="module">
+const { createClient, SUPABASE_URL, ANON } = window.__mc;
+const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function setMsg(id,t,cls){ const el=$(id); el.textContent=t; el.className='msg '+(cls||''); }
+let toastT; function toast(t,cls){ let el=document.querySelector('.toast'); if(!el){el=document.createElement('div');document.body.appendChild(el);} el.className='toast '+(cls||''); el.textContent=t; clearTimeout(toastT); toastT=setTimeout(()=>el.remove(),3800); }
+
+async function ef(fn, body){
+  const { data:{ session } } = await sb.auth.getSession();
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, { method:'POST',
+    headers:{ 'Content-Type':'application/json', apikey:ANON, Authorization:`Bearer ${session?.access_token}` }, body: JSON.stringify(body||{}) });
+  return res.json();
+}
+
+// ---------- auth (same flow as judges/config/live) ----------
+let codeMode=false;
+$('codeToggle').onclick = async () => {
+  const email=$('email').value.trim();
+  if(codeMode){ codeMode=false; $('pwWrap').classList.remove('hide'); $('codeWrap').classList.add('hide'); $('codeToggle').textContent='Email me a code instead'; $('loginBtn').textContent='Sign in'; return; }
+  if(!email) return setMsg('loginMsg','Enter your email first.','err');
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+  if(error) return setMsg('loginMsg',error.message,'err');
+  codeMode=true; $('pwWrap').classList.add('hide'); $('codeWrap').classList.remove('hide'); $('codeToggle').textContent='Use password instead'; $('loginBtn').textContent='Verify code';
+  setMsg('loginMsg','Code sent — check your email.','ok');
+};
+$('loginBtn').onclick = async () => {
+  const email=$('email').value.trim(); $('loginBtn').disabled=true;
+  try{
+    if(codeMode){ const {error}=await sb.auth.verifyOtp({ email, token:$('code').value.trim(), type:'email' }); if(error) throw error; }
+    else { const {error}=await sb.auth.signInWithPassword({ email, password:$('password').value }); if(error) throw error; }
+    await afterLogin();
+  }catch(e){ setMsg('loginMsg', e.message||'Sign-in failed.','err'); }
+  finally{ $('loginBtn').disabled=false; }
+};
+$('signoutBtn').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function afterLogin(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) return setMsg('loginMsg','Session expired — sign in again.','err');
+  const { data:staff } = await sb.from('staff').select('id').eq('auth_user_id', user.id).maybeSingle();
+  if(!staff) return setMsg('loginMsg','This account is not NMAO staff.','err');
+  $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
+  await load();
+}
+
+// ---------- data ----------
+let expanded=null, partners=[];
+async function load(){
+  const j = await ef('list-partners', {});
+  if(!j.ok){ toast(j.error||'Could not load ambassadors.','err'); return; }
+  partners = j.partners || [];
+  $('count').textContent = partners.length;
+  // populate the assign dropdown
+  $('aPartner').innerHTML = partners.map(p=>`<option value="${esc(p.id)}">${esc(p.name)} (${esc(p.slug)})</option>`).join('') || '<option value="">— create one first —</option>';
+  render();
+}
+
+function render(){
+  const b=$('body');
+  if(!partners.length){ b.innerHTML=`<tr><td colspan="5" class="empty">No ambassadors yet — create one above.</td></tr>`; return; }
+  b.innerHTML = partners.map(p=>{
+    const schools=(p.schools||[]);
+    const detail = expanded===p.id ? `<tr class="detail"><td colspan="5">
+      <div class="link"><span>${esc(p.referral_links.member)}</span><button class="btn sm" data-act="copy" data-v="${esc(p.referral_links.member)}">Copy</button></div>
+      <div class="link"><span>${esc(p.referral_links.tournament)}</span><button class="btn sm" data-act="copy" data-v="${esc(p.referral_links.tournament)}">Copy</button></div>
+      <div class="schools">${schools.length? 'Schools: '+schools.map(s=>`<span class="s">${esc(s.school_name||s.member_school_id)}</span>`).join(', ') : 'No schools attributed yet.'}</div>
+    </td></tr>` : '';
+    return `<tr>
+      <td class="name"><b>${esc(p.name)}</b><small class="slug">?p=${esc(p.slug)}${p.email?' · '+esc(p.email):''}</small></td>
+      <td><span class="pill tier">${esc(String(p.tier||'').replace('_',' '))}</span></td>
+      <td><span class="pill ${esc(p.status)}">${esc(p.status)}</span></td>
+      <td>${schools.length}</td>
+      <td class="rowbtns"><button class="btn gold sm" data-act="kit" data-id="${esc(p.id)}">Kit</button><button class="btn sm" data-act="toggle" data-id="${esc(p.id)}">${expanded===p.id?'Hide':'Details'}</button></td>
+    </tr>${detail}`;
+  }).join('');
+}
+
+// ---------- actions ----------
+$('createBtn').onclick = async () => {
+  const name=$('cName').value.trim(); if(!name) return toast('Name is required.','err');
+  $('createBtn').disabled=true;
+  try{
+    const j = await ef('partner-create', { name, email:$('cEmail').value.trim()||null, tier:$('cTier').value });
+    if(!j.ok) throw new Error(j.error);
+    toast('Ambassador created — referral links ready in Details.','ok');
+    $('cName').value=''; $('cEmail').value='';
+    await load();
+  }catch(e){ toast(e.message||'Could not create.','err'); }
+  finally{ $('createBtn').disabled=false; }
+};
+
+$('assignBtn').onclick = async () => {
+  const partner_id=$('aPartner').value, member_school_id=$('aSchoolId').value.trim();
+  if(!partner_id) return toast('Create an ambassador first.','err');
+  if(!member_school_id) return toast('Membership school ID is required.','err');
+  $('assignBtn').disabled=true;
+  try{
+    const j = await ef('partner-assign', { partner_id, member_school_id, school_name:$('aSchoolName').value.trim()||null, reason:$('aReason').value.trim()||null });
+    if(!j.ok) throw new Error(j.error);
+    toast(j.unchanged?'Already attributed to that ambassador.':(j.reassigned?'School reassigned.':'School attributed.'),'ok');
+    $('aSchoolId').value=''; $('aSchoolName').value=''; $('aReason').value='';
+    await load();
+  }catch(e){ toast(e.message||'Could not attribute.','err'); }
+  finally{ $('assignBtn').disabled=false; }
+};
+
+document.addEventListener('click', (e)=>{
+  const btn=e.target.closest('[data-act]'); if(!btn) return;
+  const act=btn.dataset.act;
+  if(act==='toggle'){ expanded = expanded===btn.dataset.id ? null : btn.dataset.id; render(); }
+  else if(act==='copy'){ navigator.clipboard.writeText(btn.dataset.v); toast('Copied.','ok'); }
+});
+
+(async () => { const { data:{ session } } = await sb.auth.getSession(); if(session) await afterLogin(); })();
+</script>
+</body>
+</html>
