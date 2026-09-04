@@ -90,7 +90,7 @@
 
     $('app').innerHTML =
       '<div class="card"><div class="hdr">'
-        + '<div><h2 class="name">'+esc(p.name)+'</h2><div class="muted" style="margin-top:4px">'+esc(String(p.tier||'').replace(/_/g,\' \'))+'</div></div>'
+        + '<div><h2 class="name">'+esc(p.name)+'</h2><div class="muted" style="margin-top:4px">'+esc(String(p.tier||'').replace(/_/g,' '))+'</div></div>'
         + '<div style="display:flex;gap:8px;align-items:center">'+payPill+'</div>'
       + '</div></div>'
       + '<div class="row">'
