@@ -8,9 +8,11 @@ returns jsonb
 language sql stable security definer set search_path = public, nmao
 as $$
   select jsonb_build_object(
-    'skill_rating',  coalesce((select rating from public.skill_ratings where competitor_id = p_competitor), 0),
-    'correct_votes', coalesce((select correct  from public.voter_stats   where competitor_id = p_competitor), 0),
-    'duel_wins',     coalesce((select wins     from public.duel_ratings  where competitor_id = p_competitor), 0),
+    'skill_rating',   coalesce((select rating from public.skill_ratings where competitor_id = p_competitor), 0),
+    'correct_votes',  coalesce((select correct  from public.voter_stats   where competitor_id = p_competitor), 0),
+    'vote_accuracy',  coalesce((select round(accuracy * 100) from public.voter_stats where competitor_id = p_competitor), 0),  -- 0-100; drives the Oracle ring
+    'qualified_votes',coalesce((select qualified from public.voter_stats   where competitor_id = p_competitor), 0),           -- resolved-vote count (Oracle needs >= 20)
+    'duel_wins',      coalesce((select wins     from public.duel_ratings  where competitor_id = p_competitor), 0),
     'journal',       (select count(*) from public.journal_entries where competitor_id = p_competitor),
     'events',        (select count(distinct event) from public.entries where competitor_id = p_competitor and payment_status = 'paid'),
     'medals_gold',   (select count(*) from public.medals where competitor_id = p_competitor and medal_type = 'gold'),

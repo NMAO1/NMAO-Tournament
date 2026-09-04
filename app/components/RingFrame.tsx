@@ -47,7 +47,66 @@ export function RingFrame({ badgeCode, ring, value, w, h, radius = 20, children 
       {/* sheen sweep + sparkles ride the whole ring; sparkle count ramps with progress */}
       <RingGlint w={w} h={h} radius={radius} />
       <RingSparkles w={w} h={h} inset={t / 2} count={1 + Math.round(p * 4)} glow={glow} />
+
+      {/* elite flourish at the top tier — a shooting star, or a royal gold rain */}
+      {cfg.flourishAt != null && value >= cfg.flourishAt
+        ? (cfg.flourishKind === "gold-rain" ? <GoldRain w={w} h={h} /> : <ShootingStar w={w} h={h} />)
+        : null}
     </View>
+  );
+}
+
+// A gentle rain of gold sparks drifting down the frame — the Sovereign's dynasty flourish.
+function GoldRain({ w, h }: { w: number; h: number }) {
+  const xs = [0.14, 0.32, 0.5, 0.66, 0.84, 0.26];
+  return <>{xs.map((x, i) => <GoldSpark key={i} x={x * w} h={h} delay={i * 480} />)}</>;
+}
+function GoldSpark({ x, h, delay }: { x: number; h: number; delay: number }) {
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const run = Animated.loop(Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(v, { toValue: 1, duration: 1900, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(v, { toValue: 0, duration: 0, useNativeDriver: true }),
+      Animated.delay(2400),
+    ]));
+    run.start(); return () => run.stop();
+  }, [v, delay]);
+  const ty = v.interpolate({ inputRange: [0, 1], outputRange: [-h * 0.1, h * 1.05] });
+  const tx = v.interpolate({ inputRange: [0, 1], outputRange: [0, 7] });
+  const opacity = v.interpolate({ inputRange: [0, 0.1, 0.8, 1], outputRange: [0, 1, 1, 0] });
+  return (
+    <Animated.View pointerEvents="none" style={{ position: "absolute", left: x, top: 0, opacity, transform: [{ translateX: tx }, { translateY: ty }] }}>
+      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#ffe9a8", shadowColor: "#f0d878", shadowOpacity: 1, shadowRadius: 6, shadowOffset: { width: 0, height: 0 } }} />
+    </Animated.View>
+  );
+}
+
+// A shooting star that streaks diagonally across the frame every few seconds — the
+// unmistakable 90%+ Oracle flourish. Rare, so it reads as a reward.
+function ShootingStar({ w, h }: { w: number; h: number }) {
+  const p = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const run = Animated.loop(Animated.sequence([
+      Animated.delay(1600),
+      Animated.timing(p, { toValue: 1, duration: 820, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(p, { toValue: 0, duration: 0, useNativeDriver: true }),
+      Animated.delay(4600),
+    ]));
+    run.start(); return () => run.stop();
+  }, [p]);
+  const x0 = -0.14 * w, y0 = 0.05 * h, x1 = 1.14 * w, y1 = 0.44 * h;
+  const ang = (Math.atan2(y1 - y0, x1 - x0) * 180) / Math.PI;
+  const tx = p.interpolate({ inputRange: [0, 1], outputRange: [x0, x1] });
+  const ty = p.interpolate({ inputRange: [0, 1], outputRange: [y0, y1] });
+  const opacity = p.interpolate({ inputRange: [0, 0.08, 0.85, 1], outputRange: [0, 1, 1, 0] });
+  const trailLen = Math.max(70, w * 0.42);
+  return (
+    <Animated.View pointerEvents="none" style={{ position: "absolute", left: 0, top: 0, width: 0, height: 0, opacity, transform: [{ translateX: tx }, { translateY: ty }, { rotate: `${ang}deg` }] }}>
+      <LinearGradient colors={["rgba(200,216,255,0)", "rgba(200,216,255,0.9)"]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        style={{ position: "absolute", right: 0, top: -1.5, width: trailLen, height: 3, borderRadius: 2 }} />
+      <View style={{ position: "absolute", left: -4, top: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: "#fff", shadowColor: "#cfe0ff", shadowOpacity: 1, shadowRadius: 10, shadowOffset: { width: 0, height: 0 } }} />
+    </Animated.View>
   );
 }
 

@@ -4,10 +4,14 @@ import type { Card } from "./duel";
 
 // Per-competitor metric bundle behind the living frames (from nmao.frame_stats).
 export type FrameStats = {
-  skill_rating: number; correct_votes: number; duel_wins: number; journal: number;
+  skill_rating: number; correct_votes: number; vote_accuracy: number; qualified_votes: number;
+  duel_wins: number; journal: number;
   events: number; medals_gold: number; medals_silver: number; medals_bronze: number;
   podiums: number; championships: number; seasons: number;
 };
+
+// Oracle demands a real sample before accuracy counts — you can't earn Aurora off 5/5.
+export const ORACLE_MIN_VOTES = 20;
 
 export async function fetchFrameStats(competitorId: string): Promise<FrameStats | null> {
   const { data } = await supabase.rpc("frame_stats", { p_competitor: competitorId });
@@ -34,7 +38,8 @@ export function frameValueFor(code: string | null | undefined, card: Card | null
     case "duelist":        return card?.duelWins ?? stats?.duel_wins ?? 0;
     case "journal_keeper": return stats?.journal ?? 0;
     case "zen":            return stats?.journal ?? 0;
-    case "oracle":         return stats?.correct_votes ?? 0;
+    case "oracle":         // accuracy %, but only once enough votes have resolved (tough to earn + must be maintained)
+      return (stats && stats.qualified_votes >= ORACLE_MIN_VOTES) ? stats.vote_accuracy : 0;
     case "precision":      return stats?.skill_rating ?? 0;
     case "ascent":         return stats?.skill_rating ?? 0;
     case "podium":         return stats?.podiums ?? 0;

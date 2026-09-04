@@ -28,9 +28,14 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
   const W = 150, H = 200;
   const [value, setValue] = useState(140);
   const STEPS = [40, 80, 120, 160, 200];
-  // picture-frame ring prototype (Oracle) — steps land on each tier: base · starfield · constellation · aurora
-  const [ringVal, setRingVal] = useState(0);
-  const RING_STEPS = [0, 15, 35, 70];
+  // picture-frame ring (Oracle) — driven by VOTING ACCURACY %. <60 base · 60s · 70s · 80s · 90s+ (shooting star)
+  const [ringVal, setRingVal] = useState(50);
+  const RING_STEPS = [50, 65, 75, 85, 95];
+  const RING_LABELS = ["Base", "60s", "70s", "80s", "90s ✦"];
+  // Sovereign's Crown ring (Grand Champion) — driven by CHAMPIONSHIPS won
+  const [crownVal, setCrownVal] = useState(0);
+  const CROWN_STEPS = [0, 1, 2, 3, 5];
+  const CROWN_LABELS = ["Dormant", "1", "2", "3+", "Dynasty"];
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 44 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -47,7 +52,7 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
       <View style={{ borderWidth: 1, borderColor: hues.sapphire?.shadow ?? "#22306a", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(90,120,255,0.06)" }}>
         <Text style={{ color: hues.sapphire?.hi ?? "#7aa0ff", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>Picture-Frame Ring · V3 prototype (Oracle)</Text>
         <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
-          The ring cross-fades night → starfield → constellation → aurora as correct votes climb, with a star accreting around it every 5. Step the count to watch it level up.
+          Driven by VOTING ACCURACY: 60s → starfield · 70s → constellation · 80s → aurora · 90%+ → a shooting star. A running ratio, so a slump drops you a tier — tough to earn and keep. Step the accuracy to watch it.
         </Text>
         <View style={{ alignItems: "center" }}>
           <RingFrame badgeCode="oracle" value={ringVal} w={220} h={150} radius={18}>
@@ -55,13 +60,38 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
               <Text style={{ color: neutrals.muted2, fontSize: 11 }}>video</Text>
             </View>
           </RingFrame>
-          <Text style={{ color: hues.gold.hi, fontSize: 14, fontWeight: "800", marginTop: 12 }}>{ringVal} correct votes</Text>
-          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+          <Text style={{ color: hues.gold.hi, fontSize: 14, fontWeight: "800", marginTop: 12 }}>{ringVal}% accuracy</Text>
+          <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
             {RING_STEPS.map((v, i) => (
               <TouchableOpacity key={v} onPress={() => setRingVal(v)}
-                style={{ paddingHorizontal: 12, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
+                style={{ paddingHorizontal: 10, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
                   borderColor: ringVal === v ? (hues.sapphire?.base ?? "#5a78ff") : neutrals.border, backgroundColor: ringVal === v ? "rgba(90,120,255,0.18)" : neutrals.surface }}>
-                <Text style={{ color: ringVal === v ? (hues.sapphire?.hi ?? "#7aa0ff") : neutrals.muted, fontWeight: "800", fontSize: 13 }}>{["Base","Starfield","Constellation","Aurora"][i]}</Text>
+                <Text style={{ color: ringVal === v ? (hues.sapphire?.hi ?? "#7aa0ff") : neutrals.muted, fontWeight: "800", fontSize: 12.5 }}>{RING_LABELS[i]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* ── SOVEREIGN'S CROWN ring (Grand Champion) — driven by championships won ── */}
+      <View style={{ borderWidth: 1, borderColor: "#4a3a12", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(232,199,102,0.06)" }}>
+        <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>Sovereign's Crown · V3 (Grand Champion)</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
+          An ornate frame that awakens from dormant bronze to radiant gold per CHAMPIONSHIP, a jewel setting around it each title, ending in a dynasty's gold rain at 5+. Step the titles.
+        </Text>
+        <View style={{ alignItems: "center" }}>
+          <RingFrame badgeCode="grand-champion" value={crownVal} w={220} h={150} radius={18}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b12" }}>
+              <Text style={{ color: neutrals.muted2, fontSize: 11 }}>video</Text>
+            </View>
+          </RingFrame>
+          <Text style={{ color: hues.gold.hi, fontSize: 14, fontWeight: "800", marginTop: 12 }}>{crownVal} championship{crownVal === 1 ? "" : "s"}</Text>
+          <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
+            {CROWN_STEPS.map((v, i) => (
+              <TouchableOpacity key={v} onPress={() => setCrownVal(v)}
+                style={{ paddingHorizontal: 10, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
+                  borderColor: crownVal === v ? hues.gold.base : neutrals.border, backgroundColor: crownVal === v ? "rgba(232,199,102,0.18)" : neutrals.surface }}>
+                <Text style={{ color: crownVal === v ? hues.gold.hi : neutrals.muted, fontWeight: "800", fontSize: 12.5 }}>{CROWN_LABELS[i]}</Text>
               </TouchableOpacity>
             ))}
           </View>

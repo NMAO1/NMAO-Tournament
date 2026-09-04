@@ -46,6 +46,8 @@ export type RingConfig = {
   thickness?: number;              // ring thickness as a fraction of min(w,h) (default 0.15).
   glow?: string;
   perimeter?: { img: string; per: number; max?: number };  // one motif per `per` of the value, placed around the ring.
+  flourishAt?: number;             // at value >= this, an elite flourish animates over the ring.
+  flourishKind?: "shooting-star" | "gold-rain";            // which flourish (default shooting-star).
 };
 export type BadgeFrameSpec = { base: FrameRarity; label?: string; border?: { colors: string[]; glow?: string; texture?: string }; elements: SpecElement[]; fx?: boolean | FxConfig; ring?: RingConfig };
 
@@ -168,14 +170,16 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
     base: "epic", label: "The Oracle",
     border: { colors: ["#08082a", "#161654", "#2a2a8a", "#4a3aa0", "#08082a"], glow: "#8a7aff" },
     fx: { glint: true, glow: true, sparkle: true },
-    // PICTURE-FRAME RING (prototype): night sky → starfield → constellation → aurora,
-    // cross-fading as correct votes climb; a star accretes around the ring every 5.
+    // PICTURE-FRAME RING: night → starfield → constellation → aurora, cross-fading by
+    // VOTING ACCURACY (60s / 70s / 80s), + a shooting star at 90%+ — a hard frame to
+    // earn and keep (accuracy is a running ratio; a slump drops you a tier).
     ring: {
       tints: ["#0a0a24", "#141452", "#33228c", "#1f6a86"],   // night · starfield · constellation · aurora
       images: ["ring_oracle_0", "ring_oracle_1", "ring_oracle_2", "ring_oracle_3"],
-      stops: [10, 30, 60],
+      stops: [60, 70, 80],          // 60-69 → starfield · 70-79 → constellation · 80-89 → aurora
+      flourishAt: 90,               // 90%+ → shooting star (the elite tier)
       thickness: 0.16, glow: "#8a7aff",
-      perimeter: { img: "starlet", per: 5, max: 22 },
+      perimeter: { img: "starlet", per: 6, max: 16 },
     },
     elements: [
       // one star per 5 correct votes, packed across the sky
@@ -258,6 +262,17 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
     base: "legendary", label: "The Grand Champion",
     border: { colors: ["#1e0a2e", "#4a1560", "#7a2a90", "#e8c766", "#1e0a2e"], glow: "#d8a0f0" },
     fx: { glint: true, glow: true, sparkle: true },
+    // PICTURE-FRAME RING (Sovereign's Crown): an ornate frame that AWAKENS from dormant
+    // bronze to a radiant bejeweled gold crown per CHAMPIONSHIP won; a gem sets around the
+    // frame each title, and a royal gold-rain crowns a dynasty (5+).
+    ring: {
+      tints: ["#241a08", "#5a3f12", "#9a721e", "#e8c766"],   // dormant · awakened · rich · radiant gold
+      images: ["ring_crown_0", "ring_crown_1", "ring_crown_2", "ring_crown_3"],
+      stops: [1, 2, 3],             // 1 title → awakened · 2 → rich · 3+ → radiant
+      flourishAt: 5, flourishKind: "gold-rain",   // 5+ titles → a dynasty's gold rain
+      thickness: 0.17, glow: "#f0d878",
+      perimeter: { img: "gem", per: 1, max: 12 },  // a jewel set around the frame per title
+    },
     elements: [
       { img: "crown_base", x: 0.5, y: 0.52, scale: 2.9, showAt: 0 },
       { img: "gem", y: 0.40, scale: 0.34, rowStep: 0.058,
