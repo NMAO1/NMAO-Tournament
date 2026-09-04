@@ -237,6 +237,7 @@ function render(){
         <button class="btn sm" data-act="pstatus" data-id="${esc(p.id)}">Check</button>
         <button class="btn gold sm" data-act="kit" data-id="${esc(p.id)}">Kit</button>
         <button class="btn sm" data-act="plink" data-tok="${esc(p.dashboard_token||'')}">Dashboard link</button>
+        <button class="btn sm" data-act="preset" data-id="${esc(p.id)}">Reset link</button>
         <button class="btn sm" data-act="toggle" data-id="${esc(p.id)}">${expanded===p.id?'Hide':'Details'}</button>
       </td>
     </tr>${detail}`;
@@ -280,6 +281,14 @@ document.addEventListener('click', async (e)=>{
   if(act==='plink'){ const tok=btn.dataset.tok; if(!tok){ toast('No dashboard token — re-deploy needed.','err'); return; }
     const url=location.origin+'/partner.html?t='+tok; navigator.clipboard.writeText(url);
     toast('Ambassador dashboard link copied — send it to them.','ok'); return; }
+  if(act==='preset'){ if(!confirm('Reset this ambassador’s dashboard link? Their current link will STOP working and you’ll need to send them the new one.')) return;
+    btn.disabled=true; try{
+      const j=await ef('partner-reset-link',{ partner_id:id });
+      if(!j.ok) throw new Error(j.error);
+      const url=location.origin+'/partner.html?t='+j.dashboard_token; navigator.clipboard.writeText(url);
+      toast('Link reset — NEW link copied. The old link is now dead.','ok');
+      await load();
+    }catch(err){ toast(err.message||'Reset failed.','err'); } finally{ btn.disabled=false; } return; }
   if(act==='kit'){ openKit(id); return; }
   if(act==='accrue'){ btn.disabled=true; try{
       const j=await ef('accrue-partner-payouts',{});

@@ -34,19 +34,24 @@ Deno.serve(async (req) => {
   if (!key) return json({ ok: false, error: "Stripe not configured." }, 500);
   const stripe = new Stripe(key, { httpClient: Stripe.createFetchHttpClient() });
 
-  const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!bearer) return json({ ok: false, error: "Sign in required." }, 401);
   const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
-  const authClient = createClient(URL_, ANON, { global: { headers: { Authorization: "Bearer " + bearer } }, auth: { persistSession: false } });
-  const { data: u } = await authClient.auth.getUser();
-  const uid = u?.user?.id;
-  if (!uid) return json({ ok: false, error: "Invalid or expired session." }, 401);
-  const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle();
-  if (!staff) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
+  // AUTH: staff JWT (Mission Control) OR x-cron-secret (the automated cron).
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const isCron = !!cronSecret && req.headers.get("x-cron-secret") === cronSecret;
+  if (!isCron) {
+    const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    if (!bearer) return json({ ok: false, error: "Sign in required." }, 401);
+    const authClient = createClient(URL_, ANON, { global: { headers: { Authorization: "Bearer " + bearer } }, auth: { persistSession: false } });
+    const { data: u } = await authClient.auth.getUser();
+    const uid = u?.user?.id;
+    if (!uid) return json({ ok: false, error: "Invalid or expired session." }, 401);
+    const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle();
+    if (!staff) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
+  }
 
   try {
     const { data: rows } = await svc.from("partner_event_payouts")
-      .select("id, entry_id, partner_id, amount_cents, currency, status, stripe_transfer_id, partners!inner(payouts_enabled, stripe_connect_account_id)")
+      .select("id, entry_id, partner_id, amount_cents, currency, status, stripe_transfer_id, partners!inner(payouts_enabled, stripe_connect_account_id, status)")
       .in("status", ["pending", "paid"]);
     const list = rows || [];
     // NOTE: do NOT early-return when there are no entry payouts — school-override
@@ -72,7 +77,8 @@ Deno.serve(async (req) => {
       }
       if (r.status !== "pending") continue; // already paid, still valid
       const p = r.partners;
-      if (!p?.payouts_enabled || !p?.stripe_connect_account_id || r.amount_cents <= 0) { pending++; continue; }
+      // pay only ACTIVE ambassadors (reversals above already ran regardless of status).
+      if (!p?.payouts_enabled || p?.status !== "active" || !p?.stripe_connect_account_id || r.amount_cents <= 0) { pending++; continue; }
       try {
         const tr = await stripe.transfers.create(
           { amount: r.amount_cents, currency: r.currency || "usd", destination: p.stripe_connect_account_id,
@@ -86,11 +92,11 @@ Deno.serve(async (req) => {
     //      accrued_fee_cents so no reversal reconciliation is needed here. ----
     let schoolPaid = 0, schoolPending = 0, schoolSkipped = 0;
     const { data: srows } = await svc.from("partner_school_payouts")
-      .select("id, partner_id, amount_cents, period, partners!inner(payouts_enabled, stripe_connect_account_id)")
+      .select("id, partner_id, amount_cents, period, partners!inner(payouts_enabled, stripe_connect_account_id, status)")
       .eq("status", "pending");
     for (const r of (srows || []) as any[]) {
       const p = r.partners;
-      if (!p?.payouts_enabled || !p?.stripe_connect_account_id || r.amount_cents <= 0) { schoolPending++; continue; }
+      if (!p?.payouts_enabled || p?.status !== "active" || !p?.stripe_connect_account_id || r.amount_cents <= 0) { schoolPending++; continue; }
       try {
         const tr = await stripe.transfers.create(
           { amount: r.amount_cents, currency: "usd", destination: p.stripe_connect_account_id,
