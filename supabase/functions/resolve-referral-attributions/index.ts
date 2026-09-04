@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     const { data: attrs } = await svc.from("partner_school_attributions").select("member_school_id").eq("active", true);
     const attributed = new Set<string>((attrs || []).map((a: any) => a.member_school_id));
 
-    let resolved = 0, already = 0, no_partner = 0;
+    let resolved = 0, already = 0, no_partner = 0, failed = 0;
     for (const s of schools as any[]) {
       const slug = String(s.referral_slug || "").trim().toLowerCase();
       if (!slug) continue;
@@ -69,20 +69,23 @@ Deno.serve(async (req) => {
       if (!pid) { no_partner++; continue; }                       // slug has no matching ambassador (yet)
       const ins = await svc.from("partner_school_attributions").insert({
         partner_id: pid, member_school_id: s.id, school_name: s.name || null,
-        method: "referral", note: "?p=" + slug,
+        method: "code", note: "?p=" + slug,                       // method CHECK allows code|manual|import
       }).select("id").maybeSingle();
       if (ins.error) {
-        // unique(active) race or already inserted — treat as already, not a failure.
-        already++; continue;
+        // 23505 = unique(active) race → genuinely already attributed. Anything else is a REAL failure.
+        if (String(ins.error.code) === "23505" || /duplicate|unique/i.test(ins.error.message || "")) { already++; }
+        else { failed++; console.error("attribution insert failed:", s.id, ins.error.message); }
+        continue;
       }
+      // best-effort audit (non-critical — supabase-js returns errors, never throws here).
       await svc.from("partner_attribution_audit").insert({
         member_school_id: s.id, partner_id: pid, prev_partner_id: null,
-        action: "attribute", method: "referral", actor: "referral-resolver", reason: "?p=" + slug,
+        action: "attribute", method: "code", actor: "referral-resolver", reason: "?p=" + slug,
       });
       attributed.add(s.id);
       resolved++;
     }
-    return json({ ok: true, scanned: schools.length, resolved, already, no_partner });
+    return json({ ok: true, scanned: schools.length, resolved, already, no_partner, failed });
   } catch (e: any) {
     console.error("resolve-referral-attributions error:", e?.message || e);
     return json({ ok: false, error: e?.message || "server_error" }, 500);

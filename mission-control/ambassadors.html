@@ -120,7 +120,7 @@
 
     <div class="card">
       <div class="hd"><h2><span class="rail"></span>Attribute a school</h2>
-        <div class="actions"><button class="btn sm" data-act="resolveref">Resolve referral links</button></div>
+        <div class="actions"><button class="btn gold sm" data-act="resolveref">Resolve referral links</button></div>
         <div class="sub">Locks a school to an ambassador (first-touch override). Use the Membership school ID. <b>Resolve referral links</b> auto-attributes any school that signed up under an ambassador's ?p= link.</div></div>
       <div class="form">
         <div class="field"><label>Ambassador</label><select id="aPartner"></select></div>
@@ -134,8 +134,8 @@
     <div class="card">
       <div class="hd"><h2><span class="rail"></span>Ambassadors <span id="count" class="pill tier"></span></h2>
         <div class="actions">
-          <button class="btn sm" data-act="accrue">Accrue entries</button>
-          <button class="btn sm" data-act="accrueschool">Accrue 10% (last mo.)</button>
+          <button class="btn gold sm" data-act="accrue">Accrue entries</button>
+          <button class="btn gold sm" data-act="accrueschool">Accrue 10% (last mo.)</button>
           <button class="btn gold sm" data-act="paypending">Pay pending</button>
         </div></div>
       <table><thead><tr><th>Ambassador</th><th style="width:96px">Tier</th><th style="width:80px">Status</th><th style="width:70px">Schools</th><th style="width:90px">Payouts</th><th></th></tr></thead>
@@ -286,7 +286,7 @@ document.addEventListener('click', async (e)=>{
   if(act==='resolveref'){ btn.disabled=true; try{
       const j=await ef('resolve-referral-attributions',{});
       if(!j.ok) throw new Error(j.error);
-      toast('Resolved '+j.resolved+' new attribution(s) · '+j.already+' already · '+j.no_partner+' unknown slug · scanned '+j.scanned+'.','ok');
+      toast('Resolved '+j.resolved+' · '+j.already+' already · '+j.no_partner+' unknown slug'+(j.failed?' · '+j.failed+' FAILED':'')+' · scanned '+j.scanned+'.', j.failed?'err':'ok');
       await load();
     }catch(err){ toast(err.message||'Resolve failed.','err'); } finally{ btn.disabled=false; } return; }
   if(act==='accrueschool'){ btn.disabled=true; try{
