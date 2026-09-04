@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
       ok: true,
       partner: created,
       referral_links: {
-        member:     "https://join.nmao.us/?p=" + created.slug,
+        member:     "https://app.nmao.us/?p=" + created.slug,
         tournament: "https://league.nmao.us/?p=" + created.slug,
       },
     });

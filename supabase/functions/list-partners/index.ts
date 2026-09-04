@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       earnings: earn[p.id] || { paid: 0, pending: 0 },
       school_earnings: searn[p.id] || { paid: 0, pending: 0 },
       referral_links: {
-        member:     "https://join.nmao.us/?p=" + p.slug,
+        member:     "https://app.nmao.us/?p=" + p.slug,
         tournament: "https://league.nmao.us/?p=" + p.slug,
       },
     }));

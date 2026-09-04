@@ -49,7 +49,8 @@ Deno.serve(async (req) => {
       .select("id, entry_id, partner_id, amount_cents, currency, status, stripe_transfer_id, partners!inner(payouts_enabled, stripe_connect_account_id)")
       .in("status", ["pending", "paid"]);
     const list = rows || [];
-    if (!list.length) return json({ ok: true, paid: 0, pending: 0, reversed: 0, skipped: 0 });
+    // NOTE: do NOT early-return when there are no entry payouts — school-override
+    // payouts (below) must still run. Empty `list` just no-ops the entry loops.
 
     // Which of these entries are still paid? (refund reconciliation)
     const entryIds = [...new Set(list.map((r: any) => r.entry_id))];

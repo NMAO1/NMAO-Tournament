@@ -57,8 +57,11 @@ Deno.serve(async (req) => {
     for (const a of attrs) memToPartner[a.member_school_id] = a.partner_id;
 
     // Cross-project read of Membership billing.
-    const MU = Deno.env.get("MEMBERSHIP_SUPABASE_URL");
-    const MK = Deno.env.get("MEMBERSHIP_SERVICE_ROLE_KEY");
+    // Strip ANY non-printable/non-ASCII gremlins a copy-paste may have injected
+    // (zero-width chars, stray whitespace) — keys/URLs are always printable ASCII.
+    const clean = (s: string | undefined) => (s || "").replace(/[^\x21-\x7E]/g, "");
+    const MU = clean(Deno.env.get("MEMBERSHIP_SUPABASE_URL"));
+    const MK = clean(Deno.env.get("MEMBERSHIP_SERVICE_ROLE_KEY"));
     if (!MU || !MK) return json({ ok: false, error: "Membership DB not configured — set MEMBERSHIP_SUPABASE_URL + MEMBERSHIP_SERVICE_ROLE_KEY secrets." }, 500);
     const mem = createClient(MU, MK, { auth: { persistSession: false } });
     const { data: usage, error: uerr } = await mem.from("platform_fee_usage")

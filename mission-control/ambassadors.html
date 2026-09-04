@@ -120,7 +120,8 @@
 
     <div class="card">
       <div class="hd"><h2><span class="rail"></span>Attribute a school</h2>
-        <div class="sub">Locks a school to an ambassador (first-touch override). Use the Membership school ID.</div></div>
+        <div class="actions"><button class="btn sm" data-act="resolveref">Resolve referral links</button></div>
+        <div class="sub">Locks a school to an ambassador (first-touch override). Use the Membership school ID. <b>Resolve referral links</b> auto-attributes any school that signed up under an ambassador's ?p= link.</div></div>
       <div class="form">
         <div class="field"><label>Ambassador</label><select id="aPartner"></select></div>
         <div class="field"><label>Membership school ID</label><input id="aSchoolId" placeholder="uuid" style="min-width:290px" /></div>
@@ -282,6 +283,12 @@ document.addEventListener('click', async (e)=>{
       toast('Accrued '+j.accrued+' new payout(s) · scanned '+j.scanned+' paid entries.','ok');
       await load();
     }catch(err){ toast(err.message||'Accrue failed.','err'); } finally{ btn.disabled=false; } return; }
+  if(act==='resolveref'){ btn.disabled=true; try{
+      const j=await ef('resolve-referral-attributions',{});
+      if(!j.ok) throw new Error(j.error);
+      toast('Resolved '+j.resolved+' new attribution(s) · '+j.already+' already · '+j.no_partner+' unknown slug · scanned '+j.scanned+'.','ok');
+      await load();
+    }catch(err){ toast(err.message||'Resolve failed.','err'); } finally{ btn.disabled=false; } return; }
   if(act==='accrueschool'){ btn.disabled=true; try{
       const j=await ef('accrue-partner-school-payouts',{});
       if(!j.ok) throw new Error(j.error);
