@@ -32,10 +32,10 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
   const [ringVal, setRingVal] = useState(50);
   const RING_STEPS = [50, 65, 75, 85, 95];
   const RING_LABELS = ["Base", "60s", "70s", "80s", "90s ✦"];
-  // Sovereign's Crown ring (Grand Champion) — driven by CHAMPIONSHIPS won
-  const [crownVal, setCrownVal] = useState(0);
-  const CROWN_STEPS = [0, 1, 2, 3, 5];
-  const CROWN_LABELS = ["Dormant", "1", "2", "3+", "Dynasty"];
+  // Sovereign's Crown ring (Grand Champion) — full gold frame from title #1; gems grow
+  const [crownVal, setCrownVal] = useState(1);
+  const CROWN_STEPS = [1, 2, 3, 5];
+  const CROWN_LABELS = ["1 title", "2", "3", "5"];
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 44 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -77,7 +77,7 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
       <View style={{ borderWidth: 1, borderColor: "#4a3a12", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(232,199,102,0.06)" }}>
         <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>Sovereign's Crown · V3 (Grand Champion)</Text>
         <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
-          An ornate frame that awakens from dormant bronze to radiant gold per CHAMPIONSHIP, a jewel setting around it each title, ending in a dynasty's gold rain at 5+. Step the titles.
+          A full ornate gold champion's frame from title #1 — the growth is the GEMS: a prominent season-colored gem across the top per season won (most win 1, a rare few up to 5). 3+ titles rains gold. Step the titles.
         </Text>
         <View style={{ alignItems: "center" }}>
           <RingFrame badgeCode="grand-champion" value={crownVal} w={220} h={150} radius={18}>

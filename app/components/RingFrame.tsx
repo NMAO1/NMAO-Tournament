@@ -44,6 +44,9 @@ export function RingFrame({ badgeCode, ring, value, w, h, radius = 20, children 
       {/* perimeter motifs — accrete around the ring as the value grows */}
       {cfg.perimeter ? <Perimeter cfg={cfg.perimeter} value={value} w={w} h={h} inset={t / 2} size={t * 0.7} /> : null}
 
+      {/* crown gems — a prominent row of season gems across the top, one per season won */}
+      {cfg.crownGems ? <CrownGems series={cfg.crownGems} value={value} w={w} t={t} /> : null}
+
       {/* sheen sweep + sparkles ride the whole ring; sparkle count ramps with progress */}
       <RingGlint w={w} h={h} radius={radius} />
       <RingSparkles w={w} h={h} inset={t / 2} count={1 + Math.round(p * 4)} glow={glow} />
@@ -53,6 +56,34 @@ export function RingFrame({ badgeCode, ring, value, w, h, radius = 20, children 
         ? (cfg.flourishKind === "gold-rain" ? <GoldRain w={w} h={h} /> : <ShootingStar w={w} h={h} />)
         : null}
     </View>
+  );
+}
+
+// A centered row of PROMINENT season gems across the top border — one per season won.
+function CrownGems({ series, value, w, t }: { series: string[]; value: number; w: number; t: number }) {
+  const n = Math.min(Math.max(0, Math.floor(value)), series.length);
+  if (n <= 0) return null;
+  const size = t * 0.92;
+  const step = size * 1.02;
+  const startX = w / 2 - (n - 1) * step / 2;
+  const y = t * 0.52;                         // sitting on the top border
+  return <>{Array.from({ length: n }, (_, i) => (
+    <CrownGem key={i} x={startX + i * step} y={y} size={size} img={series[i]} index={i} />
+  ))}</>;
+}
+function CrownGem({ x, y, size, img, index }: { x: number; y: number; size: number; img: string; index: number }) {
+  const [failed, setFailed] = useState(false);
+  const enter = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.spring(enter, { toValue: 1, delay: Math.min(index * 120, 700), friction: 5, tension: 120, useNativeDriver: true }).start(); }, [enter, index]);
+  const scale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] });
+  const url = frameElementUrl(img);
+  const glyph = ELEMENT_GLYPH[img] ?? "💎";
+  return (
+    <Animated.View pointerEvents="none" style={{ position: "absolute", left: x - size / 2, top: y - size / 2, width: size, height: size, alignItems: "center", justifyContent: "center", opacity: enter, transform: [{ scale }],
+      shadowColor: "#fff6d0", shadowOpacity: 0.9, shadowRadius: 7, shadowOffset: { width: 0, height: 0 } }}>
+      {url && !failed ? <Image source={{ uri: url }} style={{ width: size, height: size }} resizeMode="contain" onError={() => setFailed(true)} />
+        : <Text style={{ fontSize: size * 0.82 }}>{glyph}</Text>}
+    </Animated.View>
   );
 }
 

@@ -46,6 +46,9 @@ export type RingConfig = {
   thickness?: number;              // ring thickness as a fraction of min(w,h) (default 0.15).
   glow?: string;
   perimeter?: { img: string; per: number; max?: number };  // one motif per `per` of the value, placed around the ring.
+  // crownGems: a centered row of PROMINENT gems along the top border — one per `value`,
+  // each the next image in the series (season-colored). For "a gem per season won".
+  crownGems?: string[];
   flourishAt?: number;             // at value >= this, an elite flourish animates over the ring.
   flourishKind?: "shooting-star" | "gold-rain";            // which flourish (default shooting-star).
 };
@@ -262,16 +265,17 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
     base: "legendary", label: "The Grand Champion",
     border: { colors: ["#1e0a2e", "#4a1560", "#7a2a90", "#e8c766", "#1e0a2e"], glow: "#d8a0f0" },
     fx: { glint: true, glow: true, sparkle: true },
-    // PICTURE-FRAME RING (Sovereign's Crown): an ornate frame that AWAKENS from dormant
-    // bronze to a radiant bejeweled gold crown per CHAMPIONSHIP won; a gem sets around the
-    // frame each title, and a royal gold-rain crowns a dynasty (5+).
+    // PICTURE-FRAME RING (Sovereign's Crown): a FULL ornate gold champion's frame from
+    // title #1 (you only hold this as a season grand champion). The growth is the GEMS —
+    // one prominent season-colored gem across the top per season won (most win 1, a rare
+    // few 2-5). A dynasty (3+) earns a royal gold rain.
     ring: {
-      tints: ["#241a08", "#5a3f12", "#9a721e", "#e8c766"],   // dormant · awakened · rich · radiant gold
-      images: ["ring_crown_0", "ring_crown_1", "ring_crown_2", "ring_crown_3"],
-      stops: [1, 2, 3],             // 1 title → awakened · 2 → rich · 3+ → radiant
-      flourishAt: 5, flourishKind: "gold-rain",   // 5+ titles → a dynasty's gold rain
-      thickness: 0.17, glow: "#f0d878",
-      perimeter: { img: "gem", per: 1, max: 12 },  // a jewel set around the frame per title
+      tints: ["#c9a24a"],           // single radiant gold — the frame is always the champion's, from title #1
+      images: ["ring_crown"],       // one ornate gold champion frame
+      stops: [],                    // no base tiers — the frame never "levels"; the gems do
+      crownGems: ["gem_sapphire", "gem_amethyst", "gem_ruby", "gem_emerald", "gem_coral", "gem_onyx", "gem_rose", "gem_turquoise", "gem_peridot", "gem_platinum"],
+      flourishAt: 3, flourishKind: "gold-rain",   // 3+ titles → a dynasty's gold rain
+      thickness: 0.18, glow: "#f0d878",
     },
     elements: [
       { img: "crown_base", x: 0.5, y: 0.52, scale: 2.9, showAt: 0 },
