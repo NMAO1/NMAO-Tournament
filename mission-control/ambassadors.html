@@ -236,6 +236,7 @@ function render(){
         <button class="btn sm" data-act="pconnect" data-id="${esc(p.id)}">${p.payouts_enabled?'Re-link':'Connect'}</button>
         <button class="btn sm" data-act="pstatus" data-id="${esc(p.id)}">Check</button>
         <button class="btn gold sm" data-act="kit" data-id="${esc(p.id)}">Kit</button>
+        <button class="btn sm" data-act="plink" data-tok="${esc(p.dashboard_token||'')}">Dashboard link</button>
         <button class="btn sm" data-act="toggle" data-id="${esc(p.id)}">${expanded===p.id?'Hide':'Details'}</button>
       </td>
     </tr>${detail}`;
@@ -276,6 +277,9 @@ document.addEventListener('click', async (e)=>{
   const act=btn.dataset.act, id=btn.dataset.id;
   if(act==='toggle'){ expanded = expanded===id ? null : id; render(); return; }
   if(act==='copy'){ navigator.clipboard.writeText(btn.dataset.v); toast('Copied.','ok'); return; }
+  if(act==='plink'){ const tok=btn.dataset.tok; if(!tok){ toast('No dashboard token — re-deploy needed.','err'); return; }
+    const url=location.origin+'/partner.html?t='+tok; navigator.clipboard.writeText(url);
+    toast('Ambassador dashboard link copied — send it to them.','ok'); return; }
   if(act==='kit'){ openKit(id); return; }
   if(act==='accrue'){ btn.disabled=true; try{
       const j=await ef('accrue-partner-payouts',{});

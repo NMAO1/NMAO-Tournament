@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NMAO — Ambassador Dashboard</title>
+<script src="./qrcode-generator.js"></script>
+<style>
+  :root{
+    --bg:#0b0b10; --panel:#14141c; --panel2:#191922; --line:#2a2a38;
+    --ink:#f3f1ea; --dim:#9a97a8; --gold:#e8c877; --gold2:#c9a34a;
+    --sap:#5b8def; --good:#7bd88f; --pend:#e8c877;
+    --serif:ui-serif,Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#161624 0%,var(--bg) 60%);color:var(--ink);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:32px 20px 64px}
+  .brand{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+  .yy{width:30px;height:30px;border-radius:50%;background:conic-gradient(from 90deg,#fff 0 50%,var(--sap) 50% 100%);flex:0 0 auto;box-shadow:0 0 0 1px var(--line)}
+  .brand small{letter-spacing:.28em;text-transform:uppercase;color:var(--dim);font-size:12px}
+  h1{font-family:var(--serif);font-weight:600;font-size:30px;margin:0}
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px}
+  .row{display:flex;flex-wrap:wrap;gap:16px}
+  .row>.card{flex:1;min-width:240px;margin:0}
+  .hdr{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .name{font-family:var(--serif);font-size:24px;margin:0}
+  .pill{display:inline-block;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line);white-space:nowrap}
+  .pill.tier{color:var(--gold);border-color:#4a3f22;background:#241f10}
+  .pill.active{color:var(--good);border-color:#244a2f;background:#122016}
+  .pill.paused{color:var(--dim)}
+  .pill.ready{color:var(--good);border-color:#244a2f;background:#122016}
+  .pill.notset{color:var(--pend);border-color:#4a3f22;background:#241f10}
+  .eyebrow{letter-spacing:.16em;text-transform:uppercase;color:var(--dim);font-size:11px;margin:0 0 12px}
+  .earn{display:flex;align-items:baseline;gap:8px}
+  .earn .big{font-family:var(--serif);font-size:34px;font-variant-numeric:tabular-nums}
+  .earn .sub{color:var(--dim);font-size:13px}
+  .mini{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap}
+  .mini div{font-size:13px;color:var(--dim)}
+  .mini b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .paid{color:var(--good)} .pend{color:var(--pend)}
+  .link{display:flex;align-items:center;gap:10px;justify-content:space-between;background:#0f0f16;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px}
+  .link span{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--ink);word-break:break-all}
+  .btn{cursor:pointer;border:1px solid var(--line);background:#20202b;color:var(--ink);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:600}
+  .btn:hover{border-color:var(--gold2)}
+  .qrwrap{display:flex;gap:22px;flex-wrap:wrap;margin-top:14px}
+  .qr{background:#fff;border-radius:12px;padding:12px;text-align:center}
+  .qr canvas{display:block}
+  .qr small{display:block;color:#333;font-size:11px;margin-top:6px;letter-spacing:.08em;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--dim);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+  .muted{color:var(--dim)}
+  .foot{color:var(--dim);font-size:12px;margin-top:26px;line-height:1.6}
+  .center{text-align:center;padding:60px 20px;color:var(--dim)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#20202b;border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:14px;opacity:0;transition:opacity .2s}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="yy"></span><div><small>NMAO Ambassador</small></div></div>
+  <div id="app"><div class="center">Loading your dashboard…</div></div>
+  <div class="foot" id="foot"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+  var EF = 'https://oxzuavpyoetchwebdejp.supabase.co/functions/v1/partner-dashboard';
+  var $ = function(id){ return document.getElementById(id); };
+  var esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+  var money = function(c){ return '$' + ((c||0)/100).toFixed(2); };
+  function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},1400); }
+  function copy(v){ navigator.clipboard.writeText(v); toast('Copied'); }
+  function qr(host, url){
+    try{ var q=qrcode(0,'M'); q.addData(url); q.make();
+      var n=q.getModuleCount(), px=4, size=n*px, cv=document.createElement('canvas'); cv.width=size; cv.height=size;
+      var x=cv.getContext('2d'); x.imageSmoothingEnabled=false; x.fillStyle='#fff'; x.fillRect(0,0,size,size); x.fillStyle='#0b0b10';
+      for(var r=0;r<n;r++)for(var c=0;c<n;c++){ if(q.isDark(r,c)) x.fillRect(c*px,r*px,px,px); }
+      host.appendChild(cv);
+    }catch(e){ host.textContent='QR'; }
+  }
+
+  function render(d){
+    var p=d.partner, links=d.referral_links, e=d.earnings||{paid:0,pending:0}, se=d.school_earnings||{paid:0,pending:0};
+    var totalPaid=(e.paid||0)+(se.paid||0), totalPend=(e.pending||0)+(se.pending||0);
+    var payPill = p.payouts_enabled ? '<span class="pill ready">Payouts ready</span>' : '<span class="pill notset">Payouts not set up</span>';
+    var schoolsRows = (d.schools&&d.schools.length)
+      ? d.schools.map(function(s){ return '<tr><td>'+esc(s.school_name||s.member_school_id)+'</td><td class="muted">'+(s.attributed_at?String(s.attributed_at).slice(0,10):'')+'</td></tr>'; }).join('')
+      : '<tr><td colspan="2" class="muted">No schools attributed to you yet — share your link below to get started.</td></tr>';
+
+    $('app').innerHTML =
+      '<div class="card"><div class="hdr">'
+        + '<div><h2 class="name">'+esc(p.name)+'</h2><div class="muted" style="margin-top:4px">'+esc(String(p.tier||'').replace(/_/g,\' \'))+'</div></div>'
+        + '<div style="display:flex;gap:8px;align-items:center">'+payPill+'</div>'
+      + '</div></div>'
+      + '<div class="row">'
+        + '<div class="card"><p class="eyebrow">Total earned</p><div class="earn"><span class="big paid">'+money(totalPaid)+'</span><span class="sub">paid</span></div>'
+          + '<div class="mini"><div>Pending <b class="pend">'+money(totalPend)+'</b></div></div></div>'
+        + '<div class="card"><p class="eyebrow">Your streams</p>'
+          + '<div class="mini" style="margin-top:2px"><div>Per-athlete entries<br><b class="paid">'+money(e.paid)+'</b> paid · <b class="pend">'+money(e.pending)+'</b> pending</div></div>'
+          + '<div class="mini"><div>School override (10%)<br><b class="paid">'+money(se.paid)+'</b> paid · <b class="pend">'+money(se.pending)+'</b> pending</div></div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="card"><p class="eyebrow">Your schools ('+(d.schools?d.schools.length:0)+')</p>'
+        + '<table><thead><tr><th>School</th><th>Joined</th></tr></thead><tbody>'+schoolsRows+'</tbody></table></div>'
+      + '<div class="card"><p class="eyebrow">Your referral links</p>'
+        + '<div class="link"><span>'+esc(links.member)+'</span><button class="btn" id="cpM">Copy</button></div>'
+        + '<div class="link"><span>'+esc(links.tournament)+'</span><button class="btn" id="cpT">Copy</button></div>'
+        + '<div class="qrwrap"><div class="qr" id="qM"><small>Member</small></div><div class="qr" id="qT"><small>Tournament</small></div></div>'
+      + '</div>';
+
+    $('cpM').onclick=function(){ copy(links.member); };
+    $('cpT').onclick=function(){ copy(links.tournament); };
+    qr($('qM'), links.member); qr($('qT'), links.tournament);
+    $('foot').innerHTML = 'This is your private dashboard — the link is personal to you. Earnings update as schools you refer are billed and payouts run. Questions? Reach your NMAO contact.';
+  }
+
+  (function(){
+    var t = new URLSearchParams(location.search).get('t') || '';
+    if(!t){ $('app').innerHTML='<div class="center">This dashboard needs a personal link. Ask your NMAO contact for yours.</div>'; return; }
+    fetch(EF, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ token:t }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if(!d.ok){ $('app').innerHTML='<div class="center">'+esc(d.error||'Could not load your dashboard.')+'</div>'; return; } render(d); })
+      .catch(function(){ $('app').innerHTML='<div class="center">Network error — please try again.</div>'; });
+  })();
+</script>
+</body>
+</html>

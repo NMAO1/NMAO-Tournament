@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
   try {
     const { data: partners } = await svc.from("partners")
-      .select("id, name, email, slug, tier, status, payouts_enabled, created_at")
+      .select("id, name, email, slug, tier, status, payouts_enabled, dashboard_token, created_at")
       .order("created_at", { ascending: false });
 
     const ids = (partners || []).map((p: any) => p.id);

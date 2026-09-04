@@ -27,15 +27,21 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
-  const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  if (!bearer) return json({ ok: false, error: "Sign in required." }, 401);
   const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
-  const authClient = createClient(URL_, ANON, { global: { headers: { Authorization: "Bearer " + bearer } }, auth: { persistSession: false } });
-  const { data: u } = await authClient.auth.getUser();
-  const uid = u?.user?.id;
-  if (!uid) return json({ ok: false, error: "Invalid or expired session." }, 401);
-  const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle();
-  if (!staff) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
+  // AUTH: staff JWT (Mission Control button) OR x-cron-secret (the daily cron).
+  // Verify JWT is OFF on this function so the cron's header-only request reaches us.
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  const isCron = !!cronSecret && req.headers.get("x-cron-secret") === cronSecret;
+  if (!isCron) {
+    const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    if (!bearer) return json({ ok: false, error: "Sign in required." }, 401);
+    const authClient = createClient(URL_, ANON, { global: { headers: { Authorization: "Bearer " + bearer } }, auth: { persistSession: false } });
+    const { data: u } = await authClient.auth.getUser();
+    const uid = u?.user?.id;
+    if (!uid) return json({ ok: false, error: "Invalid or expired session." }, 401);
+    const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle();
+    if (!staff) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
+  }
 
   try {
     // Strip any non-printable/whitespace gremlins from pasted secrets.
