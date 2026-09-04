@@ -37,15 +37,19 @@ Deno.serve(async (req) => {
       .select("member_school_id, school_name, attributed_at").eq("partner_id", p.id).eq("active", true)
       .order("attributed_at", { ascending: false });
 
+    const year = new Date().getUTCFullYear();
+    const inYear = (t: any) => typeof t === "string" && t.slice(0, 4) === String(year);
+    let annualPaid = 0; // this calendar year's paid total across both streams (for the 1099 note)
+
     // competitor $1/entry override
-    const { data: pe } = await svc.from("partner_event_payouts").select("amount_cents, status").eq("partner_id", p.id);
+    const { data: pe } = await svc.from("partner_event_payouts").select("amount_cents, status, paid_at").eq("partner_id", p.id);
     const earn = { paid: 0, pending: 0 };
-    for (const r of (pe || [])) { const c = (r as any).amount_cents || 0; if ((r as any).status === "paid") earn.paid += c; else if ((r as any).status === "pending") earn.pending += c; }
+    for (const r of (pe || [])) { const c = (r as any).amount_cents || 0; if ((r as any).status === "paid") { earn.paid += c; if (inYear((r as any).paid_at)) annualPaid += c; } else if ((r as any).status === "pending") earn.pending += c; }
 
     // 10% school override
-    const { data: ps } = await svc.from("partner_school_payouts").select("amount_cents, status").eq("partner_id", p.id);
+    const { data: ps } = await svc.from("partner_school_payouts").select("amount_cents, status, paid_at").eq("partner_id", p.id);
     const searn = { paid: 0, pending: 0 };
-    for (const r of (ps || [])) { const c = (r as any).amount_cents || 0; if ((r as any).status === "paid") searn.paid += c; else if ((r as any).status === "pending") searn.pending += c; }
+    for (const r of (ps || [])) { const c = (r as any).amount_cents || 0; if ((r as any).status === "paid") { searn.paid += c; if (inYear((r as any).paid_at)) annualPaid += c; } else if ((r as any).status === "pending") searn.pending += c; }
 
     return json({
       ok: true,
@@ -54,6 +58,7 @@ Deno.serve(async (req) => {
       schools: attrs || [],
       earnings: earn,
       school_earnings: searn,
+      tax: { year, annual_paid_cents: annualPaid, threshold_cents: 60000 },
     });
   } catch (e: any) {
     return json({ ok: false, error: e?.message || "server_error" }, 500);

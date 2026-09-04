@@ -137,6 +137,7 @@
           <button class="btn gold sm" data-act="accrue">Accrue entries</button>
           <button class="btn gold sm" data-act="accrueschool">Accrue 10% (last mo.)</button>
           <button class="btn gold sm" data-act="paypending">Pay pending</button>
+          <button class="btn sm" data-act="report1099">1099 report</button>
         </div></div>
       <table><thead><tr><th>Ambassador</th><th style="width:96px">Tier</th><th style="width:80px">Status</th><th style="width:70px">Schools</th><th style="width:90px">Payouts</th><th></th></tr></thead>
         <tbody id="body"></tbody></table>
@@ -296,6 +297,17 @@ document.addEventListener('click', async (e)=>{
       toast('Accrued '+j.accrued+' new payout(s) · scanned '+j.scanned+' paid entries.','ok');
       await load();
     }catch(err){ toast(err.message||'Accrue failed.','err'); } finally{ btn.disabled=false; } return; }
+  if(act==='report1099'){ btn.disabled=true; try{
+      const j=await ef('annual-earnings-report',{});
+      if(!j.ok) throw new Error(j.error);
+      const rows=[['type','name','email','paid_'+j.year+'_usd','needs_1099']];
+      (j.ambassadors||[]).forEach(a=>rows.push(['ambassador',a.name,a.email||'',(a.total_cents/100).toFixed(2),a.needs_1099?'YES':'']));
+      (j.judges||[]).forEach(g=>rows.push(['judge',g.name,g.email||'',(g.total_cents/100).toFixed(2),g.needs_1099?'YES':'']));
+      const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+      navigator.clipboard.writeText(csv);
+      const need=(j.ambassadors||[]).filter(a=>a.needs_1099).length+(j.judges||[]).filter(g=>g.needs_1099).length;
+      toast(j.year+' report copied as CSV · '+(j.ambassadors||[]).length+' ambassadors + '+(j.judges||[]).length+' judges · '+need+' at/over $600.','ok');
+    }catch(err){ toast(err.message||'Report failed.','err'); } finally{ btn.disabled=false; } return; }
   if(act==='resolveref'){ btn.disabled=true; try{
       const j=await ef('resolve-referral-attributions',{});
       if(!j.ok) throw new Error(j.error);
@@ -306,7 +318,7 @@ document.addEventListener('click', async (e)=>{
       const j=await ef('accrue-partner-school-payouts',{});
       if(!j.ok) throw new Error(j.error);
       if(j.disabled) toast('School override is OFF (flag partner_school_override_enabled).','err');
-      else toast('Accrued '+j.accrued+' school payout(s) for '+j.period+' · '+j.schools+' school(s) with fees.','ok');
+      else toast('Accrued '+j.accrued+' for '+j.period+' · '+j.schools+' school(s)'+(j.reconciled?' · reconciled '+j.reconciled+(j.clawed_cents?' (clawed back $'+(j.clawed_cents/100).toFixed(2)+')':''):'')+'.','ok');
       await load();
     }catch(err){ toast(err.message||'Accrue failed.','err'); } finally{ btn.disabled=false; } return; }
   if(act==='paypending'){ if(!confirm('Pay all pending ambassador payouts (entry $1 + 10% school override, and reverse any refunded) now?')) return;

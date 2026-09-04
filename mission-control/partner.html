@@ -103,6 +103,10 @@
       + '</div>'
       + '<div class="card"><p class="eyebrow">Your schools ('+(d.schools?d.schools.length:0)+')</p>'
         + '<table><thead><tr><th>School</th><th>Joined</th></tr></thead><tbody>'+schoolsRows+'</tbody></table></div>'
+      + (d.tax ? '<div class="card"><p class="eyebrow">Tax &amp; payouts ('+d.tax.year+')</p>'
+          + '<div class="earn"><span class="big">'+money(d.tax.annual_paid_cents)+'</span><span class="sub">paid in '+d.tax.year+'</span></div>'
+          + '<div class="foot" style="margin-top:12px">You’re paid through Stripe. If your NMAO earnings reach $600 in a calendar year, a 1099-NEC tax form is filed through Stripe — find it in your Stripe payout account (the login you used to set up payouts) each January, with a copy emailed to you. This isn’t tax advice; please consult your tax professional.</div>'
+        + '</div>' : '')
       + '<div class="card"><p class="eyebrow">Your referral links</p>'
         + '<div class="link"><span>'+esc(links.member)+'</span><button class="btn" id="cpM">Copy</button></div>'
         + '<div class="link"><span>'+esc(links.tournament)+'</span><button class="btn" id="cpT">Copy</button></div>'
