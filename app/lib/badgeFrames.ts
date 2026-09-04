@@ -33,7 +33,21 @@ export type SpecElement = {
 // fx: master on/off (default on). Pass an object to disable individual effects
 // (e.g. { glint: false } keeps glow/sparkle/stack-in but drops the rolling shine).
 export type FxConfig = { glint?: boolean; glow?: boolean; sparkle?: boolean; stackIn?: boolean };
-export type BadgeFrameSpec = { base: FrameRarity; label?: string; border?: { colors: string[]; glow?: string; texture?: string }; elements: SpecElement[]; fx?: boolean | FxConfig };
+
+// A picture-frame RING: a Firefly image (or a tint gradient placeholder) masked to
+// the border margin around the video, with STAGED progression. `tints`/`images` are
+// tiers cross-faded as the value passes each of `stops` (tier 0 is the base, tier i
+// activates at stops[i-1]). Perimeter motifs accrete around the ring; glow + sparkle
+// intensity ramp with the value. Set on a spec as `ring`.
+export type RingConfig = {
+  tints: string[];                 // per-tier ring gradient (base + one per stop). Always rendered (placeholder + under art).
+  images?: string[];               // optional Firefly tier art (same length as tints); shown over the tint when present.
+  stops: number[];                 // value thresholds; tier i (i>=1) activates when value >= stops[i-1].
+  thickness?: number;              // ring thickness as a fraction of min(w,h) (default 0.15).
+  glow?: string;
+  perimeter?: { img: string; per: number; max?: number };  // one motif per `per` of the value, placed around the ring.
+};
+export type BadgeFrameSpec = { base: FrameRarity; label?: string; border?: { colors: string[]; glow?: string; texture?: string }; elements: SpecElement[]; fx?: boolean | FxConfig; ring?: RingConfig };
 
 export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
   journal_keeper: {
@@ -147,6 +161,109 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
         series: ["gem_sapphire", "gem_amethyst", "gem_ruby", "gem_emerald", "gem_coral", "gem_onyx", "gem_rose", "gem_turquoise", "gem_peridot", "gem_platinum"] },
     ],
   },
+
+  // ── ORACLE · a night-sky border where each CORRECT VOTE lights a star; the sky
+  // fills into constellations and a North Star blazes at high accuracy (badge `oracle`).
+  oracle: {
+    base: "epic", label: "The Oracle",
+    border: { colors: ["#08082a", "#161654", "#2a2a8a", "#4a3aa0", "#08082a"], glow: "#8a7aff" },
+    fx: { glint: true, glow: true, sparkle: true },
+    // PICTURE-FRAME RING (prototype): night sky → starfield → constellation → aurora,
+    // cross-fading as correct votes climb; a star accretes around the ring every 5.
+    ring: {
+      tints: ["#0a0a24", "#141452", "#33228c", "#1f6a86"],   // night · starfield · constellation · aurora
+      images: ["ring_oracle_0", "ring_oracle_1", "ring_oracle_2", "ring_oracle_3"],
+      stops: [10, 30, 60],
+      thickness: 0.16, glow: "#8a7aff",
+      perimeter: { img: "starlet", per: 5, max: 22 },
+    },
+    elements: [
+      // one star per 5 correct votes, packed across the sky
+      { img: "starlet", y: 0.62, scale: 0.42, repeatPer: 5, repeatMax: 14, rowStep: 0.062 },
+      // the North Star ignites once you're a proven seer
+      { img: "north_star", x: 0.5, y: 0.38, scale: 1.7, showAt: 50 },
+    ],
+  },
+
+  // ── PRECISION · a target on aged paper; arrows land TIGHTER to center as your
+  // tournament SKILL RATING climbs, gold bullseye at the top (badge `precision`).
+  precision: {
+    base: "rare", label: "Bullseye",
+    border: { colors: ["#241a12", "#6b4a2a", "#b03a2a", "#e8dcc0", "#241a12"], glow: "#d05a3a" },
+    fx: { glint: true, glow: true, sparkle: false },
+    elements: [
+      { img: "target", x: 0.5, y: 0.60, scale: 2.5, showAt: 0 },
+      { img: "arrow", x: 0.33, y: 0.50, scale: 1.0, rotate: 22, showAt: 40 },
+      { img: "arrow", x: 0.63, y: 0.45, scale: 1.0, rotate: -16, showAt: 55 },
+      { img: "arrow", x: 0.45, y: 0.58, scale: 1.0, rotate: 38, showAt: 70 },
+      { img: "arrow_gold", x: 0.5, y: 0.55, scale: 1.15, rotate: 0, showAt: 85 },  // dead-center
+    ],
+  },
+
+  // ── ASCENT · a mountain ridge; summit flags plant HIGHER as you climb the ranks,
+  // snowcap aurora crowns the peak at elite rating (badge `ascent`).
+  ascent: {
+    base: "rare", label: "The Ascendant",
+    border: { colors: ["#0e1830", "#243a66", "#4a6aa0", "#c8d8f0", "#0e1830"], glow: "#7aa0e0" },
+    fx: { glint: true, glow: true, sparkle: true },
+    elements: [
+      { img: "peak", x: 0.5, y: 0.70, scale: 2.7, showAt: 0 },
+      { img: "flag", x: 0.38, y: 0.60, scale: 0.7, showAt: 45 },
+      { img: "flag", x: 0.56, y: 0.48, scale: 0.78, showAt: 60 },
+      { img: "flag", x: 0.5, y: 0.38, scale: 0.9, showAt: 75 },   // summit
+      { img: "aurora", x: 0.5, y: 0.26, scale: 2.3, showAt: 88 },
+    ],
+  },
+
+  // ── PODIUM · a laurel wreath that grows a leaf per PODIUM finish, closing into a
+  // gilded crown when the garland fills (badge `podium`).
+  podium: {
+    base: "rare", label: "Top Tier",
+    border: { colors: ["#16330f", "#2e5c1c", "#8a7a1e", "#e8c766", "#16330f"], glow: "#d8c060" },
+    fx: { glint: true, glow: true, sparkle: false },
+    elements: [
+      { img: "laurel_leaf", y: 0.66, scale: 0.5, repeatPer: 1, repeatMax: 14, rowStep: 0.06 },
+      { img: "laurel_clasp", x: 0.5, y: 0.40, scale: 1.2, showAt: 12 },   // wreath complete
+    ],
+  },
+
+  // ── MASTER OF ARMS · a dojo weapon rack that fills in — one discipline at a time
+  // (bō, nunchaku, sword, kama, open-hand) as you compete across EVENTS (badge `weapon-master`).
+  "weapon-master": {
+    base: "rare", label: "Master of Arms",
+    border: { texture: "wood", colors: ["#241505", "#5a3a15", "#8a5c25", "#3a2410", "#241505"], glow: "#a5702f" },
+    fx: { glint: true, glow: true, sparkle: false },
+    elements: [
+      { img: "weapon", y: 0.60, scale: 1.5, rowStep: 0.17,
+        series: ["wpn_bo", "wpn_nunchaku", "wpn_sword", "wpn_kama", "wpn_wraps"] },
+    ],
+  },
+
+  // ── ZEN · a raked sand garden; an ink ENSŌ draws itself, ripples spread and a stone
+  // cairn rises with your REFLECTIONS — the calm frame (badge `zen`).
+  zen: {
+    base: "epic", label: "The Serene",
+    border: { colors: ["#1a1a18", "#3a3a34", "#6a6a60", "#c8c4b0", "#1a1a18"], glow: "#a09a80" },
+    fx: { glint: false, glow: true, sparkle: false, stackIn: true },   // calm — glow + gentle stack only
+    elements: [
+      { img: "enso", x: 0.5, y: 0.48, scale: 2.7, showAt: 0 },
+      { img: "ripple", x: 0.5, y: 0.72, scale: 2.9, showAt: 30 },
+      { img: "stone", y: 0.90, scale: 0.5, stackPer: 5, stackMax: 12, perCol: 4, colStep: 0.1, coinDy: 0.05 },
+    ],
+  },
+
+  // ── SOVEREIGN'S CROWN · a jeweled crown that gains a season-colored gem per
+  // CHAMPIONSHIP won — the apex flex (badge `grand-champion`; season-champion-sN map here).
+  "grand-champion": {
+    base: "legendary", label: "The Grand Champion",
+    border: { colors: ["#1e0a2e", "#4a1560", "#7a2a90", "#e8c766", "#1e0a2e"], glow: "#d8a0f0" },
+    fx: { glint: true, glow: true, sparkle: true },
+    elements: [
+      { img: "crown_base", x: 0.5, y: 0.52, scale: 2.9, showAt: 0 },
+      { img: "gem", y: 0.40, scale: 0.34, rowStep: 0.058,
+        series: ["gem_sapphire", "gem_amethyst", "gem_ruby", "gem_emerald", "gem_coral", "gem_onyx", "gem_rose", "gem_turquoise", "gem_peridot", "gem_platinum"] },
+    ],
+  },
 };
 
 // Expand a spec against a progress value into concrete positioned elements.
@@ -197,6 +314,11 @@ export const ELEMENT_GLYPH: Record<string, string> = {
   gold_medal: "🥇", silver_medal: "🥈", bronze_medal: "🥉",
   coin_gold: "🪙", coin_silver: "🪙", coin_bronze: "🪙",
   footprints: "👣", fist: "👊", bow: "🙏", sunrise: "🌅", lotus: "🪷", ballot: "🗳️", allies: "🤝",
+  // new batch (2026-09-04): oracle / precision / ascent / podium / weapon-master / zen / grand-champion
+  starlet: "✨", north_star: "🌟", target: "🎯", arrow: "🏹", arrow_gold: "🎯",
+  peak: "⛰️", flag: "🚩", aurora: "🌌", laurel_leaf: "🌿", laurel_clasp: "🏆",
+  weapon: "🗡️", wpn_bo: "🥢", wpn_nunchaku: "⛓️", wpn_sword: "🗡️", wpn_kama: "🪓", wpn_wraps: "🥊",
+  enso: "⭕", stone: "🪨", ripple: "🌊", crown_base: "👑",
   gem_sapphire: "💎", gem_amethyst: "💎", gem_ruby: "💎", gem_emerald: "💎", gem_coral: "💎",
   gem_onyx: "💎", gem_rose: "💎", gem_turquoise: "💎", gem_peridot: "💎", gem_platinum: "💎",
 };
@@ -206,5 +328,5 @@ export const ELEMENT_GLYPH: Record<string, string> = {
 export function frameElementUrl(img: string): string | null {
   const base = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!base) return null;
-  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=12`;
+  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=13`;
 }

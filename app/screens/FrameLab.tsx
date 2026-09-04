@@ -4,7 +4,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues } from "@nmao/design-tokens";
 import { BadgeFrame, type FrameRarity, type Motif, type GemKey } from "../components/BadgeFrame";
 import { LivingFrame } from "../components/LivingFrame";
+import { RingFrame } from "../components/RingFrame";
 import { DragonBand, type DragonTint } from "../components/DragonBand";
+import { FRAME_SPECS } from "../lib/badgeFrames";
+
+// Every badge that has an evolving living frame (skips the flat common borders).
+const LIVING_CODES = Object.keys(FRAME_SPECS).filter((c) => FRAME_SPECS[c].elements.length > 0);
 
 // Frame Lab — a live on-device preview of the rarity → effect ladder plus the
 // legendary signature motifs, so we can see and tune each before mapping all
@@ -23,6 +28,9 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
   const W = 150, H = 200;
   const [value, setValue] = useState(140);
   const STEPS = [40, 80, 120, 160, 200];
+  // picture-frame ring prototype (Oracle) — steps land on each tier: base · starfield · constellation · aurora
+  const [ringVal, setRingVal] = useState(0);
+  const RING_STEPS = [0, 15, 35, 70];
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 44 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -32,6 +40,33 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
       <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 }}>
         The rarity ladder — each tier adds one legible layer. Parametric V1; per-badge specs and signature motifs layer on top.
       </Text>
+
+      {/* ── PICTURE-FRAME RING (V3 prototype): a Firefly image masked to the border
+          ring, cross-fading through tiers as the value climbs, stars accreting around
+          the ring, glow ramping. Tint placeholders until Firefly art lands. ── */}
+      <View style={{ borderWidth: 1, borderColor: hues.sapphire?.shadow ?? "#22306a", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(90,120,255,0.06)" }}>
+        <Text style={{ color: hues.sapphire?.hi ?? "#7aa0ff", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>Picture-Frame Ring · V3 prototype (Oracle)</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
+          The ring cross-fades night → starfield → constellation → aurora as correct votes climb, with a star accreting around it every 5. Step the count to watch it level up.
+        </Text>
+        <View style={{ alignItems: "center" }}>
+          <RingFrame badgeCode="oracle" value={ringVal} w={220} h={150} radius={18}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b12" }}>
+              <Text style={{ color: neutrals.muted2, fontSize: 11 }}>video</Text>
+            </View>
+          </RingFrame>
+          <Text style={{ color: hues.gold.hi, fontSize: 14, fontWeight: "800", marginTop: 12 }}>{ringVal} correct votes</Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+            {RING_STEPS.map((v, i) => (
+              <TouchableOpacity key={v} onPress={() => setRingVal(v)}
+                style={{ paddingHorizontal: 12, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
+                  borderColor: ringVal === v ? (hues.sapphire?.base ?? "#5a78ff") : neutrals.border, backgroundColor: ringVal === v ? "rgba(90,120,255,0.18)" : neutrals.surface }}>
+                <Text style={{ color: ringVal === v ? (hues.sapphire?.hi ?? "#7aa0ff") : neutrals.muted, fontWeight: "800", fontSize: 13 }}>{["Base","Starfield","Constellation","Aurora"][i]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
 
       {/* ── Living frames (V2): per-badge, evolving with tier. Placeholder glyphs
           until the Firefly element art lands in the badge-frames bucket. ── */}
@@ -57,6 +92,24 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
             ))}
           </View>
         </View>
+      </View>
+
+      {/* ── the full living-frame gallery — every evolving badge frame at the current
+          value, so the whole batch is previewable on-device (emoji placeholders until
+          the Firefly art lands). ── */}
+      <Text style={{ color: hues.amethyst.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>All Living Frames · {LIVING_CODES.length}</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 14 }}>
+        Every badge frame at value {value}. Step the count above to watch each one grow.
+      </Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", marginBottom: 26 }}>
+        {LIVING_CODES.map((code) => (
+          <View key={code} style={{ width: "48%", alignItems: "center", marginBottom: 20 }}>
+            <LivingFrame badgeCode={code} rarity={FRAME_SPECS[code].base} value={value} w={150} h={200} radius={16}>
+              <Sample label={FRAME_SPECS[code].label ?? code} />
+            </LivingFrame>
+            <Text style={{ color: hues.gold.hi, fontSize: 12, fontWeight: "800", marginTop: 10, textAlign: "center" }}>{FRAME_SPECS[code].label ?? code}</Text>
+          </View>
+        ))}
       </View>
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" }}>

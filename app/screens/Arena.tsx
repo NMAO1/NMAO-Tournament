@@ -7,6 +7,7 @@ import { neutrals, hues, rarityStops, rarityBase, spectrumStops, type Rarity } f
 import { emblemUrl } from "../lib/badges";
 import { FrameElements } from "../components/LivingFrame";
 import { FRAME_SPECS, frameElementUrl } from "../lib/badgeFrames";
+import { fetchFrameStats, frameSpecKey, frameValueFor, type FrameStats } from "../lib/frameStats";
 import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, reportDuel, blockCompetitor, type FaceOff, type Choice, type Card, type Sponsor, type FrameAnim } from "../lib/duel";
 import { useSeasonLabel } from "../lib/season";
 import { sponsorClick, sponsorAdWatch } from "../lib/store";
@@ -48,6 +49,8 @@ export default function Arena({ duelId, voterId, closesVoteAt, onClose }: { duel
   const [err, setErr] = useState<string | null>(null);
   const [crest, setCrest] = useState<CrestAnchor | null>(null);
   const [nowTs, setNowTs] = useState(Date.now()); // ticks the "closes in" countdown
+  // living-frame progress values for the two fighters (drives the border art)
+  const [fstats, setFstats] = useState<{ challenger: FrameStats | null; opponent: FrameStats | null }>({ challenger: null, opponent: null });
   const flash = useRef(new Animated.Value(0)).current;
 
   // one player per side; both roll SIMULTANEOUSLY so the two forms can be
@@ -58,6 +61,19 @@ export default function Arena({ duelId, voterId, closesVoteAt, onClose }: { duel
   const opPlayer = useVideoPlayer(null, (p) => { p.loop = true; p.muted = true; });
   useEffect(() => { if (urls.challenger) chPlayer.replace(urls.challenger); }, [urls.challenger, chPlayer]);
   useEffect(() => { if (urls.opponent) opPlayer.replace(urls.opponent); }, [urls.opponent, opPlayer]);
+  // load each fighter's living-frame progress values once the face-off is known
+  useEffect(() => {
+    if (!face) return;
+    let alive = true;
+    (async () => {
+      const [c, o] = await Promise.all([
+        fetchFrameStats(face.challenger.competitorId),
+        fetchFrameStats(face.opponent.competitorId),
+      ]);
+      if (alive) setFstats({ challenger: c, opponent: o });
+    })();
+    return () => { alive = false; };
+  }, [face]);
   useEffect(() => { playbackUrls(duelId).then((u) => { setUrls(u); setUrlsLoaded(true); }); }, [duelId]);
 
   // once we're in the ring, autoplay BOTH forms together the moment each signed
@@ -223,7 +239,7 @@ export default function Arena({ duelId, voterId, closesVoteAt, onClose }: { duel
           onAudio={() => focusAudio("challenger")} onVote={() => vote("challenger")}
           onCrest={() => face.challenger.frame && setCrest({ frame: face.challenger.frame, corner: "left" })}
           onSafety={() => openSafety("challenger")}
-          demoFrame="journal_keeper" demoValue={120}
+          frameValue={frameValueFor(face.challenger.frame?.code, face.challenger, fstats.challenger)}
         />
         <Side
           card={face.opponent} choice="opponent" rarity={face.opponent.frame?.rarity ?? "epic"}
@@ -232,7 +248,7 @@ export default function Arena({ duelId, voterId, closesVoteAt, onClose }: { duel
           onAudio={() => focusAudio("opponent")} onVote={() => vote("opponent")}
           onCrest={() => face.opponent.frame && setCrest({ frame: face.opponent.frame, corner: "right" })}
           onSafety={() => openSafety("opponent")}
-          demoFrame="duelist" demoValue={100}
+          frameValue={frameValueFor(face.opponent.frame?.code, face.opponent, fstats.opponent)}
         />
       </View>
 
@@ -368,12 +384,12 @@ function AnimatedBorder({ animation, color, radius = 26 }: { animation: FrameAni
 
 function Side({
   card, choice, rarity, active, unlocked, voted, watchLeft, player, hasVideo, onAudio, onVote, onCrest, onSafety,
-  demoFrame, demoValue,
+  frameValue,
 }: {
   card: Card; choice: Choice; rarity: Rarity;
   active: boolean; unlocked: boolean; voted: Choice | null; watchLeft: number;
   player: VideoPlayer; hasVideo: boolean; onAudio: () => void; onVote: () => void; onCrest: () => void; onSafety: () => void;
-  demoFrame?: string; demoValue?: number;
+  frameValue?: number;
 }) {
   const dim = voted && voted !== choice;
   const sf = card.sponsorFrame;             // a branded sponsor frame overrides the rarity band
@@ -381,12 +397,12 @@ function Side({
   const BAND = 64;                          // thick bottom band = the badge / vote area
   const SHELF = 176;                        // element shelf: the band + spill up into the video
   const [bandW, setBandW] = useState(320);
-  // The equipped badge's "living frame" elements ride the thick bottom band.
-  // TEMP demo: fall back to the journaling pilot so it shows on any test fighter.
-  const frameCode = demoFrame && FRAME_SPECS[demoFrame] ? demoFrame
-    : (card.frame?.code && FRAME_SPECS[card.frame.code] ? card.frame.code : "journal_keeper");
-  const frameSpec = FRAME_SPECS[frameCode];
-  const frameValue = demoValue ?? 140;       // DEMO progress value for the living frame
+  // The equipped badge's living frame. frameSpecKey handles shared specs (gem-sN →
+  // gem-series, season-champion-sN → grand-champion); null = this badge has no living
+  // frame, so only the corner crest shows (no band imagery).
+  const frameCode = frameSpecKey(card.frame?.code);
+  const frameSpec = frameCode ? FRAME_SPECS[frameCode] : null;
+  const value = frameValue ?? 0;             // real progress value (from nmao.frame_stats)
   // Base border material comes from the badge spec (e.g. old wood) when defined.
   const glow = sf ? sf.accentColor : (frameSpec?.border?.glow ?? rarityBase(rarity));
   const borderTexture = !sf && frameSpec?.border?.texture ? frameElementUrl(frameSpec.border.texture) : null;
@@ -441,11 +457,11 @@ function Side({
       </View>
       {/* per-badge "living frame" elements ride the thick bottom band (behind the
           vote CTA). Skipped when a sponsor frame owns the band. */}
-      {!sf ? (
+      {!sf && frameCode ? (
         <View onLayout={(e) => { const wd = e.nativeEvent.layout.width; if (wd > 0) setBandW(wd); }} pointerEvents="none"
           style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: SHELF, zIndex: 20 }}>
           {/* elements sit on the band and spill up into the video (fighter is center-frame) */}
-          <FrameElements badgeCode={frameCode} value={frameValue} w={bandW} h={SHELF} />
+          <FrameElements badgeCode={frameCode} value={value} w={bandW} h={SHELF} />
         </View>
       ) : null}
 
