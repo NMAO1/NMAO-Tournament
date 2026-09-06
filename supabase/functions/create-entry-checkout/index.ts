@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
       metadata: meta,
       success_url: `${SITE}/pay/return?status=paid`,
       cancel_url: `${SITE}/pay/return?status=canceled`,
-    });
+    }, { idempotencyKey: "entry-checkout-" + entryId }); // double-tap → same session (one PaymentIntent), so a rushed competitor can't be charged twice for one entry
 
     return json({ ok: true, url: session.url, entry_id: entryId });
   } catch (e: any) {

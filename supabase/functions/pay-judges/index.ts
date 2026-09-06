@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
           amount: p.amount_cents, currency: p.currency || "usd",
           destination: j.stripe_connect_account_id,
           metadata: { judge_id: p.judge_id, round_id: roundId, judge_payment_id: p.id },
-        });
+        }, { idempotencyKey: "judge-payout-" + p.id }); // one payment row per (judge,round) — re-run returns the SAME transfer, never double-pays
         await svc.from("judge_payments").update({ status: "paid", stripe_transfer_id: tr.id, paid_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", p.id);
         paid++; totalPaid += p.amount_cents;
       } catch (e: any) {
