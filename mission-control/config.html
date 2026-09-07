@@ -144,10 +144,10 @@
     <div class="card">
       <div class="hd">
         <h2><span class="rail"></span>School Payout Tiers</h2>
-        <div class="sub">Each school's share of entry &amp; season-pass revenue. 15% base · 25% on the membership platform <em>or</em> accredited · 35% membership <em>and</em> accredited. Applies to new charges immediately.</div>
+        <div class="sub">Each school's share of entry &amp; season-pass revenue. 15% base · 25% on the membership platform <em>or</em> accredited · 35% membership <em>and</em> accredited. The tier is <strong>auto-derived</strong> from Membership + Accredited; pick a number to pin a manual override, or “Auto” to follow the rule. Applies to new charges immediately.</div>
       </div>
       <table>
-        <thead><tr><th>School</th><th style="width:130px">Membership</th><th style="width:130px">Payouts</th><th style="width:150px">Tier</th></tr></thead>
+        <thead><tr><th>School</th><th style="width:110px">Membership</th><th style="width:110px">Accredited</th><th style="width:100px">Payouts</th><th style="width:170px">Tier</th></tr></thead>
         <tbody id="tiersBody"></tbody>
       </table>
     </div>
@@ -318,22 +318,32 @@ async function loadPayoutTiers(){
   if (!schools.length){ $('tiersBody').innerHTML = '<tr><td colspan="4" class="muted">No schools yet.</td></tr>'; return; }
   const yesNo = (b, yes, no) => b ? `<span style="color:var(--success)">${yes}</span>` : `<span class="muted">${no}</span>`;
   $('tiersBody').innerHTML = schools.map(s => {
-    const opts = [15,25,35].map(t => `<option value="${t}" ${t===s.payout_tier?'selected':''}>${t}%</option>`).join('');
+    const auto = s.auto_tier ?? 15;
+    const pinned = s.override != null;           // null → following auto
+    const cur = pinned ? String(s.override) : 'auto';
+    const opts = [`<option value="auto" ${!pinned?'selected':''}>Auto · ${auto}%</option>`]
+      .concat([15,25,35].map(t => `<option value="${t}" ${pinned && t===s.override?'selected':''}>${t}% (pinned)</option>`)).join('');
     return `<tr>
       <td>${esc(s.name)}${s.status && s.status!=='active' ? ` <span class="muted">(${esc(s.status)})</span>`:''}</td>
       <td>${yesNo(s.membership_linked,'Linked','—')}</td>
+      <td>${yesNo(s.accredited,'✓ Accredited','—')}</td>
       <td>${yesNo(s.can_receive,'Enabled','Not set')}</td>
-      <td><select class="tierSel" data-id="${esc(s.id)}" data-prev="${s.payout_tier}" style="padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)">${opts}</select></td>
+      <td>
+        <select class="tierSel" data-id="${esc(s.id)}" data-prev="${cur}" style="padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)">${opts}</select>
+        <span class="muted" style="margin-left:7px;font-variant-numeric:tabular-nums">→ ${s.payout_tier}%</span>
+      </td>
     </tr>`;
   }).join('');
   document.querySelectorAll('.tierSel').forEach(sel => {
     sel.onchange = async () => {
-      const id = sel.dataset.id, tier = Number(sel.value), prev = Number(sel.dataset.prev);
+      const id = sel.dataset.id, val = sel.value, prev = sel.dataset.prev;
       sel.disabled = true;
-      const { error } = await sb.rpc('admin_set_school_payout_tier', { p_school: id, p_tier: tier });
+      const { error } = val === 'auto'
+        ? await sb.rpc('admin_clear_school_payout_tier_override', { p_school: id })
+        : await sb.rpc('admin_set_school_payout_tier', { p_school: id, p_tier: Number(val) });
       sel.disabled = false;
       if (error){ sel.value = prev; toast(error.message,'err'); }
-      else { sel.dataset.prev = tier; toast(`Tier set to ${tier}%`,'ok'); }
+      else { sel.dataset.prev = val; toast(val === 'auto' ? 'Following auto tier' : `Pinned ${val}%`,'ok'); await loadPayoutTiers(); }
     };
   });
 }
