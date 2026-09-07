@@ -178,6 +178,61 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Recurring monthly-pass invoice: pay the buyer's school its tier% of THIS invoice.
+  // Monthly passes carry entitlement_id on subscription_data (not the invoice PI), so
+  // the entitlement-PI path never fires for them — this is the ONLY school payout for a
+  // monthly pass, and it runs on the first invoice AND every renewal. Keyed by the
+  // invoice's PaymentIntent (distinct per invoice) so it's idempotent and a refund of
+  // any single month reverses exactly that month via revokeByPaymentIntent. Sponsor
+  // subscriptions have no entitlement, so they fall through untouched.
+  async function payoutSchoolForInvoice(inv: any) {
+    try {
+      const subId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id;
+      if (!subId) return;
+      const piId = typeof inv.payment_intent === "string" ? inv.payment_intent : inv.payment_intent?.id;
+      if (!piId) return; // need a PI to key + reverse on; skip $0/credit-only invoices
+      const { data: ent } = await svc.from("entry_entitlements").select("id, competitor_id, status").eq("stripe_subscription_id", subId).maybeSingle();
+      if (!ent || (ent as any).status === "canceled") return; // sponsor sub or dead pass
+      const competitorId = (ent as any).competitor_id;
+      if (!competitorId) return;
+      const { data: comp } = await svc.from("competitors").select("school_id").eq("id", competitorId).maybeSingle();
+      const schoolId = (comp as any)?.school_id;
+      if (!schoolId) return;
+      const { data: school } = await svc.from("schools").select("stripe_connect_account_id").eq("id", schoolId).maybeSingle();
+      const acct = (school as any)?.stripe_connect_account_id as string | null;
+
+      const base = Number(inv.amount_paid ?? inv.amount_due ?? 0);
+      if (!base) return;
+      const share = Math.round(base * (await schoolSharePct(schoolId)));
+      if (share <= 0) return;
+
+      // One payout per invoice PI (entry_id null, same shape as the pass payout).
+      const { data: prior } = await svc.from("school_payouts").select("id, status, stripe_transfer_id").eq("payment_intent_id", piId).is("entry_id", null).maybeSingle();
+      if (prior && ((prior as any).status === "paid" || (prior as any).status === "reversed" || (prior as any).stripe_transfer_id)) return;
+      if (!prior) {
+        await svc.from("school_payouts").insert(
+          { school_id: schoolId, competitor_id: competitorId, entry_id: null, payment_intent_id: piId, amount_cents: share, status: "pending" });
+      }
+      const { data: row } = await svc.from("school_payouts").select("id, status, stripe_transfer_id").eq("payment_intent_id", piId).is("entry_id", null).maybeSingle();
+      if (!row) return;
+      if ((row as any).status === "paid" || (row as any).status === "reversed" || (row as any).stripe_transfer_id) return;
+      if (!acct) { console.log("school monthly payout accrued (no connected account)", { schoolId, subId, share }); return; }
+
+      const chargeId = typeof inv.charge === "string" ? inv.charge : inv.charge?.id;
+      try {
+        const transfer = await stripe.transfers.create(
+          { amount: share, currency: "usd", destination: acct, ...(chargeId ? { source_transaction: chargeId } : {}),
+            metadata: { entitlement_id: (ent as any).id, school_id: schoolId, invoice: inv.id, payment_intent: piId } },
+          { idempotencyKey: "school-inv-payout-" + piId });
+        await svc.from("school_payouts").update({ status: "paid", stripe_transfer_id: transfer.id }).eq("id", (row as any).id);
+      } catch (te: any) {
+        console.error("school monthly transfer failed -> left pending", subId, te?.message || te);
+      }
+    } catch (e: any) {
+      console.error("payoutSchoolForInvoice error (non-fatal)", inv?.id, e?.message || e);
+    }
+  }
+
   try {
     if (event.type === "payment_intent.succeeded") {
       const pi = event.data.object;
@@ -240,6 +295,8 @@ Deno.serve(async (req) => {
         const { data: refillCfg } = await svc.from("app_settings").select("value").eq("key", "monthly_credit_refill").maybeSingle();
         const refill = refillCfg ? Number((refillCfg as any).value) : 1;
         await svc.rpc("add_subscription_credits", { p_subscription_id: String(inv.subscription), p_n: refill, p_invoice_id: inv.id ? String(inv.id) : null }).throwOnError();
+        // Pay the buyer's school its tier% of this invoice (first + every renewal).
+        await payoutSchoolForInvoice(inv);
         // recover a previously-lapsed sponsor (staff-approved ones return to active)
         await svc.from("sponsors").update({ status: "active", updated_at: now() }).eq("stripe_subscription_id", inv.subscription).eq("status", "lapsed").throwOnError();
       }
