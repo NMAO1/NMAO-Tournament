@@ -342,6 +342,26 @@ export default function SchoolPortal() {
                     ))}
                   </div>
                 )}
+                {joinReqs.length > 0 && (
+                  <div style={{ ...card, padding: 16, marginBottom: 22, borderColor: hues.gold.base }}>
+                    <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.gold.hi, marginBottom: 4 }}>🙋 Join requests</div>
+                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 12 }}>
+                      {joinReqs.length} competitor{joinReqs.length === 1 ? "" : "s"} signed up and chose your school. Approve to add them to your roster, or decline.
+                    </div>
+                    {joinReqs.map((j) => (
+                      <div key={j.request_id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: `1px solid ${neutrals.surface2}` }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>{j.first_name} {j.last_name}</div>
+                          <div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{j.dob ? `Age ${ageOf(j.dob)}` : ""}</div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button onClick={() => decideJoin(j.request_id, true)} disabled={saving} style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 8, padding: "8px 14px", fontSize: 13, background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: saving ? 0.6 : 1 }}>Approve</button>
+                          <button onClick={() => decideJoin(j.request_id, false)} disabled={saving} style={{ border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.muted, borderRadius: 8, padding: "8px 14px", fontSize: 13, cursor: "pointer" }}>Decline</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div style={{ ...card, padding: 16, marginBottom: 22 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                     <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Add athlete</div>
