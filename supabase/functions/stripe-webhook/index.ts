@@ -82,13 +82,14 @@ Deno.serve(async (req) => {
     return (ents ?? []).length;
   }
 
-  // Instant school payout: on a paid entry, transfer the school's share (config
-  // school_share_pct, default 30%) from THIS charge to the school's connected
-  // account. Idempotent per entry; never throws (a failure leaves it 'pending').
-  async function schoolSharePct(): Promise<number> {
-    const { data } = await svc.from("app_settings").select("value").eq("key", "school_share_pct").maybeSingle();
-    const v = Number((data as any)?.value);
-    return Number.isFinite(v) && v >= 0 && v <= 1 ? v : 0.30;
+  // Instant school payout: on a paid entry OR season-pass purchase, transfer the
+  // school's share to its connected account. The share is a PER-SCHOOL tier stored in
+  // schools.payout_tier as a whole-number % — 15 (base) / 25 (membership OR accredited)
+  // / 35 (both); default 15% if unset. Idempotent; never throws (failure → 'pending').
+  async function schoolSharePct(schoolId: string): Promise<number> {
+    const { data } = await svc.from("schools").select("payout_tier").eq("id", schoolId).maybeSingle();
+    const t = Number((data as any)?.payout_tier);
+    return Number.isFinite(t) && t > 0 && t <= 100 ? t / 100 : 0.15;
   }
   async function payoutSchoolForEntry(entryId: string, pi: any) {
     try {
@@ -103,7 +104,7 @@ Deno.serve(async (req) => {
 
       const base = Number(pi.amount_received ?? pi.amount ?? 0);
       if (!base) return;
-      const share = Math.round(base * (await schoolSharePct()));
+      const share = Math.round(base * (await schoolSharePct(schoolId)));
       if (share <= 0) return;
 
       // Claim exactly one payout row per entry (ignore if it already exists).
@@ -130,11 +131,59 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Season-pass / entitlement purchase: pay the buyer's school its tier% of the pass
+  // price ONCE, at purchase (the credit-claimed entries carry no PI, so this is the
+  // only school payout for a pass — mirrors the flat-entry cut). Keyed by the pass PI.
+  async function payoutSchoolForEntitlement(entitlementId: string, pi: any) {
+    try {
+      const { data: ent } = await svc.from("entry_entitlements").select("competitor_id, status").eq("id", entitlementId).maybeSingle();
+      if (!ent || (ent as any).status !== "active") return; // never pay a canceled/refunded pass
+      const competitorId = (ent as any).competitor_id;
+      if (!competitorId) return;
+      const { data: comp } = await svc.from("competitors").select("school_id").eq("id", competitorId).maybeSingle();
+      const schoolId = (comp as any)?.school_id;
+      if (!schoolId) return;
+      const { data: school } = await svc.from("schools").select("stripe_connect_account_id").eq("id", schoolId).maybeSingle();
+      const acct = (school as any)?.stripe_connect_account_id as string | null;
+
+      const base = Number(pi.amount_received ?? pi.amount ?? 0);
+      if (!base) return;
+      const share = Math.round(base * (await schoolSharePct(schoolId)));
+      if (share <= 0) return;
+
+      // One payout per pass PI (entry_id stays null for pass payouts).
+      const { data: prior } = await svc.from("school_payouts").select("id, status, stripe_transfer_id").eq("payment_intent_id", pi.id).is("entry_id", null).maybeSingle();
+      if (prior && ((prior as any).status === "paid" || (prior as any).status === "reversed" || (prior as any).stripe_transfer_id)) return;
+      if (!prior) {
+        await svc.from("school_payouts").insert(
+          { school_id: schoolId, competitor_id: competitorId, entry_id: null, payment_intent_id: pi.id, amount_cents: share, status: "pending" });
+      }
+      const { data: row } = await svc.from("school_payouts").select("id, status, stripe_transfer_id").eq("payment_intent_id", pi.id).is("entry_id", null).maybeSingle();
+      if (!row) return;
+      if ((row as any).status === "paid" || (row as any).status === "reversed" || (row as any).stripe_transfer_id) return;
+      if (!acct) { console.log("school pass payout accrued (no connected account)", { schoolId, entitlementId, share }); return; }
+
+      const chargeId = typeof pi.latest_charge === "string" ? pi.latest_charge : pi.latest_charge?.id;
+      try {
+        const transfer = await stripe.transfers.create(
+          { amount: share, currency: "usd", destination: acct, ...(chargeId ? { source_transaction: chargeId } : {}),
+            metadata: { entitlement_id: entitlementId, school_id: schoolId, payment_intent: pi.id } },
+          { idempotencyKey: "school-ent-payout-" + entitlementId });
+        await svc.from("school_payouts").update({ status: "paid", stripe_transfer_id: transfer.id }).eq("id", (row as any).id);
+      } catch (te: any) {
+        console.error("school pass transfer failed -> left pending", entitlementId, te?.message || te);
+      }
+    } catch (e: any) {
+      console.error("payoutSchoolForEntitlement error (non-fatal)", entitlementId, e?.message || e);
+    }
+  }
+
   try {
     if (event.type === "payment_intent.succeeded") {
       const pi = event.data.object;
       // New model: entitlement-scoped payment (à la carte / full / monthly first invoice).
-      if (pi.metadata?.entitlement_id) await activateEntitlement(pi.metadata.entitlement_id);
+      // Activate first, then pay the buyer's school its tier% of the pass ONCE.
+      if (pi.metadata?.entitlement_id) { await activateEntitlement(pi.metadata.entitlement_id); await payoutSchoolForEntitlement(pi.metadata.entitlement_id, pi); }
       // Flat single-entry PI. Record the PaymentIntent on the entry so a later
       // refund/dispute can find and un-pay exactly this entry.
       if (pi.metadata?.entry_id) {
