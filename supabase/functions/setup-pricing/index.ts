@@ -36,9 +36,23 @@ Deno.serve(async (req) => {
   const live = stripeKey.startsWith("sk_live_");
 
   const { data: tiers } = await svc.from("pricing_tiers").select("*").eq("active", true).order("lane").order("event_slots");
-  const created: any[] = []; const skipped: any[] = [];
+  const created: any[] = []; const skipped: any[] = []; const recreated: any[] = [];
   for (const t of (tiers ?? []) as any[]) {
-    if (t.stripe_price_id) { skipped.push({ lane: t.lane, event_slots: t.event_slots, price_id: t.stripe_price_id }); continue; }
+    if (t.stripe_price_id) {
+      // LIVE-CUTOVER GUARD — a stored price_id could be from the OTHER Stripe mode
+      // (e.g. test IDs still in the table after switching STRIPE_SECRET_KEY to sk_live_).
+      // Skipping those would silently leave test prices in a live table and break
+      // checkout. Verify the price actually exists + is active in THIS mode; only then
+      // skip. Otherwise fall through and recreate it under the current key.
+      let validHere = false;
+      try {
+        const existing = await stripe.prices.retrieve(t.stripe_price_id);
+        validHere = !!existing && existing.active !== false;
+      } catch { validHere = false; } // resource_missing (wrong mode) → recreate
+      if (validHere) { skipped.push({ lane: t.lane, event_slots: t.event_slots, price_id: t.stripe_price_id }); continue; }
+      recreated.push({ lane: t.lane, event_slots: t.event_slots, stale_price_id: t.stripe_price_id, reason: "not valid in " + (live ? "LIVE" : "test") + " mode" });
+      // fall through to (re)create under the current mode, overwriting the stale ids
+    }
     const evLabel = `${t.event_slots} event${t.event_slots > 1 ? "s" : ""}`;
     const product = await stripe.products.create({
       name: `NMAO Tournament — ${LANE_NAME[t.lane]} (${evLabel})`,
@@ -50,5 +64,5 @@ Deno.serve(async (req) => {
     await svc.from("pricing_tiers").update({ stripe_product_id: product.id, stripe_price_id: price.id, updated_at: new Date().toISOString() }).eq("id", t.id);
     created.push({ lane: t.lane, event_slots: t.event_slots, amount: t.unit_amount_cents / 100, recurring: t.bill_interval === "month", price_id: price.id });
   }
-  return json({ ok: true, mode: live ? "LIVE" : "test", created, skipped });
+  return json({ ok: true, mode: live ? "LIVE" : "test", created, recreated, skipped });
 });

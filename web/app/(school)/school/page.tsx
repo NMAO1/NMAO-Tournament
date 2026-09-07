@@ -10,6 +10,7 @@ type School = { id: string; name: string; contact_name: string | null; contact_e
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
+type JoinReq = { request_id: string; competitor_id: string; first_name: string; last_name: string; dob: string; requested_at: string };
 type Settings = {
   competitor_id: string; allowed_events: string[] | null; dueling_enabled: boolean;
   competition_class: string | null; geo_exclude_miles: number | null; merch_enabled: boolean;
@@ -55,6 +56,7 @@ export default function SchoolPortal() {
   const [school, setSchool] = useState<School | null>(null);
   const [roster, setRoster] = useState<Athlete[]>([]);
   const [pending, setPending] = useState<Pending[]>([]);
+  const [joinReqs, setJoinReqs] = useState<JoinReq[]>([]);
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [medals, setMedals] = useState<Record<string, number>>({});
   const [settings, setSettings] = useState<Record<string, Settings>>({});
@@ -103,6 +105,10 @@ export default function SchoolPortal() {
     supabase.from("bridge_pending_athletes").select("id, first_name, last_name, belt_name, declared_rank, dob, status")
       .eq("school_id", (sch as School).id).eq("status", "pending").order("last_name")
       .then(({ data }) => setPending((data ?? []) as Pending[]));
+
+    // Self-signup athletes who chose this school and are awaiting the owner's confirmation.
+    supabase.rpc("school_pending_affiliations")
+      .then(({ data }) => setJoinReqs((data ?? []) as JoinReq[]));
     if (list.length && !selStudent) setSelStudent(list[0].id);
     setEntryForm((f) => (f.competitor ? f : { ...f, competitor: list[0]?.id ?? "" }));
 
@@ -178,6 +184,15 @@ export default function SchoolPortal() {
     setSaving(false);
     if (error) { setErr(error.message); return; }
     setForm({ first: "", last: "", dob: "", rank: "beginner" }); load();
+  }
+  async function decideJoin(requestId: string, approve: boolean) {
+    setSaving(true); setErr("");
+    const { data, error } = await supabase.rpc("school_decide_affiliation", { p_request: requestId, p_approve: approve });
+    setSaving(false);
+    if (error || (data && (data as { ok?: boolean }).ok === false)) {
+      setErr(error?.message || (data as { error?: string })?.error || "Could not update the request."); return;
+    }
+    load();
   }
   async function importCompetitors() {
     if (!school) return;

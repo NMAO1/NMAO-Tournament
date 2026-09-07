@@ -107,8 +107,11 @@ Deno.serve(async (req) => {
     }
 
     // ---- competitor ----
+    // Self-signup starts UNAFFILIATED (school_id null) — a pending request is created
+    // below and the school owner must confirm before the competitor joins the roster.
+    // The invite path stays a direct, school-initiated (confirmed) affiliation.
     const { data: comp, error: cErr } = await svc.from("competitors").insert({
-      school_id: inviteToken ? inviteSchoolId : selfSchoolId,
+      school_id: inviteToken ? inviteSchoolId : null,
       first_name: c.first_name.trim(), last_name: c.last_name.trim(),
       dob: c.dob, declared_style: (c.declared_style || "").trim() || null,
       declared_rank: inviteToken ? inviteRank : ((c.declared_rank || "").trim() || null),
@@ -118,6 +121,12 @@ Deno.serve(async (req) => {
     }).select("id").single();
     if (cErr || !comp) return json({ ok: false, error: "Could not create competitor." }, 500);
     const competitorId = (comp as any).id;
+
+    // Self-signup school pick → PENDING affiliation request; the school owner confirms
+    // (approve → sets school_id, joins roster) or rejects from the school portal.
+    if (!inviteToken && selfSchoolId) {
+      await svc.from("school_affiliation_requests").insert({ competitor_id: competitorId, school_id: selfSchoolId });
+    }
 
     // ---- link + consents + enrollment ----
     await svc.from("guardian_competitors").upsert(
