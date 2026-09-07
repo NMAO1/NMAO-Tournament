@@ -140,6 +140,18 @@
       <div class="settings" id="podSettings"></div>
     </div>
 
+    <!-- SCHOOL PAYOUT TIERS -->
+    <div class="card">
+      <div class="hd">
+        <h2><span class="rail"></span>School Payout Tiers</h2>
+        <div class="sub">Each school's share of entry &amp; season-pass revenue. 15% base · 25% on the membership platform <em>or</em> accredited · 35% membership <em>and</em> accredited. Applies to new charges immediately.</div>
+      </div>
+      <table>
+        <thead><tr><th>School</th><th style="width:130px">Membership</th><th style="width:130px">Payouts</th><th style="width:150px">Tier</th></tr></thead>
+        <tbody id="tiersBody"></tbody>
+      </table>
+    </div>
+
     <div class="foot-note">Writes are staff-gated (SECURITY DEFINER). Tournament suite — separate product from the membership platform.</div>
   </div>
 </div>
@@ -183,7 +195,7 @@ async function afterLogin(){
   const { data: staff } = await sb.from('staff').select('id').eq('auth_user_id', user.id).maybeSingle();
   if (!staff) return setMsg('loginMsg','This account is not NMAO staff.','err');
   $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
-  await Promise.all([loadEvents(), loadBrackets(), loadPodSettings()]);
+  await Promise.all([loadEvents(), loadBrackets(), loadPodSettings(), loadPayoutTiers()]);
 }
 
 // ---------- events ----------
@@ -296,6 +308,34 @@ async function loadPodSettings(){
     const { data, error } = await sb.rpc('admin_sync_active_scheme');
     error ? toast(error.message,'err') : toast(data || 'Synced','ok');
   };
+}
+
+// ---------- school payout tiers ----------
+async function loadPayoutTiers(){
+  const { data, error } = await sb.rpc('admin_schools_payout');
+  if (error) return toast(error.message,'err');
+  const schools = data || [];
+  if (!schools.length){ $('tiersBody').innerHTML = '<tr><td colspan="4" class="muted">No schools yet.</td></tr>'; return; }
+  const yesNo = (b, yes, no) => b ? `<span style="color:var(--success)">${yes}</span>` : `<span class="muted">${no}</span>`;
+  $('tiersBody').innerHTML = schools.map(s => {
+    const opts = [15,25,35].map(t => `<option value="${t}" ${t===s.payout_tier?'selected':''}>${t}%</option>`).join('');
+    return `<tr>
+      <td>${esc(s.name)}${s.status && s.status!=='active' ? ` <span class="muted">(${esc(s.status)})</span>`:''}</td>
+      <td>${yesNo(s.membership_linked,'Linked','—')}</td>
+      <td>${yesNo(s.can_receive,'Enabled','Not set')}</td>
+      <td><select class="tierSel" data-id="${esc(s.id)}" data-prev="${s.payout_tier}" style="padding:6px 9px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text)">${opts}</select></td>
+    </tr>`;
+  }).join('');
+  document.querySelectorAll('.tierSel').forEach(sel => {
+    sel.onchange = async () => {
+      const id = sel.dataset.id, tier = Number(sel.value), prev = Number(sel.dataset.prev);
+      sel.disabled = true;
+      const { error } = await sb.rpc('admin_set_school_payout_tier', { p_school: id, p_tier: tier });
+      sel.disabled = false;
+      if (error){ sel.value = prev; toast(error.message,'err'); }
+      else { sel.dataset.prev = tier; toast(`Tier set to ${tier}%`,'ok'); }
+    };
+  });
 }
 
 // resume session

@@ -65,16 +65,41 @@ Deno.serve(async (req) => {
     const tsIds = Object.keys(tsInfo);
     if (!tsIds.length) return json({ ok: true, accrued: 0, scanned: 0, note: "no bridged schools for attributed partners" });
 
-    // 3) paid entries; join competitor to get its school; filter in JS to the attributed set
-    let q = svc.from("entries").select("id, competitor_id, event, round_id, competitors!inner(school_id)").eq("payment_status", "paid");
+    // 3) paid entries; join competitor to get its school; filter in JS to the attributed set.
+    //    FLAT entries accrue $1 each. SEASON-PASS entries (entitlement_id set) accrue $1
+    //    ONCE per pass — the ambassador is paid per pass purchase, not per credit used
+    //    (the school is likewise paid once, at purchase). We record the pass accrual
+    //    against one representative entry so no schema/pay-partners change is needed.
+    let q = svc.from("entries").select("id, competitor_id, event, round_id, entitlement_id, competitors!inner(school_id)").eq("payment_status", "paid");
     if (roundId) q = q.eq("round_id", roundId);
     const { data: entries } = await q;
 
+    // Which passes have ALREADY been accrued (any of their entries has a payout row)?
+    // Persist across runs/rounds so a multi-round pass isn't paid twice.
+    const passEntIds = [...new Set((entries || []).map((e: any) => e.entitlement_id).filter(Boolean))];
+    const passAccrued = new Set<string>();
+    if (passEntIds.length) {
+      const { data: allEnt } = await svc.from("entries").select("id, entitlement_id").in("entitlement_id", passEntIds);
+      const entryToEnt: Record<string, string> = {};
+      for (const e of (allEnt || [])) entryToEnt[(e as any).id] = (e as any).entitlement_id;
+      const ids = Object.keys(entryToEnt);
+      if (ids.length) {
+        const { data: existing } = await svc.from("partner_event_payouts").select("entry_id").in("entry_id", ids);
+        for (const p of (existing || [])) { const ent = entryToEnt[(p as any).entry_id]; if (ent) passAccrued.add(ent); }
+      }
+    }
+
     let accrued = 0;
+    const seenPass = new Set<string>();
     for (const e of (entries || [])) {
       const tsid = (e as any).competitors?.school_id;
       const info = tsInfo[tsid];
       if (!info) continue;
+      const entId = (e as any).entitlement_id as string | null;
+      if (entId) {
+        if (passAccrued.has(entId) || seenPass.has(entId)) continue; // this pass already earns its single $1
+        seenPass.add(entId);
+      }
       const r = await svc.from("partner_event_payouts").upsert(
         { partner_id: info.partner_id, entry_id: (e as any).id, competitor_id: (e as any).competitor_id,
           member_school_id: info.member_school_id, round_id: (e as any).round_id, event: (e as any).event, amount_cents: 100 },
