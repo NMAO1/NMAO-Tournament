@@ -95,9 +95,20 @@ Deno.serve(async (req) => {
       inviteRank = (pend as any).declared_rank; inviteSchoolId = (pend as any).school_id;
     }
 
+    // Non-invite self-signup: the guardian picks a school from the public list.
+    // Validate it's a REAL school so a caller can't inject an arbitrary/nonexistent
+    // school_id into a roster. (Self-reported affiliation is by design — owners can
+    // remove roster entries; a stricter "school must confirm" gate is a product decision.)
+    let selfSchoolId: string | null = null;
+    if (!inviteToken && c.school_id) {
+      const { data: sch } = await svc.from("schools").select("id").eq("id", String(c.school_id)).maybeSingle();
+      if (!sch) return json({ ok: false, error: "The selected school could not be found." }, 400);
+      selfSchoolId = (sch as any).id;
+    }
+
     // ---- competitor ----
     const { data: comp, error: cErr } = await svc.from("competitors").insert({
-      school_id: inviteToken ? inviteSchoolId : (c.school_id || null),
+      school_id: inviteToken ? inviteSchoolId : selfSchoolId,
       first_name: c.first_name.trim(), last_name: c.last_name.trim(),
       dob: c.dob, declared_style: (c.declared_style || "").trim() || null,
       declared_rank: inviteToken ? inviteRank : ((c.declared_rank || "").trim() || null),

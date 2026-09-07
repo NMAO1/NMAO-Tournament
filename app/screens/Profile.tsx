@@ -113,7 +113,10 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
       <Row icon="🏆" label="My prizes" onPress={() => setSub("prizes")} />
       <Row icon="🚫" label="Blocked accounts" onPress={() => setSub("blocked")} />
       <Row icon="📖" label="Rules & Help" onPress={() => setSub("rules")} />
-      <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} />
+      {/* Frame Lab is an internal design-tuning screen (placeholder art + dev copy) —
+          hidden from the production menu. Re-add this Row to tune living-frames.
+          The `sub === "framelab"` branch + import are kept so it's one line to restore. */}
+      {/* <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} /> */}
       <Row icon="🏆" label="Tournament & entries" onPress={() => setSub("home")} />
 
       <TouchableOpacity onPress={() => supabase.auth.signOut()} style={{ marginTop: 18, alignItems: "center" }}>

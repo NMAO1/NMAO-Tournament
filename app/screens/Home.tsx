@@ -5,6 +5,7 @@ import * as WebBrowser from "expo-web-browser";
 import { neutrals, hues, tierHue, metalStops } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
 import { myCompetitors, MyCompetitor as Competitor } from "../lib/competitors";
+import { useActiveCompetitor } from "../lib/activeCompetitor";
 import Reveal, { RevealResult } from "./Reveal";
 import InHouseUpload, { VideoTask } from "./InHouseUpload";
 type Entry = { event: string; age_bracket: string; status: string; created_at: string };
@@ -21,6 +22,7 @@ const RANK_LABEL: Record<string, string> = {
 const prettyBracket = (b: string) => b.replace("_plus", "+").replace("_", "–");
 
 export default function Home({ onCompete }: { onCompete: () => void }) {
+  const { activeId } = useActiveCompetitor(); // the ward the guardian is currently viewing (shared across tabs)
   const [comp, setComp] = useState<Competitor | null>(null);
   const [rating, setRating] = useState<number | null>(null);
   const [provisional, setProvisional] = useState(false);
@@ -74,7 +76,9 @@ export default function Home({ onCompete }: { onCompete: () => void }) {
     (async () => {
       refreshTasks();
       const comps = await myCompetitors();
-      const c = comps[0];
+      // Use the shared active ward (not comps[0]) so a guardian with 2+ children
+      // sees THIS screen's ratings/entries/dues for the same child selected elsewhere.
+      const c = comps.find((x) => x.id === activeId) ?? comps[0];
       if (!c) { setLoading(false); return; }
       setComp(c);
       const [{ data: sr }, { data: es }] = await Promise.all([
@@ -99,7 +103,7 @@ export default function Home({ onCompete }: { onCompete: () => void }) {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [activeId]); // re-fetch when the guardian switches the active ward
 
   if (loading) {
     return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;

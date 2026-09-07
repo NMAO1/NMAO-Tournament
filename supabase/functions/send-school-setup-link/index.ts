@@ -96,7 +96,11 @@ Deno.serve(async (req) => {
   // Public mode: by email (the school login "email me a link" button). Generic response.
   const email = String(body.email || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ ok: false, error: "A valid email is required." }, 400);
-  const { data: school } = await svc.from("schools").select(cols).ilike("contact_email", email).maybeSingle();
+  // The address can legally contain `_` (and the regex above lets `%` through) — both are
+  // LIKE wildcards, so escape them before ilike, else e.g. "a_b@x.com" would also match
+  // "aXb@x.com" and fire a recovery email to the wrong school. Keep ilike for case-insensitivity.
+  const emailLike = email.replace(/[\\%_]/g, "\\$&");
+  const { data: school } = await svc.from("schools").select(cols).ilike("contact_email", emailLike).maybeSingle();
   if (school) { await buildAndSend(svc, school); } // fire-and-forget; never reveal existence
   return json({ ok: true }); // always generic
 });
