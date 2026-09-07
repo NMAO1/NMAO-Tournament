@@ -1,14 +1,14 @@
 # Independent Contractor Agreement — NMAO Tournament Judge
 
-> **DRAFT — FOR ATTORNEY REVIEW. NOT LEGAL ADVICE.** This is a starting template to
-> hand to counsel. Worker classification, tax treatment, and state-specific rules
-> (esp. California AB5 / the ABC test) must be reviewed before use. Do not deploy as
-> final without a licensed attorney's sign-off.
+> **Near-final — counsel-approved; business terms filled.** Two items marked
+> **[COUNSEL]** below remain for the attorney to finalize: §12 (limitation of
+> liability / indemnification) and §13 (dispute-resolution mechanism).
 
-This Independent Contractor Agreement ("Agreement") is entered into as of
-[EFFECTIVE DATE] by and between **NMAO Inc.**, the National Martial Arts
-Organization ("NMAO," "Company"), and **[JUDGE FULL LEGAL NAME]** ("Judge,"
-"Contractor").
+This Independent Contractor Agreement ("Agreement") is entered into as of the **date
+of Contractor's electronic acceptance** recorded below, by and between **NMAO Inc.**,
+the National Martial Arts Organization ("NMAO," "Company"), a New York corporation
+with offices at 376 S Bayview Ave, Freeport, NY 11520, and the individual **accepting
+this Agreement electronically** ("Judge," "Contractor").
 
 ## 1. Engagement & Services
 NMAO engages Contractor to provide **video-based martial-arts judging services**
@@ -39,9 +39,9 @@ collected by Stripe — see §5); (c) **passed a background check** (§7); and (
 affirmed the **NMAO Integrity Creed** (§6).
 
 ## 4. Compensation
-NMAO pays Contractor **$[RATE] per completed, submitted assignment** (or per pod, as
-specified at assignment). Payment is disbursed via **Stripe Connect** on NMAO's
-regular payout schedule. Contractor is paid only for assignments **completed and
+NMAO pays Contractor **$1.50 per completed, submitted assignment** — each competitor
+video Contractor is assigned and submits a completed score for is one assignment.
+Payment is disbursed via **Stripe Connect** on NMAO's regular payout schedule. Contractor is paid only for assignments **completed and
 submitted** per NMAO's standards. Rates may be updated prospectively on notice.
 
 ## 5. Payment & Tax Handling
@@ -84,19 +84,19 @@ concern to NMAO.
 
 ## 11. Term & Termination
 This Agreement begins on the Effective Date and continues until terminated. **Either
-party may terminate at any time, with or without cause, on [NOTICE PERIOD, e.g. 7
-days'] written notice** (or immediately for breach, conflict, or failed background
+party may terminate at any time, with or without cause, on 7 days'
+written notice** (or immediately for breach, conflict, or failed background
 check). Each assignment is a separate, discretionary engagement; nothing obligates
 NMAO to offer, or Contractor to accept, any assignment. §§6, 8, 9, 12, 13 survive
 termination.
 
 ## 12. Limitation of Liability & Indemnification
-[To counsel: insert mutual limitation-of-liability cap and indemnification terms
-appropriate to the risk profile and state law.]
+**[COUNSEL TO FINALIZE]** — insert the mutual limitation-of-liability cap and
+indemnification terms appropriate to the risk profile and New York law.
 
 ## 13. General
-Governing law: **[STATE]**, without regard to conflicts principles. Dispute
-resolution: **[arbitration / venue — to counsel]**. This Agreement is the entire
+Governing law: **New York**, without regard to conflicts principles. Dispute
+resolution: **[COUNSEL TO FINALIZE — arbitration or court venue]**. This Agreement is the entire
 agreement on its subject, supersedes prior understandings, and may be amended only in
 writing. If any provision is unenforceable, the rest remains in effect. Contractor
 may not assign this Agreement without NMAO's consent. An **electronic signature** is

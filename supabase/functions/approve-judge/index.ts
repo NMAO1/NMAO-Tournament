@@ -67,23 +67,14 @@ Deno.serve(async (req) => {
     // is wired). Activates the judge if everything else is already satisfied.
     if (String(b.action || "") === "clear_bg") {
       await svc.from("judges").update({ background_check_status: "cleared" }).eq("id", judgeId);
-      const { data: j } = await svc.from("judges").select("status, background_check_status, ic_agreement_accepted_at, creed_accepted_at, payouts_enabled").eq("id", judgeId).single();
+      // Judge must have accepted the CURRENT required terms version to activate.
+      const { data: rv } = await svc.from("app_settings").select("value").eq("key", "required_judge_terms_version").maybeSingle();
+      const requiredTerms = rv ? String((rv as any).value).replace(/"/g, "") : "draft-2026-08";
+      const { data: j } = await svc.from("judges").select("status, background_check_status, ic_agreement_accepted_at, creed_accepted_at, payouts_enabled, terms_version").eq("id", judgeId).single();
       const jj = j as any;
-      const ready = jj && jj.status !== "rejected" && jj.background_check_status === "cleared" && !!jj.ic_agreement_accepted_at && !!jj.creed_accepted_at && !!jj.payouts_enabled;
+      const ready = jj && jj.status !== "rejected" && jj.background_check_status === "cleared" && !!jj.ic_agreement_accepted_at && !!jj.creed_accepted_at && !!jj.payouts_enabled && jj.terms_version === requiredTerms;
       if (ready && jj.status !== "active") { await svc.from("judges").update({ status: "active" }).eq("id", judgeId); return json({ ok: true, judge_status: "active" }); }
       return json({ ok: true, judge_status: jj?.status ?? "unknown" });
-    }
-
-    // TEST-ONLY override: mark payouts enabled without real Stripe onboarding, so
-    // the judging flow can be exercised while the platform's transfers capability
-    // is pending Stripe approval. Activates the judge if everything else is set.
-    if (String(b.action || "") === "mark_payouts_test") {
-      await svc.from("judges").update({ payouts_enabled: true }).eq("id", judgeId);
-      const { data: j } = await svc.from("judges").select("status, background_check_status, ic_agreement_accepted_at, creed_accepted_at, payouts_enabled").eq("id", judgeId).single();
-      const jj = j as any;
-      const ready = jj && jj.status !== "rejected" && jj.background_check_status === "cleared" && !!jj.ic_agreement_accepted_at && !!jj.creed_accepted_at && !!jj.payouts_enabled;
-      if (ready && jj.status !== "active") { await svc.from("judges").update({ status: "active" }).eq("id", judgeId); return json({ ok: true, payouts_enabled: true, judge_status: "active" }); }
-      return json({ ok: true, payouts_enabled: true, judge_status: jj?.status ?? "unknown" });
     }
 
     const email = (judge as any).email as string;

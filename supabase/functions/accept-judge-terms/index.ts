@@ -55,10 +55,17 @@ Deno.serve(async (req) => {
     if (Object.keys(patch).length && b.terms_version) patch.terms_version = String(b.terms_version).slice(0, 40);
     if (Object.keys(patch).length) await svc.from("judges").update(patch).eq("id", judgeId);
 
+    // A judge must have accepted the CURRENT required terms version to activate
+    // (server-authoritative). While terms are provisional this is "draft-2026-08";
+    // when final terms ship, bump app_settings.required_judge_terms_version to "1.0"
+    // and every draft-era judge falls out of 'active' until they re-accept.
+    const { data: rv } = await svc.from("app_settings").select("value").eq("key", "required_judge_terms_version").maybeSingle();
+    const requiredTerms = rv ? String((rv as any).value).replace(/"/g, "") : "draft-2026-08";
+
     // Re-read and (maybe) activate.
-    const { data: j } = await svc.from("judges").select("status, background_check_status, ic_agreement_accepted_at, creed_accepted_at, bg_consent_at, payouts_enabled").eq("id", judgeId).single();
+    const { data: j } = await svc.from("judges").select("status, background_check_status, ic_agreement_accepted_at, creed_accepted_at, bg_consent_at, payouts_enabled, terms_version").eq("id", judgeId).single();
     const jj = j as any;
-    const ready = jj.status !== "rejected" && jj.background_check_status === "cleared" && !!jj.ic_agreement_accepted_at && !!jj.creed_accepted_at && !!jj.payouts_enabled;
+    const ready = jj.status !== "rejected" && jj.background_check_status === "cleared" && !!jj.ic_agreement_accepted_at && !!jj.creed_accepted_at && !!jj.payouts_enabled && jj.terms_version === requiredTerms;
     let jstatus = jj.status;
     if (ready && jj.status !== "active") { await svc.from("judges").update({ status: "active" }).eq("id", judgeId); jstatus = "active"; }
 

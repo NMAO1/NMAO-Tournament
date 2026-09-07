@@ -1,12 +1,11 @@
 # Competitor Media Consent, Video Release & Privacy Authorization
 
-> **DRAFT — FOR ATTORNEY REVIEW. NOT LEGAL ADVICE.** Template for counsel. Because
-> NMAO serves **minors**, this must be reviewed for **COPPA** (verifiable parental
-> consent), state biometric/likeness laws (e.g., Illinois **BIPA**), and video/data
-> retention before use. Do not deploy as final without an attorney's sign-off.
+> **Near-final — counsel-approved; business terms filled.** One item remains for the
+> attorney to confirm: the **COPPA verifiable-parental-consent method** (§6). The
+> competitor's name, date of birth, and school are captured per-signer at acceptance.
 
 **Program:** NMAO Championship Tournament (video-based martial-arts competition).
-**Competitor:** [COMPETITOR NAME]  ·  **Date of birth:** [DOB]  ·  **School:** [SCHOOL]
+**Competitor:** _(captured at signing)_  ·  **Date of birth:** _(captured at signing)_  ·  **School:** _(captured at signing)_
 **If the competitor is under 18, a parent/legal guardian must review and sign.**
 
 By signing, I (the competitor, and if the competitor is a minor, the parent/legal
@@ -47,9 +46,10 @@ tournament.
   advertising**, will **not sell** it, and will **not** make a minor **publicly
   discoverable**. Any sponsor content is clearly labeled and non-behavioral.
 - I may **review, download, or request deletion** of the competitor's video and
-  personal data at any time by [CONTACT / IN-APP CONTROL], and NMAO will delete it
-  within [X DAYS] except where retention is required by law.
-- NMAO's full **Privacy Policy** at [URL] governs how data is handled.
+  personal data at any time by emailing **senseibrad@nmao.us** or using the in-app
+  **Account → Delete account** control, and NMAO will delete it within **30 days**
+  except where retention is required by law.
+- NMAO's full **Privacy Policy** at **https://school.nmao.us/privacy.html** governs how data is handled.
 
 ## 5. Name & likeness
 I grant NMAO permission to use the competitor's **name, school, and performance
@@ -72,7 +72,7 @@ verification, government-ID check.]
   and any assumption-of-risk / liability waiver for physical activity.]
 
 ## 8. General
-Governing law: **[STATE]**. I may withdraw this consent prospectively at any time
+Governing law: **New York**. I may withdraw this consent prospectively at any time
 (which may end participation). An **electronic signature** is valid and binding.
 
 ---

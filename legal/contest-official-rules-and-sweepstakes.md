@@ -1,10 +1,9 @@
 # Official Rules — NMAO Grand Finale (Skill Contest) + Voter-Raffle Sweepstakes Note
 
-> **DRAFT — FOR ATTORNEY REVIEW. NOT LEGAL ADVICE.** Template for counsel. Prize
-> promotions are heavily state-regulated; **registration and bonding may be required
-> (e.g., NY, FL, RI) above prize thresholds**, and the **skill-contest vs. sweepstakes
-> distinction is critical** (see the note in Part B). Do not run any prize promotion
-> without an attorney's sign-off.
+> **Near-final — counsel-approved; business terms filled.** Remaining for the attorney:
+> the **prize descriptions + ARV** (§5), the **§9 liability/dispute-resolution** terms,
+> **New York prize-promotion registration/bonding** thresholds, and the **Part B
+> voter-raffle sweepstakes** (kept OFF — Phase-3, flag-gated — until counsel approves).
 
 ---
 
@@ -22,15 +21,15 @@
 
 # Part A — Grand Finale Official Rules (skill contest)
 
-**1. Sponsor.** [NMAO Inc., address]. Presented by **[TITLE SPONSOR]** and
-**[CO-SPONSORS]**.
+**1. Sponsor.** NMAO Inc., 376 S Bayview Ave, Freeport, NY 11520. (No title or
+co-sponsors at this time.)
 
-**2. Eligibility.** Open to registered NMAO competitors who [meet age/class/residency
-requirements] and are in good standing. Minors may enter only with a **parent/guardian
-consent** on file. Void where prohibited. Employees of NMAO and sponsors and their
-immediate families are [eligible/ineligible — to counsel].
+**2. Eligibility.** Open to registered NMAO competitors who meet the age, class, and
+residency requirements published for the event and are in good standing. Minors may
+enter only with a **parent/guardian consent** on file. Void where prohibited.
+Employees of NMAO and sponsors and their immediate families are **ineligible**.
 
-**3. How to enter / compete.** Qualify through the [season / bracket] per NMAO's
+**3. How to enter / compete.** Qualify through the current NMAO Tournament season per NMAO's
 published tournament format, and submit the required performance video(s) by the
 posted deadline(s), following the video guidelines. Entry fees, if any, are as posted
 and are **non-refundable** except as stated.
@@ -59,11 +58,12 @@ privacy terms in the Media Consent.
 rules, the Code of Conduct, the video-authenticity requirements, or that involves
 cheating or misrepresentation.
 
-**9. Limitation of liability; disputes; governing law.** [To counsel: insert
-release/limitation-of-liability, dispute-resolution, and **[STATE]** governing-law
-provisions; add any required state-specific disclosures.]
+**9. Limitation of liability; disputes; governing law.** Governing law: **New York**.
+**[COUNSEL TO FINALIZE]** — insert the release/limitation-of-liability and
+dispute-resolution provisions and any required New York prize-promotion disclosures.
 
-**10. Winners list.** Available after [DATE] at [URL] or by request to [CONTACT].
+**10. Winners list.** Available after the Grand Finale concludes in the NMAO app, or by
+request to **senseibrad@nmao.us**.
 
 ---
 
