@@ -7,7 +7,7 @@ export type FrameStats = {
   skill_rating: number; correct_votes: number; vote_accuracy: number; qualified_votes: number;
   duel_wins: number; journal: number;
   events: number; medals_gold: number; medals_silver: number; medals_bronze: number;
-  podiums: number; championships: number; seasons: number;
+  podiums: number; championships: number; seasons: number; rising_star: number;
 };
 
 // Oracle demands a real sample before accuracy counts — you can't earn Aurora off 5/5.
@@ -48,6 +48,7 @@ export function frameValueFor(code: string | null | undefined, card: Card | null
     case "first-gold":     return stats?.medals_gold ?? 0;
     case "first-silver":   return stats?.medals_silver ?? 0;
     case "first-bronze":   return stats?.medals_bronze ?? 0;
+    case "rising-star":    return stats?.rising_star ?? 0;   // personal-best count (engine's rising-star tier)
     default:               return 0;
   }
 }

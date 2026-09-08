@@ -36,6 +36,10 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
   const [crownVal, setCrownVal] = useState(1);
   const CROWN_STEPS = [1, 2, 3, 5];
   const CROWN_LABELS = ["1 title", "2", "3", "5"];
+  // The Ascendant ring (Rising Star) — driven by PERSONAL BESTS. pre-dawn → sunrise, shooting star at 10
+  const [starVal, setStarVal] = useState(1);
+  const STAR_STEPS = [0, 1, 4, 7, 10];
+  const STAR_LABELS = ["Pre-dawn", "1 PB", "4", "7", "10 ✦"];
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 44 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -92,6 +96,31 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
                 style={{ paddingHorizontal: 10, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
                   borderColor: crownVal === v ? hues.gold.base : neutrals.border, backgroundColor: crownVal === v ? "rgba(232,199,102,0.18)" : neutrals.surface }}>
                 <Text style={{ color: crownVal === v ? hues.gold.hi : neutrals.muted, fontWeight: "800", fontSize: 12.5 }}>{CROWN_LABELS[i]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* ── THE ASCENDANT ring (Rising Star) — driven by personal-best count ── */}
+      <View style={{ borderWidth: 1, borderColor: "#4a2f12", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(232,138,74,0.06)" }}>
+        <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>The Ascendant · V3 (Rising Star)</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
+          A pre-dawn sky that brightens toward sunrise as you set new PERSONAL BESTS: 1 → first light · 4 → twilight climb · 7 → golden sunrise, a star added per PB around the ring, and a shooting star at ten. Step the count.
+        </Text>
+        <View style={{ alignItems: "center" }}>
+          <RingFrame badgeCode="rising-star" value={starVal} w={220} h={150} radius={18}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b12" }}>
+              <Text style={{ color: neutrals.muted2, fontSize: 11 }}>video</Text>
+            </View>
+          </RingFrame>
+          <Text style={{ color: hues.gold.hi, fontSize: 14, fontWeight: "800", marginTop: 12 }}>{starVal} personal best{starVal === 1 ? "" : "s"}</Text>
+          <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
+            {STAR_STEPS.map((v, i) => (
+              <TouchableOpacity key={v} onPress={() => setStarVal(v)}
+                style={{ paddingHorizontal: 10, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
+                  borderColor: starVal === v ? hues.gold.base : neutrals.border, backgroundColor: starVal === v ? "rgba(232,138,74,0.18)" : neutrals.surface }}>
+                <Text style={{ color: starVal === v ? hues.gold.hi : neutrals.muted, fontWeight: "800", fontSize: 12.5 }}>{STAR_LABELS[i]}</Text>
               </TouchableOpacity>
             ))}
           </View>

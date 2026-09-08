@@ -283,6 +283,33 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
         series: ["gem_sapphire", "gem_amethyst", "gem_ruby", "gem_emerald", "gem_coral", "gem_onyx", "gem_rose", "gem_turquoise", "gem_peridot", "gem_platinum"] },
     ],
   },
+
+  // ── THE ASCENDANT · a pre-dawn sky that brightens toward sunrise as you set new
+  // PERSONAL-BEST scores; a comet climbs the ring and a star is added per PB, cresting
+  // in a shooting star at the tenth (badge `rising-star`). Nearly everyone earns tier 1
+  // early — the joy is the ten-step climb.
+  "rising-star": {
+    base: "rare", label: "The Ascendant",
+    border: { colors: ["#0b1030", "#1a2360", "#5a3a8a", "#e88a4a", "#0b1030"], glow: "#ffb066" },
+    fx: { glint: true, glow: true, sparkle: true },
+    // PICTURE-FRAME RING: pre-dawn night → first light → twilight climb → golden sunrise,
+    // cross-fading as PERSONAL BESTS accrue (1 / 4 / 7), one star added per PB around the
+    // ring, and a shooting star at the tenth — the summit.
+    ring: {
+      tints: ["#0b1030", "#152a6e", "#6a2f8a", "#e0913c"],   // pre-dawn · first light · twilight climb · sunrise
+      images: ["ring_risingstar_0", "ring_risingstar_1", "ring_risingstar_2", "ring_risingstar_3"],
+      stops: [1, 4, 7],           // 1 PB → first light · 4 → twilight climb · 7 → golden sunrise
+      flourishAt: 10,             // the tenth personal best → shooting star (maxed)
+      flourishKind: "shooting-star",
+      thickness: 0.16, glow: "#ffb066",
+      perimeter: { img: "starlet", per: 1, max: 10 },   // one star earned per personal best
+    },
+    elements: [
+      // band fallback: a comet that appears once you're climbing + a star per PB
+      { img: "comet", x: 0.5, y: 0.48, scale: 1.5, showAt: 1 },
+      { img: "starlet", y: 0.62, scale: 0.44, repeatPer: 1, repeatMax: 10, rowStep: 0.06 },
+    ],
+  },
 };
 
 // Expand a spec against a progress value into concrete positioned elements.
@@ -334,7 +361,7 @@ export const ELEMENT_GLYPH: Record<string, string> = {
   coin_gold: "🪙", coin_silver: "🪙", coin_bronze: "🪙",
   footprints: "👣", fist: "👊", bow: "🙏", sunrise: "🌅", lotus: "🪷", ballot: "🗳️", allies: "🤝",
   // new batch (2026-09-04): oracle / precision / ascent / podium / weapon-master / zen / grand-champion
-  starlet: "✨", north_star: "🌟", target: "🎯", arrow: "🏹", arrow_gold: "🎯",
+  starlet: "✨", north_star: "🌟", comet: "☄️", target: "🎯", arrow: "🏹", arrow_gold: "🎯",
   peak: "⛰️", flag: "🚩", aurora: "🌌", laurel_leaf: "🌿", laurel_clasp: "🏆",
   weapon: "🗡️", wpn_bo: "🥢", wpn_nunchaku: "⛓️", wpn_sword: "🗡️", wpn_kama: "🪓", wpn_wraps: "🥊",
   enso: "⭕", stone: "🪨", ripple: "🌊", crown_base: "👑",
@@ -347,5 +374,5 @@ export const ELEMENT_GLYPH: Record<string, string> = {
 export function frameElementUrl(img: string): string | null {
   const base = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!base) return null;
-  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=13`;
+  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=14`;
 }
