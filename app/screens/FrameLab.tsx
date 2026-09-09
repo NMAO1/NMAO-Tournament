@@ -43,6 +43,9 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
   const [duelVal, setDuelVal] = useState(1);
   const DUEL_STEPS = [1, 10, 25, 100, 200];
   const DUEL_LABELS = ["1 win", "10", "25", "100", "200 ✦"];
+  const [ascentVal, setAscentVal] = useState(40);
+  const ASCENT_STEPS = [40, 50, 65, 80, 90];
+  const ASCENT_LABELS = ["Base camp", "45+", "60+", "75+", "Summit ✦"];
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 44 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -134,7 +137,7 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
       <View style={{ borderWidth: 1, borderColor: "#4a3a24", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(201,138,58,0.06)" }}>
         <Text style={{ color: "#e0a55a", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>Dedicated Duelist · V3 (Duel Wins)</Text>
         <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
-          Forged steel from win #1 (no dormant state) — wear becomes earned prestige as wins climb: 1 tempered · 10 battle-worn · 25 distinguished · 100 honored · 200 living legend, an ember per win around the ring, gold-ember storm at 200. Step the wins.
+          Forged steel from win #1 (no dormant state) — wear becomes earned prestige as wins climb: 1 tempered · 10 battle-worn · 25 distinguished · 100 honored · 200 living legend, a forged 5-bar tally chiseled in per 5 wins (a gate = 25), gold-ember storm at 200. Step the wins.
         </Text>
         <View style={{ alignItems: "center" }}>
           <RingFrame badgeCode="duelist" value={duelVal} w={220} h={150} radius={18}>
@@ -149,6 +152,31 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
                 style={{ paddingHorizontal: 10, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
                   borderColor: duelVal === v ? "#c98a3a" : neutrals.border, backgroundColor: duelVal === v ? "rgba(201,138,58,0.18)" : neutrals.surface }}>
                 <Text style={{ color: duelVal === v ? "#e0a55a" : neutrals.muted, fontWeight: "800", fontSize: 12.5 }}>{DUEL_LABELS[i]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+
+      {/* ── ASCENT ring — the tournament CLIMB driven by SKILL RATING ── */}
+      <View style={{ borderWidth: 1, borderColor: "#274a48", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(127,224,192,0.06)" }}>
+        <Text style={{ color: "#7fe0c0", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>Summit Seeker · V3 (Skill Rating)</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
+          The season-long climb, driven by tournament skill rating: valley dusk → alpine (45) → high summit (60) → aurora approach (75), an aurora beacon at the summit (88). Reflects your current altitude — the mountain rises and recedes with your rating. Step the rating.
+        </Text>
+        <View style={{ alignItems: "center" }}>
+          <RingFrame badgeCode="ascent" value={ascentVal} w={220} h={150} radius={18}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b12" }}>
+              <Text style={{ color: neutrals.muted2, fontSize: 11 }}>video</Text>
+            </View>
+          </RingFrame>
+          <Text style={{ color: "#7fe0c0", fontSize: 14, fontWeight: "800", marginTop: 12 }}>{ascentVal} skill rating</Text>
+          <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
+            {ASCENT_STEPS.map((v, i) => (
+              <TouchableOpacity key={v} onPress={() => setAscentVal(v)}
+                style={{ paddingHorizontal: 10, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1,
+                  borderColor: ascentVal === v ? "#3f9e8a" : neutrals.border, backgroundColor: ascentVal === v ? "rgba(127,224,192,0.16)" : neutrals.surface }}>
+                <Text style={{ color: ascentVal === v ? "#7fe0c0" : neutrals.muted, fontWeight: "800", fontSize: 12.5 }}>{ASCENT_LABELS[i]}</Text>
               </TouchableOpacity>
             ))}
           </View>

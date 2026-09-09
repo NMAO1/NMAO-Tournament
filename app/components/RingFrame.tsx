@@ -43,6 +43,7 @@ export function RingFrame({ badgeCode, ring, value, w, h, radius = 20, children 
 
       {/* perimeter motifs — accrete around the ring as the value grows */}
       {cfg.perimeter ? <Perimeter cfg={cfg.perimeter} value={value} w={w} h={h} inset={t / 2} size={t * 0.7} /> : null}
+      {cfg.tally ? <Tally cfg={cfg.tally} value={value} w={w} h={h} t={t} /> : null}
 
       {/* crown gems — a prominent row of season gems across the top, one per season won */}
       {cfg.crownGems ? <CrownGems series={cfg.crownGems} value={value} w={w} t={t} /> : null}
@@ -190,6 +191,49 @@ function PerimItem({ x, y, size, url, glyph, index }: { x: number; y: number; si
       {url && !failed ? <Image source={{ uri: url }} style={{ width: size, height: size }} resizeMode="contain" onError={() => setFailed(true)} />
         : <Text style={{ fontSize: size * 0.8 }}>{glyph}</Text>}
     </Animated.View>
+  );
+}
+
+// Forged 5-bar TALLY along the bottom band — one chisel notch per `per` of the value,
+// grouped into gates of `groupPer` (the 5th strikes diagonally across the prior four).
+// Vector-drawn (thin Views), so it needs no art. Reads as: wins = gates×(per·groupPer) + marks×per.
+function Tally({ cfg, value, w, h, t }: { cfg: NonNullable<RingConfig["tally"]>; value: number; w: number; h: number; t: number }) {
+  const per = cfg.per ?? 5, group = cfg.groupPer ?? 5, maxN = cfg.max ?? 40;
+  const nNotch = Math.min(Math.floor(value / per), maxN);
+  if (nNotch <= 0) return null;
+  const color = cfg.color ?? "#e6a552";
+  const barW = Math.max(2, t * 0.11);
+  const barH = Math.max(10, t * 0.62);
+  let notchGap = barW * 2.0, gateGap = barW * 3.8;
+  const nGates = Math.ceil(nNotch / group);
+  const maxW = w - 2 * t - 4;
+  let vSpan = (group - 1) * notchGap;
+  let totalW = nGates * (vSpan + barW) + Math.max(0, nGates - 1) * gateGap;
+  if (totalW > maxW) { const s = maxW / totalW; notchGap *= s; gateGap *= s; }
+  vSpan = (group - 1) * notchGap;
+  const gateW = vSpan + barW;
+  totalW = nGates * gateW + Math.max(0, nGates - 1) * gateGap;
+  const startX = (w - totalW) / 2, cy = h - t / 2;
+  const bars: { x: number; y: number; wBar: number; hBar: number; angle: number; idx: number }[] = [];
+  for (let g = 0; g < nGates; g++) {
+    const gx = startX + g * (gateW + gateGap);
+    const inGate = Math.min(group, nNotch - g * group);
+    const verticals = Math.min(group - 1, inGate);
+    for (let k = 0; k < verticals; k++) bars.push({ x: gx + k * notchGap + barW / 2, y: cy, wBar: barW, hBar: barH, angle: 0, idx: g * group + k });
+    if (inGate === group) {  // complete gate → the fifth stroke slashes across the four
+      const diagLen = Math.sqrt(vSpan * vSpan + barH * barH) * 1.08;
+      const angle = Math.atan2(barH, vSpan) * 180 / Math.PI;
+      bars.push({ x: gx + vSpan / 2 + barW / 2, y: cy, wBar: barW, hBar: diagLen, angle, idx: g * group + group - 1 });
+    }
+  }
+  return <>{bars.map((b) => <TallyBar key={b.idx} x={b.x} y={b.y} wBar={b.wBar} hBar={b.hBar} angle={b.angle} color={color} index={b.idx} />)}</>;
+}
+function TallyBar({ x, y, wBar, hBar, angle, color, index }: { x: number; y: number; wBar: number; hBar: number; angle: number; color: string; index: number }) {
+  const enter = useRef(new Animated.Value(0)).current;
+  useEffect(() => { Animated.spring(enter, { toValue: 1, delay: Math.min(index * 45, 900), friction: 6, tension: 130, useNativeDriver: true }).start(); }, [enter, index]);
+  const sc = enter.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] });
+  return (
+    <Animated.View pointerEvents="none" style={{ position: "absolute", left: x - wBar / 2, top: y - hBar / 2, width: wBar, height: hBar, borderRadius: wBar / 2, backgroundColor: color, opacity: enter, transform: [{ rotate: `${angle}deg` }, { scale: sc }], shadowColor: color, shadowOpacity: 0.75, shadowRadius: 3, shadowOffset: { width: 0, height: 0 } }} />
   );
 }
 

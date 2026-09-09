@@ -46,6 +46,9 @@ export type RingConfig = {
   thickness?: number;              // ring thickness as a fraction of min(w,h) (default 0.15).
   glow?: string;
   perimeter?: { img: string; per: number; max?: number };  // one motif per `per` of the value, placed around the ring.
+  // forged 5-bar TALLY (vector-drawn, no art needed): one chisel notch per `per` of the
+  // value, grouped into gates of `groupPer` (the 5th strikes across the prior four).
+  tally?: { per: number; groupPer?: number; max?: number; color?: string };
   // crownGems: a centered row of PROMINENT gems along the top border — one per `value`,
   // each the next image in the series (season-colored). For "a gem per season won".
   crownGems?: string[];
@@ -91,7 +94,7 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
       flourishAt: 200,             // living legend → golden ember storm
       flourishKind: "gold-rain",   // reuses the gold-rain FX as a golden ember storm
       thickness: 0.16, glow: "#c98a3a",
-      perimeter: { img: "ember", per: 1, max: 12 },   // one ember earned per duel win
+      tally: { per: 5, groupPer: 5, max: 40, color: "#e6a552" },  // forged tally: one chisel notch per 5 wins, 5-bar gates (1 full gate = 25 wins), up to 200
     },
     elements: [
       // crossed-swords anchor — earned at the first win (drawn first = behind the shield)
@@ -223,9 +226,21 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
   // ── ASCENT · a mountain ridge; summit flags plant HIGHER as you climb the ranks,
   // snowcap aurora crowns the peak at elite rating (badge `ascent`).
   ascent: {
-    base: "rare", label: "The Ascendant",
+    base: "rare", label: "Summit Seeker",
     border: { colors: ["#0e1830", "#243a66", "#4a6aa0", "#c8d8f0", "#0e1830"], glow: "#7aa0e0" },
     fx: { glint: true, glow: true, sparkle: true },
+    // PICTURE-FRAME RING: the season-long CLIMB, driven by tournament SKILL RATING. Cross-
+    // fades UP the mountain as rating rises (valley dusk → alpine → high summit → aurora).
+    // Reflects CURRENT altitude — Elo can fall, so the four tiers ARE the readout and the
+    // summit flags live in the tier art. Aurora/shooting-star beacon at the summit.
+    ring: {
+      tints: ["#16202e", "#294056", "#5e7488", "#356b62"],  // valley dusk · alpine · high summit · aurora
+      images: ["ring_ascent_0", "ring_ascent_1", "ring_ascent_2", "ring_ascent_3"],
+      stops: [45, 60, 75],   // rating 45 alpine · 60 high summit · 75 aurora approach
+      flourishAt: 88,        // summit reached → aurora beacon (shooting star over the peak)
+      flourishKind: "shooting-star",
+      thickness: 0.16, glow: "#7fe0c0",
+    },
     elements: [
       { img: "peak", x: 0.5, y: 0.70, scale: 2.7, showAt: 0 },
       { img: "flag", x: 0.38, y: 0.60, scale: 0.7, showAt: 45 },
@@ -387,5 +402,5 @@ export const ELEMENT_GLYPH: Record<string, string> = {
 export function frameElementUrl(img: string): string | null {
   const base = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!base) return null;
-  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=15`;
+  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=16`;
 }
