@@ -80,6 +80,19 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
     fx: { glint: false, glow: false, sparkle: false },   // steel border: only the stack-in entrance, no shine/glow/sparkle
     // forged steel — a tiled brushed-gunmetal grain (falls back to the gradient)
     border: { texture: "steel", colors: ["#20242b", "#4a515d", "#79828f", "#333a43", "#1b1e23"], glow: "#6d7f9c" },
+    // PICTURE-FRAME RING (gritty · worn · noble · earned): the wear transmutes into earned
+    // prestige as wins climb. Steel-based throughout — gold appears only as honor inlay and
+    // veins, never a gold frame (keeps it distinct from the all-gold Sovereign's Crown). The
+    // BASE tier IS the 1-win look — there is no dormant state (the frame requires a win).
+    ring: {
+      tints: ["#2b2f37", "#3a2f2a", "#4a3524", "#5a4326", "#6a4a1e"],  // tempered→battle-worn→distinguished→honored→living-legend
+      images: ["ring_duelist_0", "ring_duelist_1", "ring_duelist_2", "ring_duelist_3", "ring_duelist_4"],
+      stops: [10, 25, 100, 200],   // 1 tempered · 10 battle-worn · 25 distinguished · 100 honored · 200 living legend
+      flourishAt: 200,             // living legend → golden ember storm
+      flourishKind: "gold-rain",   // reuses the gold-rain FX as a golden ember storm
+      thickness: 0.16, glow: "#c98a3a",
+      perimeter: { img: "ember", per: 1, max: 12 },   // one ember earned per duel win
+    },
     elements: [
       // crossed-swords anchor — earned at the first win (drawn first = behind the shield)
       { img: "sword", x: 0.50, y: 0.60, scale: 2.3, showAt: 1 },
@@ -364,7 +377,7 @@ export const ELEMENT_GLYPH: Record<string, string> = {
   starlet: "✨", north_star: "🌟", comet: "☄️", target: "🎯", arrow: "🏹", arrow_gold: "🎯",
   peak: "⛰️", flag: "🚩", aurora: "🌌", laurel_leaf: "🌿", laurel_clasp: "🏆",
   weapon: "🗡️", wpn_bo: "🥢", wpn_nunchaku: "⛓️", wpn_sword: "🗡️", wpn_kama: "🪓", wpn_wraps: "🥊",
-  enso: "⭕", stone: "🪨", ripple: "🌊", crown_base: "👑",
+  enso: "⭕", stone: "🪨", ripple: "🌊", crown_base: "👑", ember: "🔥",
   gem_sapphire: "💎", gem_amethyst: "💎", gem_ruby: "💎", gem_emerald: "💎", gem_coral: "💎",
   gem_onyx: "💎", gem_rose: "💎", gem_turquoise: "💎", gem_peridot: "💎", gem_platinum: "💎",
 };
@@ -374,5 +387,5 @@ export const ELEMENT_GLYPH: Record<string, string> = {
 export function frameElementUrl(img: string): string | null {
   const base = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!base) return null;
-  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=14`;
+  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=15`;
 }
