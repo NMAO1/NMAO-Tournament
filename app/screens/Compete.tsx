@@ -113,10 +113,10 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
     return false;
   }
 
-  // Register + pay in one motion (payment activates the entry). Payment happens
-  // in the device BROWSER (Stripe Checkout) — deliberately OFF Apple's in-app
-  // purchase rails (no 30% cut). Gated to the competitor/guardian by
-  // create-entry-checkout — schools can't pay here.
+  // Register + pay in one motion (payment activates entry into the real-world
+  // judged competition). Payment happens in the device BROWSER via Stripe hosted
+  // Checkout. Gated to the competitor/guardian by create-entry-checkout — schools
+  // can't pay here.
   async function payAndRegister(compId?: string, ev?: string) {
     const cid = compId ?? competitorId; const evt = ev ?? event;
     if (!cid || !evt) return;
@@ -135,7 +135,7 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
         setCompetitorId(cid); setEvent(evt); setPaid(true); setPhase("idle"); setStep("");
         refreshDash(cid);
         if (typeof j.credits_remaining === "number") setCredits(j.credits_remaining);
-        const left = typeof j.credits_remaining === "number" ? `  ${j.credits_remaining} credit${j.credits_remaining === 1 ? "" : "s"} left.` : "";
+        const left = typeof j.credits_remaining === "number" ? `  ${j.credits_remaining} entr${j.credits_remaining === 1 ? "y" : "ies"} left.` : "";
         Alert.alert("You're in!", `Entered with your season pass.${left}`);
         return;
       }
@@ -189,10 +189,10 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
   function onRegisterTap(cid?: string, ev?: string) {
     if (credits === 0) {
       Alert.alert(
-        "Out of entry credits",
-        "You've used all your credits. Buy more at the season rate, or pay for just this entry.",
+        "Out of entries",
+        "You've used all your entries. Buy more at the season rate, or pay for just this event.",
         [
-          { text: "Buy credits", onPress: () => setShowBuy(true) },
+          { text: "Buy entries", onPress: () => setShowBuy(true) },
           { text: "Pay for this entry", onPress: () => payAndRegister(cid, ev) },
           { text: "Cancel", style: "cancel" },
         ],
@@ -277,13 +277,13 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
             borderColor: credits > 0 ? hues.gold.shadow : neutrals.border, backgroundColor: credits > 0 ? "rgba(230,185,63,0.07)" : neutrals.surface }}>
           <View style={{ flex: 1, paddingRight: 10 }}>
             <Text style={{ color: credits > 0 ? hues.gold.hi : neutrals.text, fontWeight: "800", fontSize: 14 }}>
-              {credits} entry credit{credits === 1 ? "" : "s"}
+              {credits} entr{credits === 1 ? "y" : "ies"}
             </Text>
             <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>
-              {credits > 0 ? "Each event you enter uses 1 credit." : "Buy a season pass or credits to enter."}
+              {credits > 0 ? "Each event you enter uses 1 entry." : "Buy a season pass or single entry to compete."}
             </Text>
           </View>
-          <Text style={{ color: hues.sapphire.hi, fontWeight: "700", fontSize: 13 }}>Buy credits ›</Text>
+          <Text style={{ color: hues.sapphire.hi, fontWeight: "700", fontSize: 13 }}>Buy entries ›</Text>
         </TouchableOpacity>
       )}
 
@@ -331,11 +331,11 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
                   style={{ borderRadius: 13, paddingVertical: 16, alignItems: "center", opacity: phase === "working" ? 0.7 : 1 }}>
                   {phase === "working"
                     ? <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><ActivityIndicator color="#141210" /><Text style={{ color: "#141210", fontWeight: "800" }}>{step || "Opening payment…"}</Text></View>
-                    : <Text style={{ color: "#141210", fontWeight: "800", fontSize: 16 }}>{credits && credits > 0 ? "Register · uses 1 credit" : "Register"}</Text>}
+                    : <Text style={{ color: "#141210", fontWeight: "800", fontSize: 16 }}>{credits && credits > 0 ? "Register · uses 1 entry" : "Register"}</Text>}
                 </LinearGradient>
               </TouchableOpacity>
               <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 10, textAlign: "center" }}>
-                {credits && credits > 0 ? `Uses 1 of your ${credits} credits — you'll upload your video next.` : "You'll pay the entry fee, then upload your video."}
+                {credits && credits > 0 ? `Uses 1 of your ${credits} entries — you'll upload your video next.` : "You'll pay the entry fee, then upload your video."}
               </Text>
             </>
           )}
@@ -468,7 +468,7 @@ function RatingPill({ label, value, note, hi }: { label: string; value: string; 
 function statusMeta(ev: CompeteEvent, canEnter: boolean, hasCredits: boolean):
   { label: string; color: string; action?: string; spectrum?: boolean; badge?: string } {
   switch (ev.status) {
-    case "awaiting_payment": return { label: "Awaiting payment", color: hues.gold.hi, action: hasCredits ? "Use 1 credit" : "Complete", spectrum: true };
+    case "awaiting_payment": return { label: "Awaiting payment", color: hues.gold.hi, action: hasCredits ? "Use 1 entry" : "Complete", spectrum: true };
     case "awaiting_video":   return { label: "Paid — upload your video", color: hues.sapphire.hi, action: "Upload", spectrum: true };
     case "in_judging":       return { label: "In judging", color: status.success, badge: "⏳" };
     case "scored": {

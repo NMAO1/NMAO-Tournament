@@ -1,8 +1,8 @@
 // =====================================================================
 // EDGE FUNCTION: create-entitlement-checkout  (Competitor app — BROWSER pay)
-// Buys the right to enter 1–2 events per round via one of three lanes and
-// returns a Stripe-HOSTED Checkout URL. The app opens it in the device browser
-// — keeping the purchase OFF Apple's in-app-purchase rails (no 30% cut).
+// Registers entry into 1–2 real-world judged events per round via one of three
+// lanes and returns a Stripe-HOSTED Checkout URL. The app opens it in the device
+// browser to complete payment for the physical-world competition entry.
 //   alacarte → mode=payment, scoped to the open round
 //   full     → mode=payment, whole season
 //   monthly  → mode=subscription (recurring)

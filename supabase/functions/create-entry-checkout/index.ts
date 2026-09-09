@@ -2,9 +2,9 @@
 // EDGE FUNCTION: create-entry-checkout  (Championship entry — BROWSER pay)
 // Browser-based replacement for create-entry-payment's native PaymentSheet.
 // Registers an entry (unpaid) for the open round and returns a Stripe-hosted
-// Checkout URL. The competitor app opens this in the device browser — keeping
-// the purchase OFF Apple's in-app-purchase rails (no 30% cut). This is a
-// PLATFORM charge (NMAO's own revenue, not a school's connected account).
+// Checkout URL. The competitor app opens this in the device browser to pay for
+// entry into the real-world judged competition. This is a PLATFORM charge
+// (NMAO's own revenue, not a school's connected account).
 // The existing stripe-webhook flips the entry to 'paid' on payment_intent
 // .succeeded (we stamp entry_id into payment_intent_data.metadata).
 //

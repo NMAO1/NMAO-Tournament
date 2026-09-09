@@ -30,8 +30,8 @@ export type CheckoutResult = {
   url?: string; entitlement_id?: string; amount?: number; lane?: Lane;
 };
 
-// Buy an entitlement (1–2 event slots) via a lane; returns a Stripe-hosted
-// Checkout URL to open in the browser (keeps purchases off Apple's IAP rails).
+// Register for competition entry (1–2 event slots) via a lane; returns a
+// Stripe-hosted Checkout URL to open in the browser.
 export async function createEntitlementCheckout(input: {
   competitor_id: string; lane: Lane; event_slots?: number; events?: string[]; credits?: number;
 }): Promise<CheckoutResult> {
