@@ -338,6 +338,45 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
       { img: "starlet", y: 0.62, scale: 0.44, repeatPer: 1, repeatMax: 10, rowStep: 0.06 },
     ],
   },
+
+  // ── BATCH A · SINGLE-TIER "duel drama" frames (one-time epic moments). No progression:
+  //    a themed border + one always-on signature motif (showAt 0). Glyph now, Firefly later.
+  clutch: {
+    base: "epic", label: "Clutch",
+    border: { colors: ["#2a0e0e", "#6e1f1f", "#c2452a", "#e8a23a", "#2a0e0e"], glow: "#ff7a3a" },
+    fx: { glint: true, glow: true, sparkle: true },
+    elements: [{ img: "clutch", x: 0.5, y: 0.55, scale: 2.4, showAt: 0 }],
+  },
+  "flawless-victory": {
+    base: "epic", label: "Flawless Victory",
+    border: { colors: ["#1a1c22", "#3a4048", "#8a94a2", "#e8e2d0", "#1a1c22"], glow: "#fff2c8" },
+    fx: { glint: true, glow: true, sparkle: true },
+    elements: [{ img: "flawless", x: 0.5, y: 0.55, scale: 2.3, showAt: 0 }],
+  },
+  "giant-slayer": {
+    base: "epic", label: "Giant-Slayer",
+    border: { colors: ["#170a12", "#5a1230", "#a01e3a", "#e0a83a", "#170a12"], glow: "#f0b64a" },
+    fx: { glint: true, glow: true, sparkle: true },
+    elements: [{ img: "slayer", x: 0.5, y: 0.55, scale: 2.4, showAt: 0 }],
+  },
+  deadlock: {
+    base: "epic", label: "Deadlock",
+    border: { colors: ["#12161c", "#28323e", "#4a5a6a", "#8a9aa8", "#12161c"], glow: "#7fa0c0" },
+    fx: { glint: true, glow: true, sparkle: false },
+    elements: [{ img: "deadlock", x: 0.5, y: 0.55, scale: 2.3, showAt: 0 }],
+  },
+  sweep: {
+    base: "epic", label: "Clean Sweep",
+    border: { colors: ["#0c1a12", "#134a2f", "#2e8a54", "#d8c060", "#0c1a12"], glow: "#8fe0a0" },
+    fx: { glint: true, glow: true, sparkle: true },
+    elements: [{ img: "broom", x: 0.5, y: 0.55, scale: 2.3, showAt: 0 }],
+  },
+  "undefeated-duelist": {
+    base: "epic", label: "Undefeated",
+    border: { colors: ["#0d1030", "#22285a", "#4a54a0", "#e0c060", "#0d1030"], glow: "#ffcf6a" },
+    fx: { glint: true, glow: true, sparkle: true },
+    elements: [{ img: "shield", x: 0.5, y: 0.55, scale: 2.2, showAt: 0 }],
+  },
 };
 
 // Expand a spec against a progress value into concrete positioned elements.
@@ -395,6 +434,8 @@ export const ELEMENT_GLYPH: Record<string, string> = {
   enso: "⭕", stone: "🪨", ripple: "🌊", crown_base: "👑", ember: "🔥",
   gem_sapphire: "💎", gem_amethyst: "💎", gem_ruby: "💎", gem_emerald: "💎", gem_coral: "💎",
   gem_onyx: "💎", gem_rose: "💎", gem_turquoise: "💎", gem_peridot: "💎", gem_platinum: "💎",
+  // Batch A single-tier motifs (Firefly art can replace these later)
+  clutch: "⚡", flawless: "💯", slayer: "🗡️", deadlock: "🔒", broom: "🧹",
 };
 
 // Real element art from the public badge-frames bucket (?v busts the image cache
