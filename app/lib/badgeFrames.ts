@@ -343,37 +343,37 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
   //    a themed border + one always-on signature motif (showAt 0). Glyph now, Firefly later.
   clutch: {
     base: "epic", label: "Clutch",
-    border: { colors: ["#2a0e0e", "#6e1f1f", "#c2452a", "#e8a23a", "#2a0e0e"], glow: "#ff7a3a" },
+    border: { colors: ["#1a0f3a", "#5b2fd6", "#9a5cff", "#38e0ff", "#1a0f3a"], glow: "#8f6bff" },  // electric violet ⇄ cyan
     fx: { glint: true, glow: true, sparkle: true },
     elements: [{ img: "clutch", x: 0.5, y: 0.55, scale: 2.4, showAt: 0 }],
   },
   "flawless-victory": {
     base: "epic", label: "Flawless Victory",
-    border: { colors: ["#1a1c22", "#3a4048", "#8a94a2", "#e8e2d0", "#1a1c22"], glow: "#fff2c8" },
+    border: { colors: ["#2a2440", "#7a6fd6", "#e0b0ff", "#fff0c0", "#2a2440"], glow: "#ffe6a0" },  // iridescent prism
     fx: { glint: true, glow: true, sparkle: true },
     elements: [{ img: "flawless", x: 0.5, y: 0.55, scale: 2.3, showAt: 0 }],
   },
   "giant-slayer": {
     base: "epic", label: "Giant-Slayer",
-    border: { colors: ["#170a12", "#5a1230", "#a01e3a", "#e0a83a", "#170a12"], glow: "#f0b64a" },
+    border: { colors: ["#2a0810", "#c01838", "#ff5a3c", "#ffcf4a", "#2a0810"], glow: "#ff8a3a" },  // crimson→gold sunburst
     fx: { glint: true, glow: true, sparkle: true },
     elements: [{ img: "slayer", x: 0.5, y: 0.55, scale: 2.4, showAt: 0 }],
   },
   deadlock: {
     base: "epic", label: "Deadlock",
-    border: { colors: ["#12161c", "#28323e", "#4a5a6a", "#8a9aa8", "#12161c"], glow: "#7fa0c0" },
+    border: { colors: ["#0e2a6a", "#2f9fe0", "#ff6a2a", "#e02818", "#0e2a6a"], glow: "#ff7a3a" },  // clashing fire ⇄ ice
     fx: { glint: true, glow: true, sparkle: false },
     elements: [{ img: "deadlock", x: 0.5, y: 0.55, scale: 2.3, showAt: 0 }],
   },
   sweep: {
     base: "epic", label: "Clean Sweep",
-    border: { colors: ["#0c1a12", "#134a2f", "#2e8a54", "#d8c060", "#0c1a12"], glow: "#8fe0a0" },
+    border: { colors: ["#06281a", "#12a05a", "#4fe08a", "#ffe07a", "#06281a"], glow: "#8fe0a0" },  // luminous emerald→gold
     fx: { glint: true, glow: true, sparkle: true },
     elements: [{ img: "broom", x: 0.5, y: 0.55, scale: 2.3, showAt: 0 }],
   },
   "undefeated-duelist": {
     base: "epic", label: "Undefeated",
-    border: { colors: ["#0d1030", "#22285a", "#4a54a0", "#e0c060", "#0d1030"], glow: "#ffcf6a" },
+    border: { colors: ["#0a1250", "#2f4fd0", "#5f8fff", "#ffd24a", "#0a1250"], glow: "#7fa0ff" },  // royal sapphire→gold
     fx: { glint: true, glow: true, sparkle: true },
     elements: [{ img: "shield", x: 0.5, y: 0.55, scale: 2.2, showAt: 0 }],
   },
