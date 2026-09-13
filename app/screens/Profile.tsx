@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Switch, TextInput, Alert } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { neutrals, hues, rarityBase, type Rarity } from "@nmao/design-tokens";
 import { Frame } from "../components/Frame";
 import { HeaderBell } from "../components/HeaderBell";
@@ -107,17 +108,18 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
       <Row icon="📓" label="Journal" onPress={() => setSub("journal")} />
       <Row icon="🥋" label="My Dojo" onPress={() => setSub("dojo")} />
       <Row icon="🔔" label="Notifications" onPress={() => setSub("notifs")} />
-      <Row icon="✦" label="Tournament entry & plans" onPress={() => setSub("store")} />
+      <Row icon="✦" label="Season pass & entries" onPress={() => setSub("store")} />
       <Row icon="🛒" label="Store" onPress={() => setSub("shop")} />
       <Row icon="🖼️" label="Sponsor frames" onPress={() => setSub("sponsorframe")} />
       <Row icon="🏆" label="My prizes" onPress={() => setSub("prizes")} />
       <Row icon="🚫" label="Blocked accounts" onPress={() => setSub("blocked")} />
       <Row icon="📖" label="Rules & Help" onPress={() => setSub("rules")} />
+      <Row icon="🔒" label="Privacy Policy" onPress={() => WebBrowser.openBrowserAsync("https://school.nmao.us/privacy.html")} />
       {/* Frame Lab is an internal design-tuning screen (placeholder art + dev copy) —
           hidden from the production menu. Re-add this Row to tune living-frames.
           The `sub === "framelab"` branch + import are kept so it's one line to restore. */}
       {/* <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} /> */}
-      <Row icon="🏆" label="Tournament & entries" onPress={() => setSub("home")} />
+      <Row icon="🏆" label="In-house tournaments" onPress={() => setSub("home")} />
 
       <TouchableOpacity onPress={() => supabase.auth.signOut()} style={{ marginTop: 18, alignItems: "center" }}>
         <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>

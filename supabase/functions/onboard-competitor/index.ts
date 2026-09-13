@@ -56,7 +56,12 @@ Deno.serve(async (req) => {
     if (!c.first_name?.trim() || !c.last_name?.trim()) return json({ ok: false, error: "Competitor first and last name are required." }, 400);
     if (!isDate(String(c.dob || ""))) return json({ ok: false, error: "A valid date of birth (YYYY-MM-DD) is required." }, 400);
     if (!seasonId) return json({ ok: false, error: "A season choice is required." }, 400);
-    if (consentTypes.length === 0) return json({ ok: false, error: "Guardian consent is required to register." }, 400);
+    // Enforce the FULL required consent set server-side (matches the app's Onboard gate) —
+    // a non-app client must not be able to register a minor with partial consent.
+    const REQUIRED_CONSENTS = ["media_release", "rules", "terms"];
+    if (!REQUIRED_CONSENTS.every((r) => consentTypes.includes(r))) {
+      return json({ ok: false, error: "All guardian consents are required to register." }, 400);
+    }
 
     const { data: season } = await svc.from("seasons").select("id, status").eq("id", seasonId).maybeSingle();
     if (!season) return json({ ok: false, error: "That season no longer exists." }, 400);

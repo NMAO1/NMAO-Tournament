@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, RefreshControl } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
@@ -49,6 +49,7 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
   const [unseenReveal, setUnseenReveal] = useState<MonthlyRevealData | null>(null);
   const [showReveal, setShowReveal] = useState(false);
   const [nowTs, setNowTs] = useState(Date.now()); // ticks the deadline countdown
+  const [refreshing, setRefreshing] = useState(false);
 
   async function refreshCredits(cid: string | null) {
     if (!cid) { setCredits(null); return; }
@@ -59,7 +60,12 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
     if (!cid) { setDash(null); return; }
     setDash(await competeDashboard(cid));
   }
-  useEffect(() => { refreshCredits(competitorId); refreshDash(competitorId); }, [competitorId]);
+  async function reload(cid: string | null) {
+    try { setLoadErr(""); await Promise.all([refreshCredits(cid), refreshDash(cid)]); }
+    catch { setLoadErr("Couldn't load your competition data. Pull down to try again."); }
+  }
+  const onRefresh = async () => { setRefreshing(true); try { await reload(competitorId); } finally { setRefreshing(false); } };
+  useEffect(() => { reload(competitorId); }, [competitorId]);
 
   // Unseen monthly reveal → the "Results Reveal" button (the only launch point).
   useEffect(() => { latestUnseenMonthly().then(setUnseenReveal); }, []);
@@ -245,7 +251,8 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 48 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 48 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={neutrals.muted} />}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
         <Text style={{ color: neutrals.text, fontSize: 26, fontWeight: "700" }}>Compete</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
