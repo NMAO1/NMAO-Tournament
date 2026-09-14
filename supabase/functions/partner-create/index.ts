@@ -61,9 +61,26 @@ Deno.serve(async (req) => {
     }
     if (!created) return json({ ok: false, error: (lastErr && lastErr.message) || "Could not create partner." }, 500);
 
+    // If an email was given (and not explicitly suppressed), bootstrap the auth
+    // account + email a set-password link for the amb.nmao.us portal. Non-fatal:
+    // the ambassador is created either way; the link can be resent from the admin.
+    let setup_emailed = false;
+    if (email && body.send_setup !== false) {
+      try {
+        const r = await fetch(URL_ + "/functions/v1/send-partner-setup-link", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + SERVICE, "Content-Type": "application/json" },
+          body: JSON.stringify({ partner_id: created.id }),
+        });
+        const j = await r.json().catch(() => ({}));
+        setup_emailed = !!(j as any)?.emailed;
+      } catch (_) { /* non-fatal */ }
+    }
+
     return json({
       ok: true,
       partner: created,
+      setup_emailed,
       referral_links: {
         member:     "https://app.nmao.us/?p=" + created.slug,
         tournament: "https://league.nmao.us/?p=" + created.slug,

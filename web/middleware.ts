@@ -20,6 +20,13 @@ export function middleware(req: NextRequest) {
       url.pathname = `/school${pathname === "/" ? "" : pathname}`;
       return NextResponse.rewrite(url);
     }
+  } else if (host.startsWith("amb.")) {
+    // Ambassador portal — same shape as school: everything maps under /partner.
+    if (!pathname.startsWith("/partner")) {
+      const url = req.nextUrl.clone();
+      url.pathname = `/partner${pathname === "/" ? "" : pathname}`;
+      return NextResponse.rewrite(url);
+    }
   } else if (host.startsWith("judge.")) {
     // The judge routes (/judge, /login, /apply, /judge/score/[id]) are already at
     // the root; only the bare landing needs to map to the app.
