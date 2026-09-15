@@ -89,7 +89,7 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
         {kind === "open" ? <Open message={str(payload, "message")} badges={badges} /> : null}
         {kind === "medals" ? <Medals medals={medals} /> : null}
         {kind === "badges" ? <Badges badges={badges} /> : null}
-        {kind === "summary" ? <Summary backers={num(payload, "backers")} rating={num(payload, "rating")} gain={num(payload, "rating_gain")} schools={num(payload, "schools_faced")} /> : null}
+        {kind === "summary" ? <Summary payload={payload} /> : null}
         {kind === "close" ? <Close onDone={done} /> : null}
       </ScrollView>
       <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 34 }}>
@@ -321,24 +321,87 @@ function Badges({ badges }: { badges: any[] }) {
   );
 }
 
-function Summary({ backers, rating, gain, schools }: { backers: number | null; rating: number | null; gain: number | null; schools: number | null }) {
+// A number that eases up from 0 to `to`, starting after `delay`. Drives a
+// listener (useNativeDriver:false — the value is read on the JS side to render
+// text), so the count-up ticks up on screen the way the web scorecard does.
+function Count({ to, dur = 900, delay = 0, suffix = "", style }: { to: number; dur?: number; delay?: number; suffix?: string; style?: any }) {
+  const v = useRef(new Animated.Value(0)).current;
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const id = v.addListener(({ value }) => setN(Math.round(value)));
+    const t = setTimeout(() => {
+      Animated.timing(v, { toValue: to, duration: dur, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    }, delay);
+    return () => { v.removeListener(id); clearTimeout(t); };
+  }, [to]);
+  return <Text style={style}>{n}{suffix}</Text>;
+}
+
+// One stat tile — rises + fades in on its stagger, then counts up in its accent.
+function StatTile({ value, label, accent, delay }: { value: number; label: string; accent: string; delay: number }) {
+  const a = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const t = setTimeout(() => Animated.timing(a, { toValue: 1, duration: 440, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(), delay);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <Animated.View style={{ opacity: a, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+      width: 96, alignItems: "center", borderWidth: 1, borderColor: accent + "44", borderRadius: 12, backgroundColor: accent + "0F", paddingVertical: 13, paddingHorizontal: 10, margin: 6 }}>
+      <Count to={value} delay={delay} style={{ color: accent, fontSize: 22, fontWeight: "900" }} />
+      <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 0.6, textTransform: "uppercase", marginTop: 5, textAlign: "center" }}>{label}</Text>
+    </Animated.View>
+  );
+}
+
+function Summary({ payload }: { payload: Payload }) {
+  const rating = num(payload, "rating");
+  const gain = num(payload, "rating_gain");
+  // candidate tiles in priority order — show only the ones that carry signal
+  const candidates: { value: number | null; label: string }[] = [
+    { value: num(payload, "duels_won"), label: "Duels won" },
+    { value: num(payload, "best_streak"), label: "Best streak" },
+    { value: num(payload, "medals_earned"), label: "Medals" },
+    { value: num(payload, "badges_earned"), label: "Badges" },
+    { value: num(payload, "backers"), label: "Backed you" },
+    { value: num(payload, "schools_faced"), label: "Schools faced" },
+    { value: num(payload, "landslide_wins"), label: "Landslides" },
+    { value: num(payload, "helped_decide"), label: "Helped decide" },
+  ];
+  const tiles = candidates.filter((c) => c.value != null && c.value > 0).slice(0, 6);
+  const accents = [hues.sapphire.hi, hues.ruby.hi, hues.amethyst.hi, hues.gold.hi, hues.emerald?.hi ?? hues.sapphire.hi, hues.gold.hi];
   return (
     <View style={{ alignItems: "center" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 18 }}>Your season, so far</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center" }}>
-        {backers != null ? <Stat v={String(backers)} l="Backed you" /> : null}
-        {rating != null ? <Stat v={`${rating}${gain ? " ▲" : ""}`} l="Rating" /> : null}
-        {schools != null ? <Stat v={String(schools)} l="Schools faced" /> : null}
+      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 16 }}>Your season, so far</Text>
+
+      {rating != null ? (
+        <View style={{ alignItems: "center", marginBottom: 18 }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+            <Count to={rating} dur={1200} delay={300} style={{ color: hues.gold.hi, fontFamily: "Georgia", fontSize: 58, fontWeight: "900", lineHeight: 60, textShadowColor: "rgba(230,185,63,0.4)", textShadowRadius: 18 }} />
+            {gain && gain > 0 ? <GainChip gain={gain} /> : null}
+          </View>
+          <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>Duel Rating</Text>
+        </View>
+      ) : null}
+
+      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", maxWidth: 330 }}>
+        {tiles.map((t, i) => <StatTile key={t.label} value={t.value as number} label={t.label} accent={accents[i % accents.length]} delay={700 + i * 190} />)}
       </View>
     </View>
   );
 }
-function Stat({ v, l }: { v: string; l: string }) {
+
+// The ▲ +N chip that rides beside the hero rating — appears after the count-up.
+function GainChip({ gain }: { gain: number }) {
+  const a = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const t = setTimeout(() => Animated.spring(a, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }).start(), 1500);
+    return () => clearTimeout(t);
+  }, []);
   return (
-    <View style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.03)", paddingVertical: 12, paddingHorizontal: 16, margin: 6, minWidth: 84, alignItems: "center" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 20, fontWeight: "800" }}>{v}</Text>
-      <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 0.5, textTransform: "uppercase", marginTop: 4 }}>{l}</Text>
-    </View>
+    <Animated.View style={{ opacity: a, transform: [{ scale: a.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }],
+      marginLeft: 8, marginTop: 6, borderRadius: 99, backgroundColor: (hues.emerald?.hi ?? "#3FB37F") + "22", borderWidth: 1, borderColor: (hues.emerald?.hi ?? "#3FB37F") + "66", paddingHorizontal: 9, paddingVertical: 4 }}>
+      <Text style={{ color: hues.emerald?.hi ?? "#3FB37F", fontSize: 12, fontWeight: "800" }}>▲ +{gain}</Text>
+    </Animated.View>
   );
 }
 
