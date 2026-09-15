@@ -1,8 +1,11 @@
-import { useEffect, useState, useRef, forwardRef, useImperativeHandle, useCallback } from "react";
+import { useEffect, useState, useRef, useMemo, forwardRef, useImperativeHandle, useCallback } from "react";
 import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing } from "react-native";
 import { Canvas, Circle } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
-import { neutrals, hues, type Rarity, type MedalType } from "@nmao/design-tokens";
+import { neutrals, hues, rarityBase, type Rarity, type MedalType } from "@nmao/design-tokens";
+
+// rarity ranking — the rarest earned badge crowns the invocation title
+const RRANK: Record<string, number> = { legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
 import { Coin } from "../components/Coin";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
@@ -81,7 +84,7 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
         {steps.map((_, i) => <View key={i} style={{ flex: 1, height: 3, borderRadius: 3, marginHorizontal: 2, backgroundColor: i <= step ? hues.gold.base : "rgba(255,255,255,0.15)" }} />)}
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 22, paddingVertical: 20 }}>
-        {kind === "open" ? <Open message={str(payload, "message")} /> : null}
+        {kind === "open" ? <Open message={str(payload, "message")} badges={badges} /> : null}
         {kind === "medals" ? <Medals medals={medals} /> : null}
         {kind === "badges" ? <Badges badges={badges} /> : null}
         {kind === "summary" ? <Summary backers={num(payload, "backers")} rating={num(payload, "rating")} gain={num(payload, "rating_gain")} schools={num(payload, "schools_faced")} /> : null}
@@ -100,15 +103,41 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
   );
 }
 
-function Open({ message }: { message: string | null }) {
+// The Invocation — the ceremonial open: NMAO mark, the competitor's earned
+// honorific (from their rarest badge), and a saying, revealed in a staggered
+// gilded sequence. (RN Animated; a single `intro` value drives all beats.)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function Open({ message, badges }: { message: string | null; badges: any[] }) {
   const season = useSeasonLabel();
+  const intro = useRef(new Animated.Value(0)).current;
+  const rarest = useMemo(() => badges.slice().sort((a, b) => (RRANK[String(b?.rarity)] || 0) - (RRANK[String(a?.rarity)] || 0))[0], [badges]);
+  useEffect(() => {
+    intro.setValue(0);
+    Animated.timing(intro, { toValue: 1, duration: 1900, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    const h = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } }, 950);
+    return () => clearTimeout(h);
+  }, [intro]);
+  const fade = (a: number, b: number) => intro.interpolate({ inputRange: [a, b], outputRange: [0, 1], extrapolate: "clamp" });
+  const grow = (a: number, b: number, from: number) => intro.interpolate({ inputRange: [a, b], outputRange: [from, 1], extrapolate: "clamp" });
+  const rise = (a: number, b: number, d: number) => intro.interpolate({ inputRange: [a, b], outputRange: [d, 0], extrapolate: "clamp" });
+  const honor = rarest ? String(rarest.name || "") : null;
+  const rCol = rarest ? rarityBase(asRarity(rarest.rarity)) : hues.gold.base;
   return (
     <View style={{ alignItems: "center" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 22, fontWeight: "700", textAlign: "center", lineHeight: 27 }}>National Martial Arts Organization</Text>
-      <Text style={{ color: hues.gold.base, fontSize: 13, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 6 }}>Tournament of Champions</Text>
-      {season ? <Text style={{ color: hues.gold.hi, fontSize: 17, fontStyle: "italic", marginTop: 8, marginBottom: 20 }}>{season}</Text> : <View style={{ height: 20 }} />}
-      <Coin size={104} />
-      <Text style={{ color: hues.gold.hi, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 22, maxWidth: 280, lineHeight: 20 }}>&ldquo;{message ?? "A month worth framing. Here’s what you earned."}&rdquo;</Text>
+      <Animated.Text style={{ opacity: fade(0, 0.15), color: hues.gold.base, fontSize: 12, fontWeight: "800", letterSpacing: 3, textTransform: "uppercase", textAlign: "center" }}>National Martial Arts Organization</Animated.Text>
+      {season ? <Animated.Text style={{ opacity: fade(0.05, 0.22), color: hues.gold.hi, fontSize: 14, fontStyle: "italic", marginTop: 6 }}>{season} · Tournament of Champions</Animated.Text> : null}
+      <Animated.View style={{ opacity: fade(0.12, 0.4), transform: [{ scale: grow(0.12, 0.4, 0.7) }], marginTop: 22, marginBottom: 6 }}>
+        <Coin size={116} />
+      </Animated.View>
+      {honor ? (
+        <>
+          <Animated.Text style={{ opacity: fade(0.36, 0.7), transform: [{ translateY: rise(0.36, 0.7, 18) }, { scale: grow(0.36, 0.72, 0.86) }], color: hues.gold.hi, fontFamily: "Georgia", fontSize: 30, fontWeight: "700", textAlign: "center", marginTop: 16, textShadowColor: "rgba(230,185,63,0.55)", textShadowRadius: 16, maxWidth: 320, lineHeight: 36 }}>&ldquo;{honor}&rdquo;</Animated.Text>
+          <Animated.Text style={{ opacity: fade(0.6, 0.82), color: rCol, fontSize: 12, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase", marginTop: 8 }}>{String(rarest.rarity)} badge earned</Animated.Text>
+        </>
+      ) : (
+        <Animated.Text style={{ opacity: fade(0.36, 0.7), transform: [{ scale: grow(0.36, 0.72, 0.86) }], color: hues.gold.hi, fontFamily: "Georgia", fontSize: 26, fontWeight: "700", textAlign: "center", marginTop: 16 }}>A month worth framing</Animated.Text>
+      )}
+      <Animated.Text style={{ opacity: fade(0.76, 1), transform: [{ translateY: rise(0.76, 1, 10) }], color: hues.gold.hi, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 22, maxWidth: 300, lineHeight: 20 }}>&ldquo;{message ?? "The season is yours to shape. Onward."}&rdquo;</Animated.Text>
     </View>
   );
 }
@@ -171,7 +200,7 @@ function Medals({ medals }: { medals: any[] }) {
   useEffect(() => {
     setShown(Array(8).fill(null)); setDone(false);
     flash.setValue(0); land.setValue(0);
-    try { play("riser"); } catch { /* optional */ } // tension build as the assembly begins
+    try { play("mriser"); } catch { /* optional */ } // tension build as the assembly begins
     let i = 0;
     const id = setInterval(() => {
       i++;
@@ -190,13 +219,13 @@ function Medals({ medals }: { medals: any[] }) {
           { count: 20, spd: MED * 0.34, r: 3, color: sparkColor(target[idx]!), life: 720 });
       }
       try { Haptics.impactAsync(i >= filled ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
-      try { play("soft"); } catch { /* optional */ } // a soft tick on each seat, on the beat
+      try { play("clink"); } catch { /* optional */ } // a soft tick on each seat, on the beat
       if (i >= filled || i >= 8) {
         clearInterval(id);
         setTimeout(() => {
           setDone(true);
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch { /* optional */ }
-          try { play("win"); } catch { /* optional */ } // triumphant hit as the medallion completes
+          try { play("clang"); } catch { /* optional */ } // triumphant hit as the medallion completes
           bursts.current?.fire(MED / 2, MED / 2, { count: 54, spd: MED * 0.62, r: 4, color: "#FFE9B0", life: 1150 });
           Animated.timing(land, { toValue: 1, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
         }, 300);

@@ -10,6 +10,10 @@ const FILES = {
   reveal: require("../assets/sounds/reveal.wav"),
   win: require("../assets/sounds/win.wav"),
   soft: require("../assets/sounds/soft.wav"),
+  // metallic set for the medallion assembly (swap these .wav files to restyle)
+  clink: require("../assets/sounds/clink.wav"),   // per-segment seat
+  clang: require("../assets/sounds/clang.wav"),   // finale
+  mriser: require("../assets/sounds/mriser.wav"), // assembly build
 };
 type Key = keyof typeof FILES;
 
