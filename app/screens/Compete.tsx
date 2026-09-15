@@ -421,6 +421,13 @@ function RoundBanner({ round, nowTs }: { round: CompeteRound; nowTs: number }) {
           {open ? "⏳ " : ""}{main}
         </Text>
         <Text style={{ color: neutrals.muted, fontSize: 13, marginTop: 4 }}>{sub}</Text>
+        {round.submissionsOpen && round.submissionPassword ? (
+          <View style={{ marginTop: 12, borderRadius: 10, borderWidth: 1, borderColor: hues.gold.base, backgroundColor: "rgba(230,185,63,0.08)", padding: 10 }}>
+            <Text style={{ color: neutrals.muted, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", fontWeight: "700" }}>Say on camera before you begin</Text>
+            <Text style={{ color: hues.gold.hi, fontSize: 20, fontWeight: "800", marginTop: 3, letterSpacing: 1 }}>{round.submissionPassword}</Text>
+            <Text style={{ color: neutrals.muted, fontSize: 11.5, marginTop: 3 }}>Unedited, one take. Wrong or missing password = disqualified.</Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );

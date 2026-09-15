@@ -12,7 +12,7 @@ export type CompeteEvent = {
 export type CompeteRound = {
   seq: number; seasonName: string | null; state: string;
   opensAt: string | null; closesAt: string | null; judgingDeadline: string | null;
-  submissionsOpen: boolean;
+  submissionsOpen: boolean; submissionPassword: string | null;
 };
 export type CompeteRating = {
   skill: number | null; skillProvisional: boolean;
@@ -31,6 +31,7 @@ export async function competeDashboard(competitorId: string): Promise<CompeteDas
       seq: d.round.seq, seasonName: d.round.season_name ?? null, state: d.round.state,
       opensAt: d.round.opens_at ?? null, closesAt: d.round.closes_at ?? null,
       judgingDeadline: d.round.judging_deadline ?? null, submissionsOpen: !!d.round.submissions_open,
+      submissionPassword: d.round.submission_password ?? null,
     } : null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     events: ((d.events ?? []) as any[]).map((e) => ({

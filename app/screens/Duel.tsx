@@ -7,7 +7,7 @@ import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { uploadDuelVideo } from "../lib/upload";
 import {
-  weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo, myDuelStanding, myDuelResults,
+  weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo, myDuelStanding, myDuelResults, currentDuelPassword,
   type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent, type DuelStanding, type DuelResult,
 } from "../lib/duel";
 import Arena from "./Arena";
@@ -37,6 +37,7 @@ export default function Duel() {
   const [challenging, setChallenging] = useState(false);
   const [events, setEvents] = useState<DuelEvent[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [duelPw, setDuelPw] = useState<string | null>(null);
 
   const load = useCallback(async (id: string) => {
     const [w, a, q, st, res] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, ""), myDuelStanding(id), myDuelResults(id)]);
@@ -51,6 +52,8 @@ export default function Duel() {
     const t = setInterval(() => setNowTs(Date.now()), 1000);
     return () => clearInterval(t);
   }, [showNextSlot]);
+
+  useEffect(() => { currentDuelPassword().then(setDuelPw); }, []);
 
   const { activeId } = useActiveCompetitor();
   useEffect(() => {
@@ -145,6 +148,14 @@ export default function Duel() {
               <View key={i} style={{ width: 6, height: 6, borderRadius: 3, marginLeft: 4, backgroundColor: i < week.remaining ? hues.gold.base : neutrals.border }} />
             ))}
           </View>
+        </View>
+      ) : null}
+
+      {duelPw ? (
+        <View style={{ borderRadius: 10, borderWidth: 1, borderColor: hues.gold.base, backgroundColor: "rgba(230,185,63,0.08)", padding: 10, marginBottom: 8 }}>
+          <Text style={{ color: neutrals.muted, fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: "700" }}>This week's duel password — say it on camera</Text>
+          <Text style={{ color: hues.gold.hi, fontSize: 19, fontWeight: "800", marginTop: 3, letterSpacing: 1 }}>{duelPw}</Text>
+          <Text style={{ color: neutrals.muted, fontSize: 11, marginTop: 3 }}>Unedited, one take. Wrong or missing password can be reported and disqualified.</Text>
         </View>
       ) : null}
 

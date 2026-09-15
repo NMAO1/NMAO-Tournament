@@ -85,6 +85,14 @@ Deno.serve(async (req) => {
       scores,
     });
 
+    // Password check (flag-for-review, not auto-void): record whether the judge
+    // confirmed the competitor said the round's password on camera.
+    if (typeof body.password_verified === "boolean") {
+      await svc.from("judge_assignments")
+        .update({ password_verified: body.password_verified })
+        .eq("id", (ja as any).id);
+    }
+
     return json({ ok: true, score: weighted }, 200);
   } catch (e: any) {
     console.error("submit-judge-scores error:", e);

@@ -281,7 +281,7 @@ const RULES: { title: string; items: RuleItem[] }[] = [
   {
     title: "Dueling",
     items: [
-      { text: "Same monthly password on your unedited form." },
+      { text: "Say the weekly duel password on camera before your form — one take, unedited." },
       { text: "Watch both forms for 15s before you can vote." },
       { text: "The tally stays hidden until a duel closes." },
       { text: "4 duels per week; opponents match your rank & age." },
@@ -314,7 +314,7 @@ const RULES: { title: string; items: RuleItem[] }[] = [
   {
     title: "Video submission",
     items: [
-      { label: "Location", text: "Film submissions from the same school in a consistent location." },
+      { label: "Location", text: "Film at your school in a consistent spot. Your instructor doesn't have to record — a friend, training partner, parent, or a tripod is fine." },
       { label: "Two angles", text: "Record front and side — two devices, or film the form twice (once front, once side)." },
       { label: "Stability", text: "Keep the camera steady on a tripod or stable surface." },
       { label: "Unedited", text: "Footage must be unedited start to finish — no cuts." },
@@ -324,7 +324,8 @@ const RULES: { title: string; items: RuleItem[] }[] = [
       { label: "Performance area", text: "Clear of obstacles; no posters, text, branding or images." },
       { label: "Full body", text: "Keep your entire body in frame throughout the form." },
       { label: "Format", text: "Follow the specified file type, resolution and size." },
-      { label: "Display info", text: "Before your form, show your name, date, event category and the tournament password on screen." },
+      { label: "Display info", text: "Before your form, say and show your name, date, event category and the tournament password on screen." },
+      { label: "Disqualified", text: "If you do not state the correct password, or the video has any edits or cuts, your submission is disqualified." },
     ],
   },
   {

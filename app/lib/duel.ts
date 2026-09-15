@@ -17,6 +17,12 @@ function asRarity(r: string | null): Rarity {
 
 // ---- weekly duel allowance (duel_week_status) ----
 export type WeekStatus = { used: number; limit: number; remaining: number; nextSlotAt: string | null };
+export async function currentDuelPassword(): Promise<string | null> {
+  const { data, error } = await supabase.rpc("current_duel_password");
+  if (error) return null;
+  return (data as string) ?? null;
+}
+
 export async function weekStatus(competitorId: string): Promise<WeekStatus> {
   const { data, error } = await supabase.rpc("duel_week_status", { p_competitor_id: competitorId });
   if (error || !data?.[0]) return { used: 0, limit: 4, remaining: 4, nextSlotAt: null };

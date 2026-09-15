@@ -186,6 +186,7 @@ export default function Arena({ duelId, voterId, closesVoteAt, onClose }: { duel
     const reasons: { label: string; code: string }[] = [
       { label: "Inappropriate or unsafe", code: "inappropriate" },
       { label: "Not a martial arts entry", code: "not_martial_arts" },
+      { label: "Wrong or missing password", code: "wrong_password" },
       { label: "Bullying or harassment", code: "harassment" },
     ];
     Alert.alert("Why are you reporting?", undefined, [

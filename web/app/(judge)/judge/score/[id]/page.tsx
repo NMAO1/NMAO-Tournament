@@ -4,7 +4,8 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
 
-type Entry = { event: string; age_bracket: string; declared_rank: string; video_url: string | null; video_url_2: string | null };
+type RoundPw = { submission_password: string | null };
+type Entry = { event: string; age_bracket: string; declared_rank: string; video_url: string | null; video_url_2: string | null; rounds: RoundPw | RoundPw[] | null };
 type Assignment = { id: string; entry_id: string; state: string; score: number | null; entry: Entry | null };
 type Criterion = { code: string; name: string; description: string; sort_order: number; weight_pct: number };
 type Style = "traditional" | "open";
@@ -16,6 +17,7 @@ const SHORT: Record<string, string> = {
   timing: "Timing", spirit: "Spirit", difficulty: "Difficulty",
 };
 const entryOf = (a: { entry: Entry | Entry[] | null }): Entry | null => (Array.isArray(a.entry) ? a.entry[0] : a.entry) ?? null;
+const roundPwOf = (e: Entry | null): string | null => { const r = e?.rounds; const o = Array.isArray(r) ? r[0] : r; return o?.submission_password ?? null; };
 
 // Mirrors _shared/rating.ts weightedJudgeScore — live preview only; the EF is authoritative.
 function weighted(vals: Record<string, number>, crit: Criterion[]): number {
@@ -43,6 +45,7 @@ export default function ScoreCarousel() {
   const [dir, setDir] = useState<"next" | "prev">("next");
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string>(""); // entry_id just submitted (for the ✓ pulse)
+  const [pwVer, setPwVer] = useState<Record<string, boolean>>({}); // entry_id -> judge confirmed password said (default true)
   const [playback, setPlayback] = useState<Record<string, { a1: string | null; a2: string | null }>>({}); // entry_id -> signed URLs
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -57,7 +60,7 @@ export default function ScoreCarousel() {
 
     const [{ data: asn, error: aerr }, { data: crit }, { data: wTrad }, { data: wOpen }, { data: priors }] = await Promise.all([
       supabase.from("judge_assignments")
-        .select("id, entry_id, state, score, entries(event, age_bracket, declared_rank, video_url, video_url_2)")
+        .select("id, entry_id, state, score, entries(event, age_bracket, declared_rank, video_url, video_url_2, rounds(submission_password))")
         .eq("judge_id", judgeId).order("state", { ascending: true }),
       supabase.from("criteria").select("code, name, description, sort_order"),
       supabase.from("rubric_weights").select("criterion_code, weight_pct").eq("style", "traditional"),
@@ -164,7 +167,7 @@ export default function ScoreCarousel() {
       const res = await fetch(`${base}/functions/v1/submit-judge-scores`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: anon!, Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ entry_id: cur.entry_id, scores: criteria.map((c) => ({ criterion_code: c.code, raw_score: vals[c.code] })) }),
+        body: JSON.stringify({ entry_id: cur.entry_id, scores: criteria.map((c) => ({ criterion_code: c.code, raw_score: vals[c.code] })), password_verified: (pwVer[cur.entry_id] ?? true) }),
       });
       const j = await res.json();
       if (!res.ok || !j.ok) { setErr(j.error || "Submission failed."); setSaving(false); return; }
@@ -251,6 +254,24 @@ export default function ScoreCarousel() {
               <p style={{ fontSize: 12, color: neutrals.muted2, margin: "0 0 12px" }}>
                 Enter 0–100 per criterion. <strong style={{ color: neutrals.muted }}>Tab/Enter</strong> moves to the next field; <strong style={{ color: neutrals.muted }}>← →</strong> flips competitors.
               </p>
+
+              {(() => {
+                const rpw = roundPwOf(curEntry); const v = pwVer[cur.entry_id] ?? true;
+                return (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, background: neutrals.surface, border: `1px solid ${v ? neutrals.border : status.danger}`, borderRadius: 11, padding: "10px 12px", marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: neutrals.muted2, fontWeight: 700 }}>Round password — competitor must say it on camera</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: hues.gold.hi, letterSpacing: 0.5 }}>{rpw ?? "—"}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                      <button type="button" onClick={() => setPwVer((m) => ({ ...m, [cur.entry_id]: true }))}
+                        style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "7px 11px", border: `1px solid ${v ? status.success : neutrals.border}`, background: v ? "rgba(63,122,82,0.18)" : "transparent", color: v ? status.success : neutrals.muted }}>✓ Said it</button>
+                      <button type="button" onClick={() => setPwVer((m) => ({ ...m, [cur.entry_id]: false }))}
+                        style={{ cursor: "pointer", fontSize: 12, fontWeight: 700, borderRadius: 8, padding: "7px 11px", border: `1px solid ${!v ? status.danger : neutrals.border}`, background: !v ? "rgba(200,60,60,0.15)" : "transparent", color: !v ? status.danger : neutrals.muted }}>✗ Missing / wrong</button>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 8 }}>
                 {criteria.map((c, i) => {
