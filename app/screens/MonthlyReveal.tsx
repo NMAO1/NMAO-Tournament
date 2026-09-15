@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, forwardRef, useImperativeHandle, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image } from "react-native";
 import { Canvas, Circle } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, rarityBase, type Rarity, type MedalType } from "@nmao/design-tokens";
@@ -14,6 +14,8 @@ import { markMonthlySeen } from "../lib/notifications";
 import { useSeasonLabel } from "../lib/season";
 import { startMusic, stopMusic, fadeOutMusic, initSounds, play } from "../lib/sound";
 import { revealTrackUrl } from "../lib/revealMusic";
+import { emblemUrl } from "../lib/vault";
+import { supabase } from "../lib/supabase";
 
 // The monthly badge + tournament-medal reveal — the collectibles ceremony.
 // Stepped: NMAO coin + regal title → medals → badges → season summary → journal.
@@ -267,25 +269,54 @@ function Medals({ medals }: { medals: any[] }) {
   );
 }
 
+// Phase B — badges flip in one by one (3D rotateY) with their real emblem art,
+// each with a clink + haptic. Emblem keys aren't in the payload, so we look them
+// up by code (graceful ◆ fallback if art is missing).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Badges({ badges }: { badges: any[] }) {
+  const [emblems, setEmblems] = useState<Record<string, string | null>>({});
+  const flips = useMemo(() => badges.map(() => new Animated.Value(0)), [badges.length]);
+  useEffect(() => {
+    const codes = badges.map((b) => b?.code).filter(Boolean);
+    if (codes.length) {
+      supabase.from("badges").select("code, emblem_key").in("code", codes).then(({ data }) => {
+        const m: Record<string, string | null> = {};
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ((data as any[] | null) ?? []).forEach((r) => { m[r.code] = r.emblem_key ?? null; });
+        setEmblems(m);
+      });
+    }
+    const timers = badges.map((_, i) => setTimeout(() => {
+      Animated.timing(flips[i], { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+      try { play("clink"); } catch { /* optional */ }
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
+    }, 260 + i * 430));
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [badges.length]);
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
       <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 18 }}>✦ {badges.length} new badge{badges.length === 1 ? "" : "s"} ✦</Text>
-      {badges.map((b, i) => (
-        <View key={i} style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, width: "100%", maxWidth: 320 }}>
-          <Frame rarity={asRarity(b.rarity)} size="mini" radius={26}>
-            <View style={{ width: 46, height: 46, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
-              <Text style={{ color: "#EFC24E", fontSize: 18 }}>◆</Text>
+      {badges.map((b, i) => {
+        const url = emblemUrl(emblems[String(b?.code)] ?? null);
+        const f = flips[i] ?? new Animated.Value(1);
+        return (
+          <Animated.View key={i} style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, width: "100%", maxWidth: 320,
+            opacity: f.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] }),
+            transform: [{ perspective: 800 }, { rotateY: f.interpolate({ inputRange: [0, 1], outputRange: ["100deg", "0deg"] }) }, { scale: f.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }}>
+            <Frame rarity={asRarity(b.rarity)} size="mini" radius={26}>
+              <View style={{ width: 46, height: 46, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
+                {url ? <Image source={{ uri: url }} style={{ width: 44, height: 44 }} resizeMode="contain" /> : <Text style={{ color: "#EFC24E", fontSize: 18 }}>◆</Text>}
+              </View>
+            </Frame>
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }}>{String(b.name ?? "")}</Text>
+              <Text style={{ color: rarityBase(asRarity(b.rarity)), fontSize: 8, letterSpacing: 1, textTransform: "uppercase" }}>{String(b.rarity ?? "")}</Text>
+              <Text style={{ color: neutrals.muted, fontSize: 11, marginTop: 3, lineHeight: 15 }}>{earnText(b)}</Text>
             </View>
-          </Frame>
-          <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }}>{String(b.name ?? "")}</Text>
-            <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 1, textTransform: "uppercase" }}>{String(b.rarity ?? "")}</Text>
-            <Text style={{ color: neutrals.muted, fontSize: 11, marginTop: 3, lineHeight: 15 }}>{earnText(b)}</Text>
-          </View>
-        </View>
-      ))}
+          </Animated.View>
+        );
+      })}
     </View>
   );
 }
