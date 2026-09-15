@@ -51,22 +51,26 @@ export async function play(key: Key): Promise<void> {
 // the ceremony just runs silent.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let musicPlayer: any = null;
+let musicGen = 0; // guards the async start: a stop or newer start supersedes an in-flight one
 function stopMusicSync(): void {
   try { if (musicPlayer) { musicPlayer.remove(); musicPlayer = null; } } catch { /* silent */ }
 }
 export async function startMusic(url: string | null, volume = 0.7): Promise<void> {
   if (!ExpoAudio || !url) return;
+  const gen = ++musicGen;
   try {
     await ExpoAudio.setAudioModeAsync({ playsInSilentMode: true });
+    if (gen !== musicGen) return;             // stopped/superseded while awaiting the audio mode
     stopMusicSync();
     const p = ExpoAudio.createAudioPlayer({ uri: url });
     p.loop = true;
     p.volume = volume;
     musicPlayer = p;
+    if (gen !== musicGen) { stopMusicSync(); return; } // stopped after the player was created
     p.play();
   } catch { /* silent */ }
 }
-export async function stopMusic(): Promise<void> { stopMusicSync(); }
+export async function stopMusic(): Promise<void> { musicGen++; stopMusicSync(); }
 
 export async function unloadSounds(): Promise<void> {
   if (!ExpoAudio) return;

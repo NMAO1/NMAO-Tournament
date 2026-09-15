@@ -7,7 +7,7 @@ import { neutrals, hues } from "@nmao/design-tokens";
 import { supabase } from "./lib/supabase";
 import { myCompetitors } from "./lib/competitors";
 import { useActiveCompetitor } from "./lib/activeCompetitor";
-import { unreadCount, subscribeNotifications, latestUnseenMonthly, markMonthlySeen, type Notif } from "./lib/notifications";
+import { unreadCount, subscribeNotifications, latestMonthly, markMonthlySeen, type Notif } from "./lib/notifications";
 import Login from "./screens/Login";
 import Signup from "./screens/Signup";
 import Onboard from "./screens/Onboard";
@@ -67,7 +67,7 @@ function MainTabs() {
     const duelId = typeof n.data?.duel_id === "string" ? (n.data.duel_id as string) : null;
     if (n.type === "reveal_ready") {
       // Open the ceremony straight from the notification; fall back to the Compete tab if nothing's unseen.
-      latestUnseenMonthly().then((r) => { if (r) setReveal({ kind: "monthly", period: r.period, payload: r.payload }); else setTab("compete"); });
+      latestMonthly().then((r) => { if (r) setReveal({ kind: "monthly", period: r.period, payload: r.payload }); else setTab("compete"); });
       return;
     }
     if (duelId && n.type === "duel_result") { setReveal({ kind: "duel", duelId }); return; }

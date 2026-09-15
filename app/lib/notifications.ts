@@ -82,6 +82,21 @@ export async function latestUnseenMonthly(): Promise<MonthlyReveal | null> {
   return { period: r.period, payload: r.payload };
 }
 
+// Latest reveal regardless of seen — for re-opening from its notification (the
+// notification persists after the reveal is marked seen; the Compete button uses
+// latestUnseenMonthly for the "new" state instead).
+export async function latestMonthly(): Promise<MonthlyReveal | null> {
+  const { data } = await supabase
+    .from("monthly_reveals")
+    .select("period, payload")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const r = data as { period: string; payload: Record<string, unknown> };
+  return { period: r.period, payload: r.payload };
+}
+
 export async function markMonthlySeen(period: string): Promise<void> {
   await supabase.rpc("mark_monthly_reveal_seen", { p_period: period });
 }
