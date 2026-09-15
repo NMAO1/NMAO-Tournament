@@ -10,10 +10,11 @@ const FILES = {
   reveal: require("../assets/sounds/reveal.wav"),
   win: require("../assets/sounds/win.wav"),
   soft: require("../assets/sounds/soft.wav"),
-  // metallic set for the medallion assembly (swap these .wav files to restyle)
-  clink: require("../assets/sounds/clink.wav"),   // per-segment seat
-  clang: require("../assets/sounds/clang.wav"),   // finale
-  mriser: require("../assets/sounds/mriser.wav"), // assembly build
+  // reveal SFX set (Brad's recordings, trimmed to one-shots — swap the .wav to restyle)
+  clink: require("../assets/sounds/clink.wav"),   // medallion inset — per-segment seat
+  clang: require("../assets/sounds/clang.wav"),   // medal impact — finale
+  mriser: require("../assets/sounds/mriser.wav"), // medallion aura — assembly build
+  badge: require("../assets/sounds/badge.wav"),   // badge flip
 };
 type Key = keyof typeof FILES;
 

@@ -289,7 +289,7 @@ function Badges({ badges }: { badges: any[] }) {
     }
     const timers = badges.map((_, i) => setTimeout(() => {
       Animated.timing(flips[i], { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-      try { play("clink"); } catch { /* optional */ }
+      try { play("badge"); } catch { /* optional */ }
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
     }, 260 + i * 430));
     return () => timers.forEach(clearTimeout);
