@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, type Rarity, type MedalType } from "@nmao/design-tokens";
@@ -33,6 +33,8 @@ function earnText(b: any): string {
 
 export default function MonthlyReveal({ period, payload, onClose }: { period: string; payload: Payload; onClose: () => void }) {
   const [step, setStep] = useState(0);
+  const [auto, setAuto] = useState(true); // phase C: the ceremony plays itself
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } }, [step]);
   // Score: stream this round's soundtrack under the ceremony; stop on exit.
   useEffect(() => { startMusic(revealTrackUrl(period), 0.7); return () => { stopMusic(); }; }, [period]);
@@ -41,6 +43,24 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
   const badges = arr(payload, "badges");
   const steps: string[] = ["open", ...(medals.length ? ["medals"] : []), ...(badges.length ? ["badges"] : []), "summary", "close"];
   const kind = steps[step];
+  const last = steps.length - 1;
+
+  // How long each act holds before the film advances (phase C: proportional-ish;
+  // badges scale with count). The close act is the final CTA — it never auto-advances.
+  function durMs(k: string): number {
+    if (k === "open") return 5600;
+    if (k === "medals") return 9500;
+    if (k === "badges") return Math.max(6500, badges.length * 2800);
+    if (k === "summary") return 6500;
+    return 0;
+  }
+  // Auto-advance timeline; pausing (setAuto false) or a manual skip re-drives it.
+  useEffect(() => {
+    if (timer.current) clearTimeout(timer.current);
+    if (auto && step < last) timer.current = setTimeout(() => setStep((s) => Math.min(s + 1, last)), durMs(kind));
+    return () => { if (timer.current) clearTimeout(timer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, auto, kind, last]);
 
   function done() { stopMusic(); markMonthlySeen(period); onClose(); }
 
@@ -56,10 +76,14 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
         {kind === "summary" ? <Summary backers={num(payload, "backers")} rating={num(payload, "rating")} gain={num(payload, "rating_gain")} schools={num(payload, "schools_faced")} /> : null}
         {kind === "close" ? <Close onDone={done} /> : null}
       </ScrollView>
-      <View style={{ flexDirection: "row", justifyContent: "center", paddingBottom: 34 }}>
-        {step > 0 ? <Ghost label="‹ Back" onPress={() => setStep((s) => s - 1)} /> : <View style={{ width: 104 }} />}
-        <View style={{ width: 12 }} />
-        {step < steps.length - 1 ? <Gold label="Next ›" onPress={() => setStep((s) => s + 1)} /> : <Gold label="Done" onPress={done} />}
+      <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 34 }}>
+        {step < last ? (
+          <>
+            <Ghost label={auto ? "❚❚ Pause" : "▶ Play"} onPress={() => setAuto((a) => !a)} />
+            <View style={{ width: 12 }} />
+            <Gold label="Skip ›" onPress={() => { setAuto(false); setStep((s) => Math.min(s + 1, last)); }} />
+          </>
+        ) : null}
       </View>
     </View>
   );
