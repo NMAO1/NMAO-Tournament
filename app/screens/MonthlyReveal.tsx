@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, forwardRef, useImperativeHandle, useCallback } from "react";
 import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing } from "react-native";
+import { Canvas, Circle } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, type Rarity, type MedalType } from "@nmao/design-tokens";
 import { Coin } from "../components/Coin";
@@ -111,6 +112,47 @@ function Open({ message }: { message: string | null }) {
   );
 }
 
+type BurstHandle = { fire: (x: number, y: number, o?: { count?: number; spd?: number; r?: number; color?: string; life?: number }) => void };
+type Spark = { x: number; y: number; ang: number; spd: number; r: number; color: string; born: number; life: number };
+const sparkColor = (t: Tier): string => (t === "gold" ? "#FFE488" : t === "silver" ? "#EAF2FA" : t === "bronze" ? "#F3C79A" : "#FFFFFF");
+
+// Skia particle bursts fired as each medallion segment seats (+ a big one at the
+// finale). RAF-driven — no reanimated. Sparks fly out on an ease-out arc and fade;
+// the canvas only re-renders while sparks are alive.
+const Bursts = forwardRef<BurstHandle, { size: number }>(function Bursts({ size }, ref) {
+  const sparks = useRef<Spark[]>([]);
+  const raf = useRef<number | null>(null);
+  const [, setNow] = useState(0);
+  const loop = useCallback(() => {
+    const t = Date.now();
+    sparks.current = sparks.current.filter((s) => t - s.born < s.life);
+    setNow(t);
+    raf.current = sparks.current.length ? requestAnimationFrame(loop) : null;
+  }, []);
+  useImperativeHandle(ref, () => ({
+    fire: (x, y, o = {}) => {
+      const n = o.count ?? 22, now = Date.now();
+      for (let i = 0; i < n; i++) {
+        const ang = (Math.PI * 2 * i) / n + Math.random() * 0.5;
+        sparks.current.push({ x, y, ang, spd: (o.spd ?? 80) * (0.55 + Math.random() * 0.9), r: (o.r ?? 3) * (0.6 + Math.random()), color: o.color ?? "#FFE488", born: now, life: o.life ?? 720 });
+      }
+      if (!raf.current) raf.current = requestAnimationFrame(loop);
+    },
+  }), [loop]);
+  useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current); }, []);
+  const t = Date.now();
+  return (
+    <Canvas style={{ position: "absolute", width: size, height: size }} pointerEvents="none">
+      {sparks.current.map((s, i) => {
+        const a = Math.min(1, (t - s.born) / s.life);
+        const ease = 1 - (1 - a) * (1 - a);
+        const d = s.spd * ease;
+        return <Circle key={i} cx={s.x + Math.cos(s.ang) * d} cy={s.y + Math.sin(s.ang) * d} r={Math.max(0, s.r * (1 - a * 0.6))} color={s.color} opacity={Math.max(0, 1 - a)} />;
+      })}
+    </Canvas>
+  );
+});
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Medals({ medals }: { medals: any[] }) {
   // Phase B — the Season Medallion assembles piece by piece: each earned segment
@@ -123,6 +165,7 @@ function Medals({ medals }: { medals: any[] }) {
   const [done, setDone] = useState(false);
   const flash = useRef(new Animated.Value(0)).current;   // per-seat glow pulse
   const land = useRef(new Animated.Value(0)).current;    // completion shockwave + flash
+  const bursts = useRef<BurstHandle>(null);              // Skia particle bursts
   useEffect(() => {
     setShown(Array(8).fill(null)); setDone(false);
     flash.setValue(0); land.setValue(0);
@@ -135,12 +178,21 @@ function Medals({ medals }: { medals: any[] }) {
         Animated.timing(flash, { toValue: 1, duration: 90, useNativeDriver: true }),
         Animated.timing(flash, { toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       ]).start();
+      // burst of sparks at the seating segment, in its earned metal
+      const idx = i - 1;
+      if (idx >= 0 && idx < 8 && target[idx]) {
+        const ang = -Math.PI / 2 + (idx + 0.5) * (Math.PI / 4);
+        const rr = 95 * (MED / 340);
+        bursts.current?.fire(MED / 2 + rr * Math.cos(ang), MED / 2 + rr * Math.sin(ang),
+          { count: 20, spd: MED * 0.34, r: 3, color: sparkColor(target[idx]!), life: 720 });
+      }
       try { Haptics.impactAsync(i >= filled ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
       if (i >= filled || i >= 8) {
         clearInterval(id);
         setTimeout(() => {
           setDone(true);
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch { /* optional */ }
+          bursts.current?.fire(MED / 2, MED / 2, { count: 54, spd: MED * 0.62, r: 4, color: "#FFE9B0", life: 1150 });
           Animated.timing(land, { toValue: 1, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
         }, 260);
       }
@@ -161,6 +213,8 @@ function Medals({ medals }: { medals: any[] }) {
           opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.45] }),
           transform: [{ scale: flash.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.5] }) }] }} />
         <Medallion tiers={shown} season={SEASON} size={MED} />
+        {/* Skia particle bursts (over the medallion) */}
+        <Bursts ref={bursts} size={MED} />
         {/* completion white flash */}
         <Animated.View pointerEvents="none" style={{ position: "absolute", width: MED, height: MED, borderRadius: MED / 2, backgroundColor: "#FFFFFF",
           opacity: land.interpolate({ inputRange: [0, 0.12, 1], outputRange: [0, 0.8, 0] }) }} />
