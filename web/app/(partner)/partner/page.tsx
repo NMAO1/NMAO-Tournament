@@ -8,8 +8,8 @@ import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
 type Summary = {
   partner: { id: string; name: string; slug: string; tier: string; status: string; payouts_enabled: boolean };
   referral_links: { member: string; tournament: string };
-  counts: { schools_active: number; schools_total: number; competitors_referred: number };
-  schools: { name: string; active: boolean; attributed_at: string }[];
+  counts: { schools_active: number; schools_total: number; competitors_referred: number; entries_total: number };
+  schools: { name: string; active: boolean; attributed_at: string; entries: number; competitors: number }[];
 };
 
 const TIER_LABEL: Record<string, string> = { ambassador: "Ambassador", regional_director: "Regional Director", founding: "Founding" };
@@ -116,19 +116,20 @@ export default function PartnerDashboard() {
             </div>
           </div>
           <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ fontSize: 11, letterSpacing: 2, color: hues.gold.base, fontWeight: 800, textTransform: "uppercase" }}>Your referral link &amp; QR</div>
+            <div style={{ fontSize: 11, letterSpacing: 2, color: hues.gold.base, fontWeight: 800, textTransform: "uppercase" }}>Your school sign-up link &amp; QR</div>
             <div style={{ display: "flex", gap: 10, marginTop: 9, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200, background: neutrals.bg, border: `1px solid ${neutrals.border}`, borderRadius: 10, padding: "11px 14px", fontFamily: "ui-monospace, Menlo, monospace", fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{refLink}</div>
               <button onClick={copyLink} style={{ ...primaryBtn, padding: "0 18px" }}>{copied ? "Copied ✓" : "Copy"}</button>
             </div>
-            <div style={{ fontSize: 12, color: neutrals.muted, marginTop: 9 }}>Every school or competitor who joins through this link is credited to you automatically.</div>
+            <div style={{ fontSize: 12, color: neutrals.muted, marginTop: 9, lineHeight: 1.5 }}>Send this to a school. When they sign up, they&apos;re credited to you — and you earn on their platform fee <b style={{ color: neutrals.text }}>plus $1 for every tournament entry their students make</b>.</div>
           </div>
         </div>
 
         {/* Stat tiles */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginBottom: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 14, marginBottom: 18 }}>
           <Tile accent={hues.gold.base} k="Schools referred" v={String(c.schools_active)} d={`${c.schools_total} total · ${c.schools_active} active`} />
-          <Tile accent="#4C97DE" k="Competitors referred" v={String(c.competitors_referred)} d="Competing under your schools" />
+          <Tile accent="#4C97DE" k="Competitors" v={String(c.competitors_referred)} d="Competing under your schools" />
+          <Tile accent="#37C87A" k="Entries" v={String(c.entries_total)} d="Paid entries · $1 each to you" />
           <Tile accent="transparent" k="Earnings" v="—" d="Shown once payouts & tax onboarding go live" preview />
         </div>
 
@@ -141,20 +142,28 @@ export default function PartnerDashboard() {
           {data.schools.length === 0 ? (
             <div style={{ padding: 22, color: neutrals.muted, fontSize: 13.5 }}>No schools credited to you yet. Share your referral link to get started.</div>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
-              <thead><tr>
-                <th style={th}>School</th><th style={th}>Attributed</th><th style={th}>Status</th>
-              </tr></thead>
-              <tbody>
-                {data.schools.map((s, i) => (
-                  <tr key={i}>
-                    <td style={td}><b>{s.name}</b></td>
-                    <td style={{ ...td, color: neutrals.muted }}>{new Date(s.attributed_at).toLocaleDateString()}</td>
-                    <td style={td}><Tag active={s.active} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5, minWidth: 460 }}>
+                <thead><tr>
+                  <th style={th}>School</th>
+                  <th style={{ ...th, textAlign: "right" }}>Entries</th>
+                  <th style={{ ...th, textAlign: "right" }}>Competitors</th>
+                  <th style={th}>Attributed</th>
+                  <th style={th}>Status</th>
+                </tr></thead>
+                <tbody>
+                  {data.schools.map((s, i) => (
+                    <tr key={i}>
+                      <td style={td}><b>{s.name}</b></td>
+                      <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{s.entries}</td>
+                      <td style={{ ...td, textAlign: "right", fontVariantNumeric: "tabular-nums", color: neutrals.muted }}>{s.competitors}</td>
+                      <td style={{ ...td, color: neutrals.muted }}>{new Date(s.attributed_at).toLocaleDateString()}</td>
+                      <td style={td}><Tag active={s.active} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 

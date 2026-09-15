@@ -20,6 +20,10 @@ import Stripe from "npm:stripe@16";
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON = Deno.env.get("SUPABASE_ANON_KEY")!;
+// The ambassador's monthly school override is 10% of the school's 1% platform
+// transaction fee, capped so the ambassador receives at most $20/school/month
+// (= 10% of a $200 fee base). Cap the AMBASSADOR PAYOUT, not the fee base.
+const SCHOOL_OVERRIDE_CAP_CENTS = 2000;
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -93,7 +97,7 @@ Deno.serve(async (req) => {
       if (cents <= 0) continue;
       const pid = memToPartner[(row as any).school_id];
       if (!pid) continue;
-      const amount = Math.round(cents * 0.10);
+      const amount = Math.min(Math.round(cents * 0.10), SCHOOL_OVERRIDE_CAP_CENTS); // 10% of the 1% platform fee, capped at $20/school/month
       if (amount <= 0) continue;
       const r = await svc.from("partner_school_payouts").upsert(
         { partner_id: pid, member_school_id: (row as any).school_id, period, collected_fee_cents: cents, rate: 0.10, amount_cents: amount },
@@ -120,7 +124,7 @@ Deno.serve(async (req) => {
       const sk = Deno.env.get("STRIPE_SECRET_KEY");
       for (const r of existing as any[]) {
         const fee = feeMap[r.member_school_id + "|" + r.period] || 0;
-        const correct = Math.round(fee * 0.10);
+        const correct = Math.min(Math.round(fee * 0.10), SCHOOL_OVERRIDE_CAP_CENTS); // same $20/school/month cap on reconcile
         if (correct === r.amount_cents) continue;                    // already in sync
         if (r.status === "pending") {
           await svc.from("partner_school_payouts")
