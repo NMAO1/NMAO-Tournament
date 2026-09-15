@@ -59,10 +59,17 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "NMAO needs access to your videos so you can submit your competition entry."
+          "photosPermission": "NMAO needs access to your videos so you can submit your competition entry.",
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": false
+        }
+      ],
       "expo-web-browser",
       "expo-video",
       "expo-asset"
