@@ -7,13 +7,14 @@ import { neutrals, hues } from "@nmao/design-tokens";
 import { supabase } from "./lib/supabase";
 import { myCompetitors } from "./lib/competitors";
 import { useActiveCompetitor } from "./lib/activeCompetitor";
-import { unreadCount, subscribeNotifications, type Notif } from "./lib/notifications";
+import { unreadCount, subscribeNotifications, latestUnseenMonthly, markMonthlySeen, type Notif } from "./lib/notifications";
 import Login from "./screens/Login";
 import Signup from "./screens/Signup";
 import Onboard from "./screens/Onboard";
 import InviteRedeem from "./screens/InviteRedeem";
 import Intro from "./screens/Intro";
 import Compete from "./screens/Compete";
+import MonthlyReveal from "./screens/MonthlyReveal";
 import Duel from "./screens/Duel";
 import Achievements from "./screens/Achievements";
 import Leaderboard from "./screens/Leaderboard";
@@ -64,7 +65,11 @@ function MainTabs() {
   function routeNotif(n: Notif) {
     setAlertsOpen(false);
     const duelId = typeof n.data?.duel_id === "string" ? (n.data.duel_id as string) : null;
-    if (n.type === "reveal_ready") { setTab("compete"); return; } // launch is on the Compete tab now
+    if (n.type === "reveal_ready") {
+      // Open the ceremony straight from the notification; fall back to the Compete tab if nothing's unseen.
+      latestUnseenMonthly().then((r) => { if (r) setReveal({ kind: "monthly", period: r.period, payload: r.payload }); else setTab("compete"); });
+      return;
+    }
     if (duelId && n.type === "duel_result") { setReveal({ kind: "duel", duelId }); return; }
     if (duelId) { setTab("duel"); }
   }
@@ -106,6 +111,7 @@ function MainTabs() {
 
       <Modal visible={!!reveal} animationType="fade" onRequestClose={() => setReveal(null)}>
         {reveal?.kind === "duel" ? <DuelReveal duelId={reveal.duelId} myId={myId} onClose={() => setReveal(null)} /> : null}
+        {reveal?.kind === "monthly" ? <MonthlyReveal period={reveal.period} payload={reveal.payload} onClose={() => { markMonthlySeen(reveal.period); setReveal(null); }} /> : null}
       </Modal>
     </View>
   );
