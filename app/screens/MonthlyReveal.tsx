@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, forwardRef, useImperativeHandle, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image, Dimensions } from "react-native";
 import { Canvas, Circle } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, rarityBase, type Rarity, type MedalType } from "@nmao/design-tokens";
@@ -82,6 +82,7 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
 
   return (
     <View style={{ flex: 1, backgroundColor: "#070605" }}>
+      {kind === "close" ? <RisingEmbers /> : null}
       <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingTop: 50 }}>
         {steps.map((_, i) => <View key={i} style={{ flex: 1, height: 3, borderRadius: 3, marginHorizontal: 2, backgroundColor: i <= step ? hues.gold.base : "rgba(255,255,255,0.15)" }} />)}
       </View>
@@ -90,7 +91,7 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
         {kind === "medals" ? <Medals medals={medals} /> : null}
         {kind === "badges" ? <Badges badges={badges} /> : null}
         {kind === "summary" ? <Summary payload={payload} /> : null}
-        {kind === "close" ? <Close onDone={done} /> : null}
+        {kind === "close" ? <Close onDone={done} signal={str(payload, "signal")} /> : null}
       </ScrollView>
       <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 34 }}>
         {step < last ? (
@@ -405,14 +406,82 @@ function GainChip({ gain }: { gain: number }) {
   );
 }
 
-function Close({ onDone }: { onDone: () => void }) {
+// The Charge — the send-off. A tone-adapted rallying line keyed to the month's
+// signal, the NMAO crest returning to bookend the Invocation, a "next battle"
+// tile, and the Onward CTA — revealed in a staggered gilded sequence over
+// rising embers. (RN Animated; a single `intro` value drives all beats.)
+const CHARGE: Record<string, { head: string; sub: string }> = {
+  effort: { head: "Sharper than last month.", sub: "Now bring it to the tournament." },
+  dominant: { head: "The throne is yours to defend.", sub: "Round 9 comes for the crown." },
+  rising: { head: "You're climbing. Don't stop now.", sub: "The next rung is Round 9." },
+  steady: { head: "Keep stacking the work.", sub: "Round 9 is the next brick." },
+};
+
+// Embers drifting upward behind the Charge — a quiet "carry it forward" motion.
+// Each ember loops on its own timing (native driver); the field is memoized so the
+// loops start once. Rendered as a full-screen layer behind the ceremony content.
+function RisingEmbers({ count = 14 }: { count?: number }) {
+  const H = Dimensions.get("window").height;
+  const embers = useMemo(() => Array.from({ length: count }, (_, i) => ({
+    x: 4 + Math.random() * 92,
+    size: 2 + Math.random() * 3.5,
+    dur: 3400 + Math.random() * 2800,
+    delay: Math.random() * 3000,
+    drift: (Math.random() - 0.5) * 40,
+    color: [hues.sapphire.hi, hues.amethyst.hi, hues.gold.hi][i % 3],
+    v: new Animated.Value(0),
+  })), [count]);
+  useEffect(() => {
+    const anims = embers.map((e) => Animated.loop(Animated.sequence([
+      Animated.delay(e.delay),
+      Animated.timing(e.v, { toValue: 1, duration: e.dur, easing: Easing.linear, useNativeDriver: true }),
+    ])));
+    anims.forEach((a) => a.start());
+    return () => anims.forEach((a) => a.stop());
+  }, [embers]);
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, overflow: "hidden" }}>
+      {embers.map((e, i) => (
+        <Animated.View key={i} style={{ position: "absolute", left: `${e.x}%`, bottom: -8, width: e.size, height: e.size, borderRadius: e.size / 2, backgroundColor: e.color,
+          opacity: e.v.interpolate({ inputRange: [0, 0.12, 0.75, 1], outputRange: [0, 0.7, 0.4, 0] }),
+          transform: [
+            { translateY: e.v.interpolate({ inputRange: [0, 1], outputRange: [0, -(H * 0.85)] }) },
+            { translateX: e.v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, e.drift, 0] }) },
+          ] }} />
+      ))}
+    </View>
+  );
+}
+
+function Close({ onDone, signal }: { onDone: () => void; signal: string | null }) {
+  const season = useSeasonLabel();
+  const intro = useRef(new Animated.Value(0)).current;
+  const c = (signal && CHARGE[signal]) ? CHARGE[signal] : CHARGE.effort;
+  useEffect(() => {
+    intro.setValue(0);
+    Animated.timing(intro, { toValue: 1, duration: 2600, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    const h = setTimeout(() => { try { play("win"); } catch { /* optional */ } }, 650);
+    return () => clearTimeout(h);
+  }, [intro]);
+  const fade = (a: number, b: number) => intro.interpolate({ inputRange: [a, b], outputRange: [0, 1], extrapolate: "clamp" });
+  const grow = (a: number, b: number, from: number) => intro.interpolate({ inputRange: [a, b], outputRange: [from, 1], extrapolate: "clamp" });
+  const rise = (a: number, b: number, d: number) => intro.interpolate({ inputRange: [a, b], outputRange: [d, 0], extrapolate: "clamp" });
   return (
     <View style={{ alignItems: "center", alignSelf: "stretch" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 12 }}>Carry it forward</Text>
-      <Text style={{ color: hues.gold.hi, fontSize: 16, fontStyle: "italic", textAlign: "center", maxWidth: 280, lineHeight: 22 }}>&ldquo;Sharper than last month. Bring it to the tournament.&rdquo;</Text>
-      <View style={{ marginTop: 24, alignSelf: "stretch", paddingHorizontal: 12 }}>
+      <Animated.Text style={{ opacity: fade(0, 0.12), color: hues.gold.base, fontSize: 12, fontWeight: "800", letterSpacing: 3, textTransform: "uppercase" }}>Carry It Forward</Animated.Text>
+      <Animated.View style={{ opacity: fade(0.08, 0.34), transform: [{ scale: grow(0.08, 0.34, 0.7) }], marginTop: 18, marginBottom: 4,
+        shadowColor: hues.amethyst.hi, shadowOpacity: 0.6, shadowRadius: 22, shadowOffset: { width: 0, height: 0 } }}>
+        <Coin size={92} />
+      </Animated.View>
+      <Animated.Text style={{ opacity: fade(0.26, 0.52), transform: [{ translateY: rise(0.26, 0.52, 16) }], color: hues.gold.hi, fontSize: 30, fontWeight: "900", textAlign: "center", marginTop: 18, maxWidth: 320, lineHeight: 35, textShadowColor: "rgba(230,185,63,0.4)", textShadowRadius: 18 }}>{c.head}</Animated.Text>
+      <Animated.Text style={{ opacity: fade(0.46, 0.68), color: "#d9cfb6", fontSize: 15, fontStyle: "italic", textAlign: "center", marginTop: 12, maxWidth: 290, lineHeight: 21 }}>{c.sub}</Animated.Text>
+      <Animated.View style={{ opacity: fade(0.62, 0.82), transform: [{ translateY: rise(0.62, 0.82, 12) }], marginTop: 20, borderRadius: 14, borderWidth: 1, borderColor: hues.amethyst.hi + "66", backgroundColor: hues.amethyst.hi + "12", paddingVertical: 11, paddingHorizontal: 22, alignItems: "center" }}>
+        <Text style={{ color: neutrals.text, fontSize: 15, fontWeight: "800", letterSpacing: 0.5 }}>{season ? `${season} · Next Battle` : "Your Next Battle"}</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 1.4, textTransform: "uppercase", marginTop: 3 }}>Awaits you in the Arena</Text>
+      </Animated.View>
+      <Animated.View style={{ opacity: fade(0.8, 1), transform: [{ translateY: rise(0.8, 1, 14) }], marginTop: 26, alignSelf: "stretch", paddingHorizontal: 12 }}>
         <Gold full label="Onward →" onPress={onDone} />
-      </View>
+      </Animated.View>
     </View>
   );
 }
