@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { View, Text, TouchableOpacity, ScrollView, AppState } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing } from "react-native";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, type Rarity, type MedalType } from "@nmao/design-tokens";
 import { Coin } from "../components/Coin";
@@ -113,26 +113,59 @@ function Open({ message }: { message: string | null }) {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Medals({ medals }: { medals: any[] }) {
-  // The month's medals take their place on the Season Medallion, one by one.
+  // Phase B — the Season Medallion assembles piece by piece: each earned segment
+  // seats with a glow pulse + escalating haptic, then a climactic shockwave +
+  // flash when the medallion completes. (RN Animated — no reanimated babel plugin.)
+  const MED = 260;
   const target: (Tier | null)[] = Array.from({ length: 8 }, (_, i) => (medals[i] ? asTier(medals[i].tier) : null));
+  const filled = target.filter(Boolean).length;
   const [shown, setShown] = useState<(Tier | null)[]>(Array(8).fill(null));
+  const [done, setDone] = useState(false);
+  const flash = useRef(new Animated.Value(0)).current;   // per-seat glow pulse
+  const land = useRef(new Animated.Value(0)).current;    // completion shockwave + flash
   useEffect(() => {
-    setShown(Array(8).fill(null));
+    setShown(Array(8).fill(null)); setDone(false);
+    flash.setValue(0); land.setValue(0);
     let i = 0;
     const id = setInterval(() => {
       i++;
       setShown(target.map((t, idx) => (idx < i ? t : null)));
-      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
-      if (i >= target.filter(Boolean).length || i >= 8) clearInterval(id);
-    }, 220);
+      flash.setValue(0);
+      Animated.sequence([
+        Animated.timing(flash, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(flash, { toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start();
+      try { Haptics.impactAsync(i >= filled ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
+      if (i >= filled || i >= 8) {
+        clearInterval(id);
+        setTimeout(() => {
+          setDone(true);
+          try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch { /* optional */ }
+          Animated.timing(land, { toValue: 1, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+        }, 260);
+      }
+    }, 300);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [medals]);
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
       <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>◈ Your Season Medallion ◈</Text>
-      <Medallion tiers={shown} season={SEASON} size={236} />
-      <Text style={{ color: neutrals.muted2, fontSize: 11, marginTop: 8, marginBottom: 4 }}>Each medal takes its place</Text>
+      <View style={{ width: MED, height: MED, alignItems: "center", justifyContent: "center" }}>
+        {/* completion shockwave ring */}
+        <Animated.View pointerEvents="none" style={{ position: "absolute", width: MED * 0.7, height: MED * 0.7, borderRadius: MED * 0.35, borderWidth: 3, borderColor: hues.gold.hi,
+          opacity: land.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 0.9, 0] }),
+          transform: [{ scale: land.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.3] }) }] }} />
+        {/* per-seat central glow */}
+        <Animated.View pointerEvents="none" style={{ position: "absolute", width: MED * 0.55, height: MED * 0.55, borderRadius: MED * 0.275, backgroundColor: hues.gold.hi,
+          opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.45] }),
+          transform: [{ scale: flash.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.5] }) }] }} />
+        <Medallion tiers={shown} season={SEASON} size={MED} />
+        {/* completion white flash */}
+        <Animated.View pointerEvents="none" style={{ position: "absolute", width: MED, height: MED, borderRadius: MED / 2, backgroundColor: "#FFFFFF",
+          opacity: land.interpolate({ inputRange: [0, 0.12, 1], outputRange: [0, 0.8, 0] }) }} />
+      </View>
+      <Text style={{ color: done ? hues.gold.hi : neutrals.muted2, fontSize: 11, marginTop: 8, marginBottom: 4, fontWeight: done ? "800" : "400", letterSpacing: done ? 1 : 0 }}>{done ? "The season takes shape" : "Each medal takes its place"}</Text>
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
         {medals.map((m, i) => (
           <View key={i} style={{ alignItems: "center", margin: 8, width: 84 }}>
