@@ -174,8 +174,56 @@ export default function PartnerDashboard() {
           <QuickLink u="league.nmao.us" w="Competitors — where athletes start" href="https://league.nmao.us" />
           <QuickLink u={data.referral_links.tournament.replace(/^https?:\/\//, "")} w="Your competitor referral link" href={data.referral_links.tournament} />
         </div>
+
+        <h3 style={{ fontSize: 15, margin: "26px 0 10px" }}>Earnings calculator</h3>
+        <EarningsCalc />
       </div>
     </main>
+  );
+}
+
+function EarningsCalc() {
+  const [schools, setSchools] = useState(5);
+  const [rev, setRev] = useState(20000);
+  const [comp, setComp] = useState(40);
+  const [entries, setEntries] = useState(3);
+  const perSchool = Math.min(rev * 0.001, 20);          // 10% of the school's 1% fee, capped at $20
+  const platformMo = schools * perSchool;
+  const entriesMo = comp * entries;                     // $1 each
+  const totalMo = platformMo + entriesMo;
+  const money = (n: number) => "$" + Math.round(n).toLocaleString();
+
+  const row = (label: string, val: string, min: number, max: number, step: number, v: number, set: (n: number) => void) => (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}>
+        <span style={{ color: neutrals.muted }}>{label}</span><span style={{ fontWeight: 700 }}>{val}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={v} onChange={(e) => set(Number(e.target.value))}
+        style={{ width: "100%", accentColor: hues.gold.base }} />
+    </div>
+  );
+
+  return (
+    <div style={{ border: `1px solid ${neutrals.border}`, borderRadius: 16, padding: 18, background: "#0e0e11", display: "grid", gridTemplateColumns: "minmax(240px, 1fr) minmax(200px, 260px)", gap: 22 }}>
+      <div>
+        {row("Schools referred", String(schools), 0, 50, 1, schools, setSchools)}
+        {row("Avg monthly revenue / school", money(rev), 0, 30000, 1000, rev, setRev)}
+        <div style={{ fontSize: 11.5, color: neutrals.muted, margin: "-8px 0 14px" }}>→ {money(perSchool)}/school (10% of their 1% platform fee, capped at $20)</div>
+        {row("Active competitors", String(comp), 0, 500, 5, comp, setComp)}
+        {row("Entries / competitor / month", String(entries), 0, 12, 1, entries, setEntries)}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, justifyContent: "center", borderLeft: `1px solid ${neutrals.border}`, paddingLeft: 22 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span style={{ color: neutrals.muted }}>Platform</span><span style={{ fontWeight: 700 }}>{money(platformMo)}/mo</span></div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}><span style={{ color: neutrals.muted }}>Entries ($1 each)</span><span style={{ fontWeight: 700 }}>{money(entriesMo)}/mo</span></div>
+        <div style={{ height: 1, background: neutrals.border }} />
+        <div>
+          <div style={{ fontSize: 12, color: neutrals.muted }}>Projected total</div>
+          <div style={{ fontSize: 34, lineHeight: 1, color: hues.gold.base, fontWeight: 800, fontFamily: "Georgia, serif" }}>{money(totalMo)}<span style={{ fontSize: 15, color: neutrals.muted, fontWeight: 400 }}>/mo</span></div>
+          <div style={{ fontSize: 13, color: neutrals.text, marginTop: 3 }}>{money(totalMo * 12)}<span style={{ color: neutrals.muted }}> / year</span></div>
+        </div>
+        <div style={{ fontSize: 10.5, color: neutrals.muted, lineHeight: 1.4 }}>Estimate only — for planning, not a guarantee of earnings.</div>
+      </div>
+    </div>
   );
 }
 
