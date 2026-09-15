@@ -94,7 +94,7 @@ function MainTabs() {
       ) : null}
 
       <View style={{ flex: 1 }}>
-        {tab === "compete" ? <Compete unread={unread} onBell={() => setAlertsOpen(true)} /> : null}
+        {tab === "compete" ? <Compete unread={unread} onBell={() => setAlertsOpen(true)} onOpenReveal={(r) => setReveal({ kind: "monthly", period: r.period, payload: r.payload })} /> : null}
         {tab === "duel" ? <Duel /> : null}
         {tab === "achievements" ? <Achievements /> : null}
         {tab === "leaderboard" ? <Leaderboard /> : null}

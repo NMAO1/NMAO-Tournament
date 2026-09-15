@@ -11,8 +11,7 @@ import { getActiveCompetitorId, setActiveCompetitorId } from "../lib/activeCompe
 import { creditSummary } from "../lib/pricing";
 import { competeDashboard, formatCountdown, CompeteDashboard, CompeteEvent, CompeteRound, CompeteRating } from "../lib/compete";
 import { HeaderBell } from "../components/HeaderBell";
-import { latestUnseenMonthly, markMonthlySeen, MonthlyReveal as MonthlyRevealData } from "../lib/notifications";
-import MonthlyReveal from "./MonthlyReveal";
+import { latestUnseenMonthly, MonthlyReveal as MonthlyRevealData } from "../lib/notifications";
 import BuyEntry from "./BuyEntry";
 import * as WebBrowser from "expo-web-browser";
 
@@ -32,7 +31,7 @@ const EVENTS = [
 const prettyBracket = (b: string) => b.replace("_plus", "+").replace("_", "–");
 const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 
-export default function Compete({ unread = 0, onBell }: { unread?: number; onBell?: () => void }) {
+export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?: number; onBell?: () => void; onOpenReveal?: (r: MonthlyRevealData) => void }) {
   const [comps, setComps] = useState<Competitor[]>([]);
   const [competitorId, setCompetitorId] = useState<string | null>(null);
   const [event, setEvent] = useState<string | null>(null);
@@ -47,7 +46,6 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
   const [showBuy, setShowBuy] = useState(false);
   const [dash, setDash] = useState<CompeteDashboard | null>(null); // round + per-event status + ratings
   const [unseenReveal, setUnseenReveal] = useState<MonthlyRevealData | null>(null);
-  const [showReveal, setShowReveal] = useState(false);
   const [nowTs, setNowTs] = useState(Date.now()); // ticks the deadline countdown
   const [refreshing, setRefreshing] = useState(false);
 
@@ -214,18 +212,6 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
     return <BuyEntry competitorId={competitorId} onClose={() => { setShowBuy(false); refreshCredits(competitorId); }} onPaid={() => { setShowBuy(false); refreshCredits(competitorId); }} />;
   }
 
-  // The Results Reveal ceremony — launched deliberately from the button below
-  // (this is the only entry point; the app no longer auto-plays it on open).
-  if (showReveal && unseenReveal) {
-    return (
-      <MonthlyReveal
-        period={unseenReveal.period}
-        payload={unseenReveal.payload}
-        onClose={() => { markMonthlySeen(unseenReveal.period); setUnseenReveal(null); setShowReveal(false); }}
-      />
-    );
-  }
-
   if (done) {
     const ev = EVENTS.find((e) => e.code === done.event)?.name ?? done.event;
     return (
@@ -268,7 +254,7 @@ export default function Compete({ unread = 0, onBell }: { unread?: number; onBel
         <Text style={{ color: neutrals.muted, fontSize: 14, marginBottom: 16 }}>Submit your entry for the open round.</Text>
       )}
 
-      {unseenReveal && competitorId ? <RevealButton onPress={() => setShowReveal(true)} /> : null}
+      {unseenReveal && competitorId ? <RevealButton onPress={() => { onOpenReveal?.(unseenReveal); setUnseenReveal(null); }} /> : null}
 
       {dash && competitorId ? (
         <IdentityStrip
