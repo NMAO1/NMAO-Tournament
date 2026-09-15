@@ -9,7 +9,7 @@ import { Medallion, type Tier } from "../components/Medallion";
 import { Frame } from "../components/Frame";
 import { markMonthlySeen } from "../lib/notifications";
 import { useSeasonLabel } from "../lib/season";
-import { startMusic, stopMusic, fadeOutMusic } from "../lib/sound";
+import { startMusic, stopMusic, fadeOutMusic, initSounds, play } from "../lib/sound";
 import { revealTrackUrl } from "../lib/revealMusic";
 
 // The monthly badge + tournament-medal reveal — the collectibles ceremony.
@@ -38,7 +38,8 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } }, [step]);
   // Score: stream this round's soundtrack under the ceremony; stop on exit.
-  useEffect(() => { startMusic(revealTrackUrl(period), 0.7); return () => { stopMusic(); }; }, [period]);
+  // initSounds loads the one-shot SFX (riser/tick/win) layered over the music.
+  useEffect(() => { initSounds(); startMusic(revealTrackUrl(period), 0.7); return () => { stopMusic(); }; }, [period]);
   // Never let the score outlive the moment: cut it if the app backgrounds.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => { if (s !== "active") stopMusic(); });
@@ -159,6 +160,7 @@ function Medals({ medals }: { medals: any[] }) {
   // seats with a glow pulse + escalating haptic, then a climactic shockwave +
   // flash when the medallion completes. (RN Animated — no reanimated babel plugin.)
   const MED = 260;
+  const BEAT = 520; // ms per segment — a steady, musical cadence for the inserts
   const target: (Tier | null)[] = Array.from({ length: 8 }, (_, i) => (medals[i] ? asTier(medals[i].tier) : null));
   const filled = target.filter(Boolean).length;
   const [shown, setShown] = useState<(Tier | null)[]>(Array(8).fill(null));
@@ -169,6 +171,7 @@ function Medals({ medals }: { medals: any[] }) {
   useEffect(() => {
     setShown(Array(8).fill(null)); setDone(false);
     flash.setValue(0); land.setValue(0);
+    try { play("riser"); } catch { /* optional */ } // tension build as the assembly begins
     let i = 0;
     const id = setInterval(() => {
       i++;
@@ -187,16 +190,18 @@ function Medals({ medals }: { medals: any[] }) {
           { count: 20, spd: MED * 0.34, r: 3, color: sparkColor(target[idx]!), life: 720 });
       }
       try { Haptics.impactAsync(i >= filled ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
+      try { play("soft"); } catch { /* optional */ } // a soft tick on each seat, on the beat
       if (i >= filled || i >= 8) {
         clearInterval(id);
         setTimeout(() => {
           setDone(true);
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch { /* optional */ }
+          try { play("win"); } catch { /* optional */ } // triumphant hit as the medallion completes
           bursts.current?.fire(MED / 2, MED / 2, { count: 54, spd: MED * 0.62, r: 4, color: "#FFE9B0", life: 1150 });
           Animated.timing(land, { toValue: 1, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-        }, 260);
+        }, 300);
       }
-    }, 300);
+    }, BEAT);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [medals]);
