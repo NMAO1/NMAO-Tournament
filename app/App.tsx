@@ -111,7 +111,7 @@ function MainTabs() {
 
       <Modal visible={!!reveal} animationType="fade" onRequestClose={() => setReveal(null)}>
         {reveal?.kind === "duel" ? <DuelReveal duelId={reveal.duelId} myId={myId} onClose={() => setReveal(null)} /> : null}
-        {reveal?.kind === "monthly" ? <MonthlyReveal period={reveal.period} payload={reveal.payload} onClose={() => { markMonthlySeen(reveal.period); setReveal(null); }} /> : null}
+        {reveal?.kind === "monthly" ? <MonthlyReveal period={reveal.period} payload={reveal.payload} viewerId={myId ?? undefined} onClose={() => { markMonthlySeen(reveal.period); setReveal(null); }} /> : null}
       </Modal>
     </View>
   );

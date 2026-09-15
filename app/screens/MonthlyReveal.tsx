@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo, forwardRef, useImperativeHandle, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image, Dimensions, Linking } from "react-native";
 import { Canvas, Circle } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, rarityBase, type Rarity, type MedalType } from "@nmao/design-tokens";
@@ -15,6 +15,7 @@ import { useSeasonLabel } from "../lib/season";
 import { startMusic, stopMusic, fadeOutMusic, initSounds, play } from "../lib/sound";
 import { revealTrackUrl } from "../lib/revealMusic";
 import { emblemUrl } from "../lib/vault";
+import { revealSponsor, type RevealSponsor } from "../lib/revealSponsor";
 import { supabase } from "../lib/supabase";
 
 // The monthly badge + tournament-medal reveal — the collectibles ceremony.
@@ -37,14 +38,20 @@ function earnText(b: any): string {
   return typeof b.description === "string" ? b.description : "";
 }
 
-export default function MonthlyReveal({ period, payload, onClose }: { period: string; payload: Payload; onClose: () => void }) {
+export default function MonthlyReveal({ period, payload, onClose, viewerId }: { period: string; payload: Payload; onClose: () => void; viewerId?: string }) {
   const [step, setStep] = useState(0);
   const [auto, setAuto] = useState(true); // phase C: the ceremony plays itself
+  // Bookend sponsor — resolved at view time (segment-targeted). `undefined` while
+  // it loads: the ceremony holds until it settles so the step list can't shift
+  // out from under an in-flight step. `null` = no sponsor → both bookends skip.
+  const [sponsor, setSponsor] = useState<RevealSponsor | null | undefined>(undefined);
+  const ready = sponsor !== undefined;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } }, [step]);
+  useEffect(() => { let a = true; revealSponsor(viewerId).then((s) => { if (a) setSponsor(s); }).catch(() => { if (a) setSponsor(null); }); return () => { a = false; }; }, [viewerId]);
+  useEffect(() => { if (ready) { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } } }, [step, ready]);
   // Score: stream this round's soundtrack under the ceremony; stop on exit.
   // initSounds loads the one-shot SFX (riser/tick/win) layered over the music.
-  useEffect(() => { initSounds(); startMusic(revealTrackUrl(period), 0.7); return () => { stopMusic(); }; }, [period]);
+  useEffect(() => { if (!ready) return; initSounds(); startMusic(revealTrackUrl(period), 0.7); return () => { stopMusic(); }; }, [period, ready]);
   // Never let the score outlive the moment: cut it if the app backgrounds.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (s) => { if (s !== "active") stopMusic(); });
@@ -53,13 +60,24 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
 
   const medals = arr(payload, "medals");
   const badges = arr(payload, "badges");
-  const steps: string[] = ["open", ...(medals.length ? ["medals"] : []), ...(badges.length ? ["badges"] : []), "summary", "close"];
+  const hasSponsor = !!sponsor;
+  // Sponsor bookends wrap the ceremony: pre-roll first, end-card last.
+  const steps: string[] = [
+    ...(hasSponsor ? ["presenter"] : []),
+    "open",
+    ...(medals.length ? ["medals"] : []),
+    ...(badges.length ? ["badges"] : []),
+    "summary",
+    "close",
+    ...(hasSponsor ? ["sponsor_end"] : []),
+  ];
   const kind = steps[step];
   const last = steps.length - 1;
 
   // How long each act holds before the film advances (phase C: proportional-ish;
-  // badges scale with count). The close act is the final CTA — it never auto-advances.
+  // badges scale with count). The close and end-card acts hold on their CTAs.
   function durMs(k: string): number {
+    if (k === "presenter") return 4800;
     if (k === "open") return 5600;
     if (k === "medals") return 9500;
     if (k === "badges") return Math.max(6500, badges.length * 2800);
@@ -69,16 +87,21 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
   // Auto-advance timeline; pausing (setAuto false) or a manual skip re-drives it.
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
-    if (auto && step < last) timer.current = setTimeout(() => setStep((s) => Math.min(s + 1, last)), durMs(kind));
+    if (ready && auto && step < last && kind !== "close") timer.current = setTimeout(() => setStep((s) => Math.min(s + 1, last)), durMs(kind));
     return () => { if (timer.current) clearTimeout(timer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, auto, kind, last]);
+  }, [step, auto, kind, last, ready]);
 
-  // Finale: once the acts finish and the ceremony rests on its closing card, let
-  // the score fade out rather than loop on underneath it.
-  useEffect(() => { if (kind === "close") fadeOutMusic(1400); }, [kind]);
+  // Finale: once the ceremony reaches its last card (the Charge, or the sponsor
+  // end-card when there is one), let the score fade out rather than loop on.
+  useEffect(() => { if (ready && step === last) fadeOutMusic(1400); }, [ready, step, last]);
 
   function done() { stopMusic(); markMonthlySeen(period); onClose(); }
+  // The Charge's Onward advances to the sponsor end-card when there is one, else closes.
+  function advanceOrDone() { if (step < last) { setAuto(false); setStep((s) => Math.min(s + 1, last)); } else done(); }
+
+  // Hold on black while the sponsor resolves (a beat, under the modal's own fade).
+  if (!ready) return <View style={{ flex: 1, backgroundColor: "#070605" }} />;
 
   return (
     <View style={{ flex: 1, backgroundColor: "#070605" }}>
@@ -87,14 +110,16 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
         {steps.map((_, i) => <View key={i} style={{ flex: 1, height: 3, borderRadius: 3, marginHorizontal: 2, backgroundColor: i <= step ? hues.gold.base : "rgba(255,255,255,0.15)" }} />)}
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 22, paddingVertical: 20 }}>
+        {kind === "presenter" ? <Presenter sponsor={sponsor!} /> : null}
         {kind === "open" ? <Open message={str(payload, "message")} badges={badges} /> : null}
         {kind === "medals" ? <Medals medals={medals} /> : null}
         {kind === "badges" ? <Badges badges={badges} /> : null}
         {kind === "summary" ? <Summary payload={payload} /> : null}
-        {kind === "close" ? <Close onDone={done} signal={str(payload, "signal")} /> : null}
+        {kind === "close" ? <Close onDone={advanceOrDone} signal={str(payload, "signal")} /> : null}
+        {kind === "sponsor_end" ? <SponsorEnd sponsor={sponsor!} onDone={done} /> : null}
       </ScrollView>
       <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 34 }}>
-        {step < last ? (
+        {step < last && kind !== "close" ? (
           <>
             <Ghost label={auto ? "❚❚ Pause" : "▶ Play"} onPress={() => setAuto((a) => !a)} />
             <View style={{ width: 12 }} />
@@ -449,6 +474,78 @@ function RisingEmbers({ count = 14 }: { count?: number }) {
             { translateX: e.v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, e.drift, 0] }) },
           ] }} />
       ))}
+    </View>
+  );
+}
+
+// A sponsor's logo, or its name as a wordmark when no logo art is set.
+function SponsorMark({ sponsor, big }: { sponsor: RevealSponsor; big?: boolean }) {
+  if (sponsor.logoUrl) {
+    return <Image source={{ uri: sponsor.logoUrl }} style={{ width: big ? 224 : 168, height: big ? 84 : 60 }} resizeMode="contain" />;
+  }
+  return <Text style={{ color: "#EDEFF2", fontSize: big ? 36 : 26, fontWeight: "900", letterSpacing: 2, textAlign: "center", textShadowColor: "rgba(255,255,255,0.18)", textShadowRadius: 12 }}>{sponsor.name}</Text>;
+}
+
+// Sponsor pre-roll — "This round … is presented by [logo]", the sponsor's tagline,
+// and a brand-color underline, revealed in a staggered gilded sequence. (Bookends
+// the end-card; both appear only when a sponsor is targeted to the viewer.)
+function Presenter({ sponsor }: { sponsor: RevealSponsor }) {
+  const season = useSeasonLabel();
+  const intro = useRef(new Animated.Value(0)).current;
+  useEffect(() => { intro.setValue(0); Animated.timing(intro, { toValue: 1, duration: 2200, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(); }, [intro]);
+  const fade = (a: number, b: number) => intro.interpolate({ inputRange: [a, b], outputRange: [0, 1], extrapolate: "clamp" });
+  const grow = (a: number, b: number, from: number) => intro.interpolate({ inputRange: [a, b], outputRange: [from, 1], extrapolate: "clamp" });
+  return (
+    <View style={{ alignItems: "center" }}>
+      <Animated.Text style={{ opacity: fade(0, 0.2), color: neutrals.muted, fontSize: 13, lineHeight: 22, textAlign: "center", letterSpacing: 0.3 }}>
+        This round of the{"\n"}
+        <Text style={{ color: hues.gold.base, fontWeight: "800", letterSpacing: 0.6 }}>{season ? `${season} · Tournament of Champions` : "Tournament of Champions"}</Text>{"\n"}
+        is presented by
+      </Animated.Text>
+      <Animated.View style={{ opacity: fade(0.22, 0.55), transform: [{ scale: grow(0.22, 0.55, 0.82) }], marginTop: 26, marginBottom: 4, alignItems: "center" }}>
+        <SponsorMark sponsor={sponsor} big />
+      </Animated.View>
+      {sponsor.tagline ? <Animated.Text style={{ opacity: fade(0.5, 0.75), color: "#c9b8a0", fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 16, letterSpacing: 0.3, maxWidth: 300 }}>{sponsor.tagline}</Animated.Text> : null}
+      <Animated.View style={{ opacity: fade(0.62, 0.9), width: 74, height: 3, borderRadius: 3, marginTop: 18, backgroundColor: sponsor.color }} />
+    </View>
+  );
+}
+
+// Sponsor end-card — "Brought to you by [logo]", a motivational message, an
+// optional offer, and a "Shop the … store" link (opens the sponsor's URL). The
+// true finale card; its Onward closes the ceremony.
+function SponsorEnd({ sponsor, onDone }: { sponsor: RevealSponsor; onDone: () => void }) {
+  const intro = useRef(new Animated.Value(0)).current;
+  useEffect(() => { intro.setValue(0); Animated.timing(intro, { toValue: 1, duration: 2400, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(); }, [intro]);
+  const fade = (a: number, b: number) => intro.interpolate({ inputRange: [a, b], outputRange: [0, 1], extrapolate: "clamp" });
+  const rise = (a: number, b: number, d: number) => intro.interpolate({ inputRange: [a, b], outputRange: [d, 0], extrapolate: "clamp" });
+  const openStore = () => { if (sponsor.storeUrl) Linking.openURL(sponsor.storeUrl).catch(() => {}); };
+  return (
+    <View style={{ alignItems: "center", alignSelf: "stretch" }}>
+      <Animated.Text style={{ opacity: fade(0, 0.16), color: neutrals.muted, fontSize: 12, fontWeight: "700", letterSpacing: 2.4, textTransform: "uppercase" }}>Brought to you by</Animated.Text>
+      <Animated.View style={{ opacity: fade(0.14, 0.42), marginTop: 16, marginBottom: 2, alignItems: "center" }}>
+        <SponsorMark sponsor={sponsor} />
+      </Animated.View>
+      {sponsor.message ? <Animated.Text style={{ opacity: fade(0.38, 0.62), color: "#efe6d2", fontSize: 16, fontStyle: "italic", textAlign: "center", marginTop: 14, maxWidth: 300, lineHeight: 22 }}>{sponsor.message}</Animated.Text> : null}
+      {sponsor.offer ? (
+        <Animated.View style={{ opacity: fade(0.54, 0.76), transform: [{ translateY: rise(0.54, 0.76, 10) }], marginTop: 16, borderRadius: 12, borderWidth: 1, borderColor: sponsor.color + "66", backgroundColor: sponsor.color + "14", paddingVertical: 9, paddingHorizontal: 16, maxWidth: 300 }}>
+          <Text style={{ color: "#f0d9b0", fontSize: 13, textAlign: "center" }}>🎁  {sponsor.offer}</Text>
+        </Animated.View>
+      ) : null}
+      {sponsor.storeUrl ? (
+        <Animated.View style={{ opacity: fade(0.68, 0.9), transform: [{ translateY: rise(0.68, 0.9, 10) }], marginTop: 20 }}>
+          <TouchableOpacity onPress={openStore} activeOpacity={0.85}>
+            <View style={{ borderRadius: 99, paddingVertical: 13, paddingHorizontal: 26, backgroundColor: sponsor.color }}>
+              <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14, letterSpacing: 0.3 }}>Shop the {sponsor.name} store →</Text>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      ) : null}
+      <Animated.View style={{ opacity: fade(0.82, 1), marginTop: 26 }}>
+        <TouchableOpacity onPress={onDone} activeOpacity={0.8}>
+          <Text style={{ color: neutrals.muted, fontSize: 13, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", padding: 8 }}>Onward →</Text>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
