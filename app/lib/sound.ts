@@ -46,6 +46,28 @@ export async function play(key: Key): Promise<void> {
   } catch { /* silent */ }
 }
 
+// Streamed soundtrack (monthly reveal) — a remote MP3 from the reveal-music
+// bucket, looped low under the ceremony. Best-effort: no network / no module =
+// the ceremony just runs silent.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let musicPlayer: any = null;
+function stopMusicSync(): void {
+  try { if (musicPlayer) { musicPlayer.remove(); musicPlayer = null; } } catch { /* silent */ }
+}
+export async function startMusic(url: string | null, volume = 0.7): Promise<void> {
+  if (!ExpoAudio || !url) return;
+  try {
+    await ExpoAudio.setAudioModeAsync({ playsInSilentMode: true });
+    stopMusicSync();
+    const p = ExpoAudio.createAudioPlayer({ uri: url });
+    p.loop = true;
+    p.volume = volume;
+    musicPlayer = p;
+    p.play();
+  } catch { /* silent */ }
+}
+export async function stopMusic(): Promise<void> { stopMusicSync(); }
+
 export async function unloadSounds(): Promise<void> {
   if (!ExpoAudio) return;
   try {

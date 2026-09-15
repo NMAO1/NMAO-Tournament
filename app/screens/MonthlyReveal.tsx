@@ -8,6 +8,8 @@ import { Medallion, type Tier } from "../components/Medallion";
 import { Frame } from "../components/Frame";
 import { markMonthlySeen } from "../lib/notifications";
 import { useSeasonLabel } from "../lib/season";
+import { startMusic, stopMusic } from "../lib/sound";
+import { revealTrackUrl } from "../lib/revealMusic";
 
 // The monthly badge + tournament-medal reveal — the collectibles ceremony.
 // Stepped: NMAO coin + regal title → medals → badges → season summary → journal.
@@ -32,13 +34,15 @@ function earnText(b: any): string {
 export default function MonthlyReveal({ period, payload, onClose }: { period: string; payload: Payload; onClose: () => void }) {
   const [step, setStep] = useState(0);
   useEffect(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } }, [step]);
+  // Score: stream this round's soundtrack under the ceremony; stop on exit.
+  useEffect(() => { startMusic(revealTrackUrl(period), 0.7); return () => { stopMusic(); }; }, [period]);
 
   const medals = arr(payload, "medals");
   const badges = arr(payload, "badges");
   const steps: string[] = ["open", ...(medals.length ? ["medals"] : []), ...(badges.length ? ["badges"] : []), "summary", "close"];
   const kind = steps[step];
 
-  function done() { markMonthlySeen(period); onClose(); }
+  function done() { stopMusic(); markMonthlySeen(period); onClose(); }
 
   return (
     <View style={{ flex: 1, backgroundColor: "#070605" }}>
