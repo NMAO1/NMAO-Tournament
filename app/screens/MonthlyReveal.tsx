@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, AppState } from "react-native";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, type Rarity, type MedalType } from "@nmao/design-tokens";
 import { Coin } from "../components/Coin";
@@ -8,7 +8,7 @@ import { Medallion, type Tier } from "../components/Medallion";
 import { Frame } from "../components/Frame";
 import { markMonthlySeen } from "../lib/notifications";
 import { useSeasonLabel } from "../lib/season";
-import { startMusic, stopMusic } from "../lib/sound";
+import { startMusic, stopMusic, fadeOutMusic } from "../lib/sound";
 import { revealTrackUrl } from "../lib/revealMusic";
 
 // The monthly badge + tournament-medal reveal — the collectibles ceremony.
@@ -38,6 +38,11 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
   useEffect(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } }, [step]);
   // Score: stream this round's soundtrack under the ceremony; stop on exit.
   useEffect(() => { startMusic(revealTrackUrl(period), 0.7); return () => { stopMusic(); }; }, [period]);
+  // Never let the score outlive the moment: cut it if the app backgrounds.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (s) => { if (s !== "active") stopMusic(); });
+    return () => sub.remove();
+  }, []);
 
   const medals = arr(payload, "medals");
   const badges = arr(payload, "badges");
@@ -61,6 +66,10 @@ export default function MonthlyReveal({ period, payload, onClose }: { period: st
     return () => { if (timer.current) clearTimeout(timer.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, auto, kind, last]);
+
+  // Finale: once the acts finish and the ceremony rests on its closing card, let
+  // the score fade out rather than loop on underneath it.
+  useEffect(() => { if (kind === "close") fadeOutMusic(1400); }, [kind]);
 
   function done() { stopMusic(); markMonthlySeen(period); onClose(); }
 

@@ -72,6 +72,28 @@ export async function startMusic(url: string | null, volume = 0.7): Promise<void
 }
 export async function stopMusic(): Promise<void> { musicGen++; stopMusicSync(); }
 
+// Gentle fade to silence, then release — the ceremony's score resolves with the
+// finale instead of hard-cutting or looping on. Aborts if a stop / new start
+// supersedes it mid-fade (so it can never resurrect a stopped track).
+export function fadeOutMusic(ms = 900): void {
+  if (!ExpoAudio || !musicPlayer) return;
+  const p = musicPlayer;
+  const gen = musicGen;
+  const startVol = typeof p.volume === "number" ? p.volume : 0.7;
+  const steps = 16;
+  let i = 0;
+  const iv = setInterval(() => {
+    i++;
+    if (musicPlayer !== p || gen !== musicGen) { clearInterval(iv); return; } // superseded/stopped elsewhere
+    try { p.volume = Math.max(0, startVol * (1 - i / steps)); } catch { /* silent */ }
+    if (i >= steps) {
+      clearInterval(iv);
+      try { p.remove(); } catch { /* silent */ }
+      if (musicPlayer === p) musicPlayer = null;
+    }
+  }, Math.max(24, Math.floor(ms / steps)));
+}
+
 export async function unloadSounds(): Promise<void> {
   if (!ExpoAudio) return;
   try {
