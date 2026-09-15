@@ -346,9 +346,9 @@ function StatTile({ value, label, accent, delay }: { value: number; label: strin
   }, []);
   return (
     <Animated.View style={{ opacity: a, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-      width: 96, alignItems: "center", borderWidth: 1, borderColor: accent + "44", borderRadius: 12, backgroundColor: accent + "0F", paddingVertical: 13, paddingHorizontal: 10, margin: 6 }}>
-      <Count to={value} delay={delay} style={{ color: accent, fontSize: 22, fontWeight: "900" }} />
-      <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 0.6, textTransform: "uppercase", marginTop: 5, textAlign: "center" }}>{label}</Text>
+      width: 150, alignItems: "center", borderWidth: 1, borderColor: accent + "55", borderRadius: 14, backgroundColor: accent + "12", paddingVertical: 18, paddingHorizontal: 12, margin: 6 }}>
+      <Count to={value} delay={delay} style={{ color: accent, fontSize: 30, fontWeight: "900" }} />
+      <Text style={{ color: neutrals.muted, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 6, textAlign: "center" }}>{label}</Text>
     </Animated.View>
   );
 }
@@ -383,7 +383,7 @@ function Summary({ payload }: { payload: Payload }) {
         </View>
       ) : null}
 
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", maxWidth: 330 }}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", maxWidth: 336 }}>
         {tiles.map((t, i) => <StatTile key={t.label} value={t.value as number} label={t.label} accent={accents[i % accents.length]} delay={700 + i * 190} />)}
       </View>
     </View>
