@@ -121,10 +121,12 @@
     <div class="card">
       <div class="hd"><h2><span class="rail"></span>Attribute a school</h2>
         <div class="actions"><button class="btn gold sm" data-act="resolveref">Resolve referral links</button></div>
-        <div class="sub">Locks a school to an ambassador (first-touch override). Use the Membership school ID. <b>Resolve referral links</b> auto-attributes any school that signed up under an ambassador's ?p= link.</div></div>
+        <div class="sub">Locks a school to an ambassador (first-touch override). <b>Search a school by name or email</b> to auto-fill it (no UUID hunting), or paste a Membership school ID. <b>Resolve referral links</b> auto-attributes any school that signed up under an ambassador's ?p= link.</div></div>
       <div class="form">
         <div class="field"><label>Ambassador</label><select id="aPartner"></select></div>
-        <div class="field"><label>Membership school ID</label><input id="aSchoolId" placeholder="uuid" style="min-width:290px" /></div>
+        <div class="field" style="min-width:290px"><label>Find school (name or email)</label><input id="aSearch" placeholder="type a school name…" autocomplete="off" /></div>
+        <div id="aResults" class="schools" style="width:100%;margin:2px 0"></div>
+        <div class="field"><label>Membership school ID</label><input id="aSchoolId" placeholder="auto-filled from search — or paste a uuid" style="min-width:290px" /></div>
         <div class="field"><label>School name</label><input id="aSchoolName" placeholder="label (optional)" /></div>
         <div class="field"><label>Reason</label><input id="aReason" placeholder="e.g. phone onboarding" /></div>
         <button class="btn gold" id="assignBtn">Attribute</button>
@@ -259,6 +261,36 @@ $('createBtn').onclick = async () => {
   finally{ $('createBtn').disabled=false; }
 };
 
+// School search → auto-fill the Membership school ID (no UUID hunting).
+let aSearchT;
+$('aSearch').oninput = () => {
+  clearTimeout(aSearchT);
+  const q = $('aSearch').value.trim();
+  if(q.length < 2){ $('aResults').innerHTML=''; return; }
+  aSearchT = setTimeout(async () => {
+    $('aResults').innerHTML = '<span style="color:var(--muted)">Searching…</span>';
+    try{
+      const j = await ef('find-member-school', { q });
+      if(!j.ok){ $('aResults').innerHTML = '<span style="color:var(--muted)">'+esc(j.error||'No results')+'</span>'; return; }
+      const rows = j.results||[];
+      if(!rows.length){ $('aResults').innerHTML = '<span style="color:var(--muted)">No schools match.</span>'; return; }
+      $('aResults').innerHTML = rows.map((r,i)=>`<div class="sres" data-i="${i}" style="cursor:pointer;padding:7px 9px;border:1px solid var(--line);border-radius:8px;margin:4px 0">`+
+        `<b>${esc(r.name||'(no name)')}</b> <span style="color:var(--muted)">${esc(r.email||'')}</span>`+
+        (r.attributed_to_slug?` <span style="color:#e6a06a">· already → ${esc(r.attributed_to_slug)}</span>`:(r.referral_slug?` <span style="color:var(--muted)">· ?p=${esc(r.referral_slug)}</span>`:''))+`</div>`).join('');
+      $('aResults').querySelectorAll('.sres').forEach(el=>{
+        el.onclick = () => {
+          const r = rows[+el.dataset.i];
+          $('aSchoolId').value = r.member_school_id;
+          $('aSchoolName').value = r.name||'';
+          $('aSearch').value = r.name||'';
+          $('aResults').innerHTML = '';
+          if(r.attributed_to_slug) toast('Already attributed to '+r.attributed_to_slug+' — attributing will reassign.','err');
+        };
+      });
+    }catch(e){ $('aResults').innerHTML = '<span style="color:var(--muted)">Search failed.</span>'; }
+  }, 300);
+};
+
 $('assignBtn').onclick = async () => {
   const partner_id=$('aPartner').value, member_school_id=$('aSchoolId').value.trim();
   if(!partner_id) return toast('Create an ambassador first.','err');
@@ -268,7 +300,7 @@ $('assignBtn').onclick = async () => {
     const j = await ef('partner-assign', { partner_id, member_school_id, school_name:$('aSchoolName').value.trim()||null, reason:$('aReason').value.trim()||null });
     if(!j.ok) throw new Error(j.error);
     toast(j.unchanged?'Already attributed to that ambassador.':(j.reassigned?'School reassigned.':'School attributed.'),'ok');
-    $('aSchoolId').value=''; $('aSchoolName').value=''; $('aReason').value='';
+    $('aSchoolId').value=''; $('aSchoolName').value=''; $('aReason').value=''; $('aSearch').value=''; $('aResults').innerHTML='';
     await load();
   }catch(e){ toast(e.message||'Could not attribute.','err'); }
   finally{ $('assignBtn').disabled=false; }
