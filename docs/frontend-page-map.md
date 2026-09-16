@@ -66,7 +66,7 @@ Last updated: 2026-08-06
 | **/control/judges** | Judge pool (cleared/active), per-video assignments, reassign, reopen incomplete pods. | `judges, judge_assignments` (**realtime**) | Flag under-judged videos. |
 | **/control/results** | Resolved scores, placements, rating deltas, season standings (best 5/9). | `results, skill_ratings, rating_history` (**realtime**) | Empty before resolve. |
 | **/control/medals** | Medal ship list — one shipment per school, counts, statuses. | `medals, medal_shipments, schools` | Export/print. |
-| **/control/finance** | Entry-fee payments, school revenue-share payouts (10/20/30% tiers). | `payments, school_payouts` | Reconcile view. |
+| **/control/finance** | Entry-fee payments, school revenue-share payouts (15/25/35% tiers). | `payments, school_payouts` | Reconcile view. |
 | **/control/audit** | Every override/rollback (who/when/before/after). | `engine_audit` (**realtime**) | Read-only timeline. |
 | **/control/scheme** | Edit the Division Scheme (axes, brackets, floor, collapse order) and **simulate** against current entries before locking. | `division_schemes`, simulate via divisioning core | Preview counts; immutable once a round locks. |
 | **/control/settings** | Create seasons/rounds, set deadlines (the 15th), manage staff, invite judges. | `seasons, rounds, staff, judges` | — |

@@ -40,7 +40,7 @@ Last updated: 2026-08-06
 
 **C1. Processor + flow.** DECISION. **Stripe.** Entry fee **captured at sign-up** for the round; you can sign up/pay anytime, but the video submission must be in before the deadline.
 
-**C2. School payouts.** DECISION + BUILD. **Per round via Stripe (Connect).** Tiers 10/20/30% applied automatically at payout. 30% = tournament **+ accreditation + member platform**. Must be fully automated.
+**C2. School payouts.** DECISION + BUILD. **Per round via Stripe (Connect).** Tiers 15/25/35% applied automatically at payout. 35% = tournament **+ accreditation + member platform**. Must be fully automated.
 
 **C3. Entry fee.** DECISION. **$45.**
 

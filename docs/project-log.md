@@ -23,7 +23,7 @@ Last updated: 2026-08-05
 
 **Judges are paid per video.** Each entry's video is scored by 1 judge (beginner/intermediate) or 3 judges (advanced). Per-video scales with entries and removes any small-pod penalty. ~$1.50/video working assumption.
 
-**School revenue share is tiered by engagement (max 30%):** 10% tournament-only, 20% accredited + competing, 30% also on the member platform. Deeper engagement earns more — a deliberate flywheel toward accreditation and the member platform.
+**School revenue share is tiered by engagement (max 35%):** 15% tournament-only, 25% accredited + competing, 35% also on the member platform. Deeper engagement earns more — a deliberate flywheel toward accreditation and the member platform.
 
 **Entry fee ≈ $45** (working number; pending real medal/box/shipping quotes). Comfortably profitable even worst-case (~32% margin with a top-tier 30% school and heavy advanced judging).
 
@@ -129,7 +129,7 @@ Full Q&A in `docs/open-questions.md`. Engine/product locks:
 - **Scoring — CHANGED:** judges score **per criterion** using the Traditional/Open weight profiles (`rubric_weights`); the per-judge score = weighted sum of criteria. This supersedes the single-0-100-per-judge lock. `resolvePod`/placement/rating are unchanged; needs per-criterion capture (`submission_scores`) re-added + judge-app fields. (Confirm scale + 3-judge averaging.)
 - **Rating → rank:** member-platform rank auto-seeds `declared_rank`; add a **school-configurable belt→tier mapping** (beginner/intermediate/advanced/black belt) since belt systems differ by style.
 - **Identity:** self sign-up for school/guardian/competitor; **judges invited** by a tournament admin. School app uses a `school_members(school_id, auth_user_id, role)` table (owner + assistant instructors).
-- **Payments:** Stripe. Entry fee **$45**, captured at sign-up. School payouts **per round via Stripe Connect**, tiers 10/20/30% automated (30% = tournament + accreditation + member platform).
+- **Payments:** Stripe. Entry fee **$45**, captured at sign-up. School payouts **per round via Stripe Connect**, tiers 15/25/35% automated (35% = tournament + accreditation + member platform).
 - **Video:** Vimeo (no ads); minor-safety protocols (private/unlisted, no public discovery).
 - **Consent:** signed e-waiver (COPPA).
 - **Legal:** incorporated. D-U-N-S meeting Aug 24. Privacy policy to be drafted here (reuse member-platform policy).

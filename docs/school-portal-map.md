@@ -69,7 +69,7 @@ uploaded → judging → results), entry-fee payment status. Nudge students who 
 uploaded before the deadline.
 
 ### E. Payouts & finance
-Revenue-share **payouts per round via Stripe Connect** (tiers 10 / 20 / 30%;
+Revenue-share **payouts per round via Stripe Connect** (tiers 15 / 25 / 35%;
 accreditation unlocks the 20% tier). Financial dashboard: earnings from entry-fee
 share, merch, tutorials. Reconciles with `school_payouts`. This portal has its **own
 Stripe Connect** onboarding, independent of the Member Platform.

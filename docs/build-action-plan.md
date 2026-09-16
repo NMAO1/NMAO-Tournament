@@ -112,7 +112,7 @@ is judged → reveals → Imprint fills. *(Mockups: `competitor-app-screens.html
 **M4 · School Portal Phase 1.** School account + auth, roster + **CSV import**,
 **class assignment**, **Tournament Controls** panel (per-student toggles →
 `student_tournament_settings`), entries/payments oversight, per-round **payouts**
-(Stripe Connect, 10/20/30% tiers). **DoD:** a school runs its students through a
+(Stripe Connect, 15/25/35% tiers). **DoD:** a school runs its students through a
 round and gets paid. *(Mockup: `school-portal-screens.html`.)*
 
 **M5 · Public + recognition.** Public **results** (`/results/[roundId]`, SSR/SEO),

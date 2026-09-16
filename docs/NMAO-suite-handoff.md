@@ -44,7 +44,7 @@ NMAO is three interlocking products that together form a martial-arts ecosystem.
                  │
                  ▼
    Schools adopt the MEMBER PLATFORM to run their dojo
-   + earn the top revenue share (20% → 30%)
+   + earn the top revenue share (25% → 35%)
                  │
                  ▼
    Member-platform student/rank data seeds tournament
@@ -53,7 +53,7 @@ NMAO is three interlocking products that together form a martial-arts ecosystem.
                  └────────────► back to Tournament (stronger)
 ```
 
-The revenue-share ladder (10% / 20% / 30%) is the deliberate incentive engine that pulls each school deeper into the suite. **[LOCKED]** (the ladder itself; the accreditation/member mechanics that gate it are [TO DEFINE]).
+The revenue-share ladder (15% / 25% / 35%) is the deliberate incentive engine that pulls each school deeper into the suite. **[LOCKED]** (the ladder itself; the accreditation/member mechanics that gate it are [TO DEFINE]).
 
 ## 3. Shared foundations across the suite
 
@@ -101,7 +101,7 @@ Rating is seeded by declared rank and updated by results; standings use best 5 o
 - Entry fee: ~$45/event (working; final pending vendor quotes).
 - Medals: everyone who competes gets one every round — a collectible metal segment that interlocks over the year into a full yin-yang. Bulk-shipped one box per school.
 - No qualifying prize pools: 9 rounds run on medals + rating + advancement. Cash prize pools only at semis + grand finale, funded by an 8% per-entry set-aside plus sponsors.
-- School revenue share: 10% tournament-only → 20% accredited + competing → 30% also on the member platform.
+- School revenue share: 15% tournament-only → 25% accredited + competing → 35% also on the member platform.
 - Full unit-economics model: `docs/unit-economics.xlsx`.
 
 ### 4.8 Parked revenue idea — Sponsor Vote [PROPOSED, parked]
@@ -115,7 +115,7 @@ Open questions [TO DEFINE]: who's accredited (schools/instructors/both); criteri
 
 ## 6. Member Platform — proposed scope (mostly [TO DEFINE])
 
-Likely: SaaS for running a martial arts school. Adopting it earns the top 30% tournament revenue tier and feeds clean student/rank data into the other products.
+Likely: SaaS for running a martial arts school. Adopting it earns the top 35% tournament revenue tier and feeds clean student/rank data into the other products.
 
 Likely v1 features: roster & profiles · rank/belt progression · scheduling & attendance · billing/dues · communication · curriculum library · instructor management · reporting.
 
@@ -124,7 +124,7 @@ Open questions [TO DEFINE]: v1 feature priority; pricing model; how rank data fl
 ## 7. How the products connect — [PROPOSED]
 - Shared identity: one account, roles across products. Schools = shared org spine.
 - Data flow: member platform (rank, roster) → tournament (seeds entries, `declared_rank`, ratings). Tournament results → back as student achievements.
-- Revenue ladder binds them: 10% → 20% → 30%.
+- Revenue ladder binds them: 15% → 25% → 35%.
 - Trust flows down: accreditation status gates tournament privileges and is displayed in the member platform + public directory.
 
 ## 8. Cross-cutting technical architecture — [mixed]
