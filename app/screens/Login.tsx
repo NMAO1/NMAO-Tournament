@@ -25,6 +25,7 @@ export default function Login({ onSignup }: { onSignup: () => void }) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={{ flex: 1, backgroundColor: neutrals.bg, justifyContent: "center", padding: 26 }}>
+      <View style={{ width: "100%", maxWidth: 640, alignSelf: "center" }}>
       <LinearGradient colors={["#FF2E3B", "#A32BF7", "#1F7BFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
         style={{ height: 4, width: 150, borderRadius: 99, alignSelf: "center", marginBottom: 18 }} />
       <Text style={{ color: neutrals.text, fontSize: 30, fontWeight: "700", textAlign: "center" }}>NMAO Compete</Text>
@@ -54,6 +55,7 @@ export default function Login({ onSignup }: { onSignup: () => void }) {
       </TouchableOpacity>
 
       {msg ? <Text style={{ color: msg.startsWith("Check") ? status.success : status.danger, textAlign: "center", marginTop: 16 }}>{msg}</Text> : null}
+      </View>
     </KeyboardAvoidingView>
   );
 }

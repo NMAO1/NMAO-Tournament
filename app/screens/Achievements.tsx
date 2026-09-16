@@ -90,7 +90,7 @@ export default function Achievements() {
   const equipped = selBadge ? vault.equipped === selBadge.code : false;
   return (
     <>
-    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingBottom: 34 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingBottom: 34, width: "100%", maxWidth: 640, alignSelf: "center" }}>
       <Label t="Your Season Medallion" />
       <View style={{ alignItems: "center", marginBottom: 10 }}>
         <Medallion tiers={medTiers} season={SEASON} size={280} centerTier={centerTier} />

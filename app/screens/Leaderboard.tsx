@@ -73,7 +73,7 @@ export default function Leaderboard() {
 
   return (
     <>
-      <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 16, paddingBottom: 40, width: "100%", maxWidth: 640, alignSelf: "center" }}>
         <View style={{ flexDirection: "row", backgroundColor: neutrals.surface, borderRadius: 10, padding: 3, marginBottom: 12 }}>
           <Seg label="Tournament" active={board === "tournament"} onPress={() => setBoard("tournament")} />
           <Seg label="Duelists" active={board === "duelists"} onPress={() => setBoard("duelists")} />

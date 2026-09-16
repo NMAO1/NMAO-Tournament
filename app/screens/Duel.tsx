@@ -119,7 +119,7 @@ export default function Duel() {
     <>
     <ScrollView
       style={{ flex: 1, backgroundColor: neutrals.bg }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 32, width: "100%", maxWidth: 640, alignSelf: "center" }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={neutrals.muted} />}
     >
       {standing ? (

@@ -237,7 +237,7 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
   }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 48 }}
+    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 48, width: "100%", maxWidth: 640, alignSelf: "center" }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={neutrals.muted} />}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
         <Text style={{ color: neutrals.text, fontSize: 26, fontWeight: "700" }}>Compete</Text>

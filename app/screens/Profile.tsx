@@ -72,7 +72,7 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
     <View style={{ position: "absolute", top: 54, right: 18, zIndex: 10 }}>
       <HeaderBell unread={unread} onPress={onBell} />
     </View>
-    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 34 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 34, width: "100%", maxWidth: 640, alignSelf: "center" }}>
       {/* header */}
       <View style={{ alignItems: "center", marginBottom: 20 }}>
         <View>
@@ -238,7 +238,7 @@ function Row({ icon, label, onPress }: { icon: string; label: string; onPress: (
 
 function Panel({ title, onBack, children }: { title: string; onBack: () => void; children: ReactNode }) {
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54 }}>
+    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, width: "100%", maxWidth: 640, alignSelf: "center" }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 18 }}>
         <TouchableOpacity onPress={onBack} style={{ marginRight: 12 }}><Text style={{ color: neutrals.muted, fontSize: 22 }}>‹</Text></TouchableOpacity>
         <Text style={{ color: neutrals.text, fontSize: 16, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" }}>{title}</Text>
