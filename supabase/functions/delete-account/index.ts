@@ -102,6 +102,30 @@ Deno.serve(async (req) => {
         .filter(Boolean) as string[];
       if (paths.length) { try { await svc.storage.from("profile-photos").remove(paths); } catch (_) { /* non-fatal */ } }
 
+      // competition + duel videos (entry-videos bucket, PRIVATE — minors' footage):
+      // remove the storage objects, then null the DB references. The stored value
+      // is the object key (get-playback-url signs it directly), so pass it as-is;
+      // strip any accidental URL/prefix + query defensively.
+      try {
+        const toKey = (v: unknown) => v ? String(v).replace(/^.*\/entry-videos\//, "").split("?")[0] : null;
+        const vids: string[] = [];
+        const { data: ent } = await svc.from("entries").select("video_url, video_url_2").in("competitor_id", anonIds);
+        for (const e of (ent ?? []) as any[]) { const a = toKey(e.video_url); const b = toKey(e.video_url_2); if (a) vids.push(a); if (b) vids.push(b); }
+        const { data: du } = await svc.from("duels")
+          .select("challenger_id, opponent_id, challenger_video, opponent_video")
+          .or(`challenger_id.in.(${anonIds.join(",")}),opponent_id.in.(${anonIds.join(",")})`);
+        for (const d of (du ?? []) as any[]) {
+          if (anonIds.includes(d.challenger_id)) { const k = toKey(d.challenger_video); if (k) vids.push(k); }
+          if (anonIds.includes(d.opponent_id))   { const k = toKey(d.opponent_video);   if (k) vids.push(k); }
+        }
+        const keys = [...new Set(vids)];
+        if (keys.length) { try { await svc.storage.from("entry-videos").remove(keys); } catch (_) { /* non-fatal */ } }
+        // null the references so no path to a (now-deleted) minor's video remains
+        await svc.from("entries").update({ video_url: null, video_url_2: null }).in("competitor_id", anonIds);
+        await svc.from("duels").update({ challenger_video: null }).in("challenger_id", anonIds);
+        await svc.from("duels").update({ opponent_video: null }).in("opponent_id", anonIds);
+      } catch (_) { /* non-fatal — never block account deletion on video cleanup */ }
+
       const { error: cErr } = await svc.from("competitors").update({
         first_name: "Deleted", last_name: "Competitor", email: null,
         dob: "2000-01-01", auth_user_id: null, profile_photo_url: null,
