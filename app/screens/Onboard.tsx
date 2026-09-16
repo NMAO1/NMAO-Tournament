@@ -6,10 +6,11 @@ import { supabase } from "../lib/supabase";
 import { listSeasons, listSchools, onboardCompetitor, type Season, type School } from "../lib/onboard";
 
 const RANKS = ["beginner", "intermediate", "advanced"];
-const CONSENTS: { key: string; label: string; link?: { text: string; url: string }; after?: string }[] = [
-  { key: "media_release", label: "I consent to my competitor's forms being recorded and shown for judging and community voting." },
+type Lnk = { text: string; url: string };
+const CONSENTS: { key: string; label: string; link?: Lnk; mid?: string; link2?: Lnk; after?: string }[] = [
+  { key: "media_release", label: "I consent to my competitor's forms being recorded and shown for judging and community voting, as described in the ", link: { text: "Parental Consent & Video Release", url: "https://school.nmao.us/media-release.html" }, after: "." },
   { key: "rules", label: "I have read and agree to the ", link: { text: "Competition Rules & Code of Conduct", url: "https://school.nmao.us/rules.html" }, after: ", and understand NMAO has no tolerance for objectionable content or abusive behavior — such content and the accounts responsible are removed." },
-  { key: "terms", label: "I agree to the ", link: { text: "Privacy Policy", url: "https://school.nmao.us/privacy.html" }, after: "." },
+  { key: "terms", label: "I agree to the ", link: { text: "Terms of Service", url: "https://school.nmao.us/terms.html" }, mid: " and ", link2: { text: "Privacy Policy", url: "https://school.nmao.us/privacy.html" }, after: "." },
 ];
 const pad = (s: string) => (s.length === 1 ? "0" + s : s);
 
@@ -116,6 +117,8 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
             <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, flex: 1 }}>
               {c.label}
               {c.link ? <Text onPress={() => { if (c.link) Linking.openURL(c.link.url); }} style={{ color: hues.sapphire.hi, textDecorationLine: "underline" }}>{c.link.text}</Text> : null}
+              {c.mid ?? ""}
+              {c.link2 ? <Text onPress={() => { if (c.link2) Linking.openURL(c.link2.url); }} style={{ color: hues.sapphire.hi, textDecorationLine: "underline" }}>{c.link2.text}</Text> : null}
               {c.after ?? ""}
             </Text>
           </TouchableOpacity>
