@@ -8,9 +8,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "us.nmao.compete",
-      "buildNumber": "1",
       "associatedDomains": [
         "applinks:compete.nmao.us"
       ],
