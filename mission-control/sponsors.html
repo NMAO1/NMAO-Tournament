@@ -55,6 +55,9 @@
   .pill.suspended{background:rgba(230,185,63,.10);color:#d9c58a;border:1px solid #5a4a22}
   .pill.rejected{background:rgba(224,112,112,.12);color:#E9A0A0;border:1px solid #4a2b2b}
   .pill.lapsed{background:rgba(120,120,130,.14);color:#b7b2aa;border:1px solid #3a3a40}
+  .revprev{display:flex;gap:10px;flex-wrap:wrap}
+  .revcard{width:150px;min-height:154px;border-radius:14px;padding:16px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:radial-gradient(120% 90% at 50% 44%,#16121a 0%,#0a0908 66%,#060505 100%);box-shadow:inset 0 0 0 1px rgba(230,185,63,.1)}
   .name b{font-size:13.5px} .name small{display:block;color:var(--muted);font-size:11.5px}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:560px;z-index:80}
   .toast.err{border-color:#4a2b2b;color:#E9A0A0} .toast.ok{border-color:#2b4a3a;color:#a9f0c1}
@@ -106,6 +109,12 @@
         <table><thead><tr><th>Company</th><th style="width:104px">Status</th><th style="width:110px">Tier</th>
           <th style="width:60px">Ads</th><th style="width:74px">Products</th><th style="width:88px">Impr.</th><th style="width:74px">Clicks</th><th style="width:110px"></th></tr></thead>
           <tbody id="sponsorsBody"></tbody></table>
+      </div>
+
+      <div class="card">
+        <div class="hd"><h2><span class="rail"></span>Reveal creative review</h2>
+          <div class="sub">The monthly-reveal bookends (pre-roll &amp; end-card). Preview exactly what a competitor will see, then approve. Any edit sends it back to pending — and a creative only shows once it's <b>approved</b>, its sponsor is <b>active</b>, and it's enabled.</div></div>
+        <div id="reviewBody" style="padding:6px 18px 16px"></div>
       </div>
 
       <div class="card">
@@ -209,10 +218,10 @@ const n = v => Number(v||0).toLocaleString();
 
 async function load(){
   try{
-    const [sponsors, tiers, analytics, house, catalog] = await Promise.all([
-      rpc('admin_list_sponsors'), rpc('admin_list_tiers'), rpc('admin_sponsor_analytics'), rpc('admin_house_ads'), rpc('admin_list_offerings') ]);
+    const [sponsors, tiers, analytics, house, catalog, review] = await Promise.all([
+      rpc('admin_list_sponsors'), rpc('admin_list_tiers'), rpc('admin_sponsor_analytics'), rpc('admin_house_ads'), rpc('admin_list_offerings'), rpc('admin_creative_queue').catch(()=>[]) ]);
     TIERS = tiers||[]; CATALOG = catalog||[];
-    renderSponsors(sponsors||[]); renderAnalytics(analytics||[]); renderHouse(house||[]); renderHouseForm(); renderTiers(); renderCatalog();
+    renderSponsors(sponsors||[]); renderAnalytics(analytics||[]); renderHouse(house||[]); renderHouseForm(); renderTiers(); renderCatalog(); renderReview(review||[]);
   }catch(e){ toast(e.message||'Could not load.','err'); }
 }
 
@@ -280,6 +289,71 @@ function renderCatalog(){
       <button class="btn gold sm" data-act="saveOffering" data-code="${esc(o.code)}">Save</button>
     </td></tr>`).join('');
 }
+function fmtDate(ts){ if(!ts) return ''; try{ return new Date(ts).toLocaleDateString(undefined,{month:'short',day:'numeric'}); }catch(e){ return ''; } }
+
+// A faithful (static) preview of the two reveal bookend cards, straight from the
+// creative's config — the same layout the app renders, so staff approve what
+// the competitor will actually see.
+function revealPreviewHTML(c){
+  const cfg = c.config||{};
+  const color = cfg.color||'#E6B93F';
+  const mark = c.logo_url
+    ? `<img src="${esc(c.logo_url)}" style="max-width:122px;max-height:40px;object-fit:contain"/>`
+    : `<div style="font-weight:900;font-size:18px;letter-spacing:1px;color:#EDEFF2;text-align:center">${esc(c.company_name)}</div>`;
+  const pre = `<div class="revcard">
+      <div style="color:#9a927f;font-size:9px;line-height:1.55;text-align:center">This round of the<br><b style="color:${esc(color)}">Tournament of Champions</b><br>is presented by</div>
+      <div style="margin:11px 0 6px">${mark}</div>
+      ${c.tagline?`<div style="color:#c9b8a0;font-size:10px;font-style:italic;text-align:center">${esc(c.tagline)}</div>`:''}
+      <div style="width:44px;height:3px;border-radius:3px;margin:10px auto 0;background:${esc(color)}"></div>
+    </div>`;
+  const end = `<div class="revcard">
+      <div style="color:#8a8271;font-size:8px;letter-spacing:2px;text-transform:uppercase;text-align:center">Brought to you by</div>
+      <div style="margin:9px 0 5px">${mark}</div>
+      ${cfg.message?`<div style="color:#efe6d2;font-size:10px;font-style:italic;text-align:center;line-height:1.4">${esc(cfg.message)}</div>`:''}
+      ${cfg.offer?`<div style="margin:8px auto 0;max-width:150px;font-size:9px;text-align:center;color:#f0d9b0;padding:6px 10px;border-radius:9px;border:1px solid ${esc(color)}66;background:${esc(color)}14">🎁 ${esc(cfg.offer)}</div>`:''}
+      ${cfg.store_url?`<div style="margin:10px auto 0"><span style="display:inline-block;font-size:9px;font-weight:800;color:#fff;padding:7px 12px;border-radius:99px;background:${esc(color)}">Shop the ${esc(c.company_name)} store →</span></div>`:''}
+    </div>`;
+  return `<div class="revprev">${pre}${end}</div>`;
+}
+
+function renderReview(list){
+  const b=$('reviewBody'); if(!b) return;
+  if(!list.length){ b.innerHTML = `<div class="muted" style="font-size:13px;padding:8px 0">No reveal-sponsor creatives yet. Add the “Monthly-reveal sponsor” offering to a sponsor (Manage → Offerings) to create one.</div>`; return; }
+  b.innerHTML = list.map(c=>{
+    const cfg=c.config||{};
+    const approved=!!c.approved_at;
+    const live = approved && c.active && c.sponsor_status==='active';
+    const statusPill = approved ? `<span class="pill active">approved</span>` : `<span class="pill pending">pending review</span>`;
+    const warn=[]; if(c.sponsor_status!=='active') warn.push(`sponsor ${esc(c.sponsor_status)}`); if(!c.active) warn.push('disabled');
+    const livePill = live ? `<span class="pill active">● live</span>` : `<span class="pill lapsed">not live${warn.length?' — '+warn.join(', '):''}</span>`;
+    const targ = [ (c.age_brackets||[]).join(','), (c.states||[]).join(','), (c.regions||[]).join(','), (c.ranks||[]).join(',') ].filter(Boolean).join(' · ');
+    const id=c.entitlement_id;
+    return `<div style="border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--panel2)">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <b>${esc(c.company_name)}</b> ${statusPill} ${livePill}
+        <span class="muted2" style="font-size:11px;margin-left:auto">${targ?('🎯 '+esc(targ)):'national'} · submitted ${fmtDate(c.submitted_at)}</span>
+      </div>
+      ${c.review_notes?`<div class="muted" style="font-size:12px;margin:-4px 0 10px">Note: ${esc(c.review_notes)}</div>`:''}
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+        ${revealPreviewHTML(c)}
+        <div class="frm" style="flex:1;min-width:250px;margin:0">
+          <div><label>Brand color (hex)</label><input id="rv_color_${id}" value="${esc(cfg.color||'#E6B93F')}" placeholder="#E6B93F"/></div>
+          <div><label>Store URL</label><input id="rv_store_${id}" value="${esc(cfg.store_url||'')}" placeholder="https:// (else top product / site)"/></div>
+          <div class="full"><label>Message (end-card)</label><input id="rv_msg_${id}" value="${esc(cfg.message||'')}" placeholder="Champions are made in the reps no one sees."/></div>
+          <div class="full"><label>Offer (end-card)</label><input id="rv_offer_${id}" value="${esc(cfg.offer||'')}" placeholder="20% off your first order — code CHAMP"/></div>
+          <div class="actions-row">
+            <button class="btn sm" data-act="reviewSave" data-id="${id}" data-sid="${c.sponsor_id}" data-on="${c.active?1:0}">Save creative</button>
+            ${approved
+              ? `<button class="btn sm" data-act="reviewReject" data-id="${id}" data-approved="1">Unapprove</button>`
+              : `<button class="btn danger sm" data-act="reviewReject" data-id="${id}">Reject…</button>
+                 <button class="btn gold sm" data-act="reviewApprove" data-id="${id}">Approve</button>`}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderAddOfferingForm(){
   $('addOfferingForm').innerHTML = `
     <div><label>Name</label><input id="no_name" placeholder="Sideline banner"/></div>
@@ -530,6 +604,12 @@ document.addEventListener('click', async (e)=>{
     if(act==='addSponsorToggle'){ const f=$('addSponsorForm'); if(f.classList.contains('hide')){ renderAddSponsorForm(); f.classList.remove('hide'); } else { f.classList.add('hide'); f.innerHTML=''; } return; }
     if(act==='manage'){ return showDetail(btn.dataset.id); }
     if(act==='back'){ return backToList(); }
+    if(act==='reviewApprove'){ await rpc('admin_review_entitlement',{ p_id:btn.dataset.id, p_approve:true }); toast('Approved — creative is live.','ok'); return load(); }
+    if(act==='reviewReject'){ const notes=prompt(btn.dataset.approved?'Unapprove — reason / notes (optional):':'Reject — reason / notes (optional):')||''; await rpc('admin_review_entitlement',{ p_id:btn.dataset.id, p_approve:false, p_notes:notes||null }); toast('Sent back to pending.','ok'); return load(); }
+    if(act==='reviewSave'){ const id=btn.dataset.id;
+      const cfg={ color: val('rv_color_'+id)||'#E6B93F', store_url: val('rv_store_'+id)||null, message: val('rv_msg_'+id)||null, offer: val('rv_offer_'+id)||null };
+      await rpc('admin_set_entitlement',{ p_sponsor:btn.dataset.sid, p_offering:'reveal_sponsor', p_active: btn.dataset.on==='1', p_config:cfg });
+      toast('Saved — back to pending review.','ok'); return load(); }
 
     btn.disabled=true;
 
