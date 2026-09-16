@@ -59,9 +59,20 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
           <Text style={{ color: neutrals.text, fontSize: 24, fontWeight: "800" }}>Register your competitor</Text>
           <TouchableOpacity onPress={() => supabase.auth.signOut()}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Sign out</Text></TouchableOpacity>
         </View>
-        <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 }}>
+        <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 14 }}>
           Every competitor joins a season — the year-long journey of nine tournaments. You can add more competitors later.
         </Text>
+
+        {/* COPPA §312.4 direct notice — shown BEFORE any child information is entered. */}
+        <View style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, padding: 14, marginBottom: 20, backgroundColor: "rgba(255,255,255,0.03)" }}>
+          <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 13, marginBottom: 6 }}>Before you begin</Text>
+          <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18 }}>
+            You're registering your competitor as their parent or legal guardian. We'll collect their name, date of birth, rank, school, and the competition videos they submit — used only to run the tournament. Please review the{" "}
+            <Text onPress={() => Linking.openURL("https://school.nmao.us/media-release.html")} style={{ color: hues.sapphire.hi, textDecorationLine: "underline" }}>Parental Consent &amp; Video Release</Text>
+            {" "}and{" "}
+            <Text onPress={() => Linking.openURL("https://school.nmao.us/privacy.html")} style={{ color: hues.sapphire.hi, textDecorationLine: "underline" }}>Privacy Policy</Text>. You'll confirm your consent at the bottom.
+          </Text>
+        </View>
 
         <Section title="The competitor" />
         <Row><Field label="First name" value={first} onChange={setFirst} flex /><View style={{ width: 10 }} /><Field label="Last name" value={last} onChange={setLast} flex /></Row>

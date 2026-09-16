@@ -156,7 +156,15 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, url: session.url, entitlement_id: entitlementId, amount, lane });
   } catch (e: any) {
-    console.error("create-entitlement-checkout error:", e?.message || e);
-    return json({ ok: false, error: e?.message || "server_error" }, 500);
+    const msg = e?.message || "server_error";
+    // A tier activated without re-running setup-pricing carries a stripe_price_id
+    // from the wrong Stripe mode → Stripe rejects with "No such price". This fails
+    // safe (no charge), but surface it clearly so the operator knows the fix.
+    if (e?.code === "resource_missing" || /no such price/i.test(msg)) {
+      console.error("create-entitlement-checkout: tier price not valid in current Stripe mode — re-run setup-pricing after activating a tier:", msg);
+      return json({ ok: false, error: "This plan isn't available right now. Please try again shortly." }, 409);
+    }
+    console.error("create-entitlement-checkout error:", msg);
+    return json({ ok: false, error: msg }, 500);
   }
 });
