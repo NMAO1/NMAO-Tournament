@@ -343,10 +343,23 @@ function renderReview(list){
           <div class="full"><label>Offer (end-card)</label><input id="rv_offer_${id}" value="${esc(cfg.offer||'')}" placeholder="20% off your first order — code CHAMP"/></div>
           <div class="actions-row">
             <button class="btn sm" data-act="reviewSave" data-id="${id}" data-sid="${c.sponsor_id}" data-on="${c.active?1:0}">Save creative</button>
+            <button class="btn sm" data-act="reviewTargetToggle" data-id="${id}">🎯 Targeting</button>
             ${approved
               ? `<button class="btn sm" data-act="reviewReject" data-id="${id}" data-approved="1">Unapprove</button>`
               : `<button class="btn danger sm" data-act="reviewReject" data-id="${id}">Reject…</button>
                  <button class="btn gold sm" data-act="reviewApprove" data-id="${id}">Approve</button>`}
+          </div>
+          <div class="full" id="revtarget_${id}" style="display:none;border-top:1px solid var(--line);margin-top:6px;padding-top:10px">
+            <div class="muted2" style="font-size:11px;margin-bottom:8px">Who sees it — leave a field blank for “all”. Blank everything = national (everyone). Changing targeting does <b>not</b> require re-approval.</div>
+            <div class="frm" style="padding:0;margin:0">
+              <div><label>Age brackets</label><input id="tg_age_${id}" value="${(c.age_brackets||[]).join(', ')}" placeholder="all — 7_9, 10_12, 13_15, 16_17, 18_plus"/></div>
+              <div><label>Ranks</label><input id="tg_rank_${id}" value="${(c.ranks||[]).join(', ')}" placeholder="all — beginner, intermediate, advanced, black_belt"/></div>
+              <div><label>Regions</label><input id="tg_region_${id}" value="${(c.regions||[]).join(', ')}" placeholder="all — Northeast/Southeast/Midwest/Southwest/West"/></div>
+              <div><label>States (2-letter)</label><input id="tg_state_${id}" value="${(c.states||[]).join(', ')}" placeholder="all — NY, CA"/></div>
+              <div><label>Events</label><input id="tg_event_${id}" value="${(c.events||[]).join(', ')}" placeholder="all — open_forms"/></div>
+              <div style="display:flex;align-items:flex-end"><span class="muted" style="font-size:12.5px">Audience reach: <b id="tg_reach_${id}" style="color:var(--gold-soft)">—</b></span></div>
+            </div>
+            <div class="actions-row"><button class="btn sm" data-act="reviewReach" data-id="${id}">Estimate reach</button><button class="btn gold sm" data-act="reviewSaveTarget" data-id="${id}" data-sid="${c.sponsor_id}">Save targeting</button></div>
           </div>
         </div>
       </div>
@@ -610,6 +623,14 @@ document.addEventListener('click', async (e)=>{
       const cfg={ color: val('rv_color_'+id)||'#E6B93F', store_url: val('rv_store_'+id)||null, message: val('rv_msg_'+id)||null, offer: val('rv_offer_'+id)||null };
       await rpc('admin_set_entitlement',{ p_sponsor:btn.dataset.sid, p_offering:'reveal_sponsor', p_active: btn.dataset.on==='1', p_config:cfg });
       toast('Saved — back to pending review.','ok'); return load(); }
+    if(act==='reviewTargetToggle'){ const el=$('revtarget_'+btn.dataset.id); if(el) el.style.display = el.style.display==='none' ? 'block' : 'none'; return; }
+    if(act==='reviewReach'){ const id=btn.dataset.id;
+      const n=await rpc('admin_segment_reach',{ p_age:csv(val('tg_age_'+id)), p_states:csv(val('tg_state_'+id)).map(x=>x.toUpperCase()), p_regions:csv(val('tg_region_'+id)), p_ranks:csv(val('tg_rank_'+id)) });
+      const el=$('tg_reach_'+id); if(el) el.textContent = n+' competitor'+(n===1?'':'s'); btn.disabled=false; return; }
+    if(act==='reviewSaveTarget'){ const id=btn.dataset.id;
+      await rpc('admin_set_entitlement_targeting',{ p_sponsor:btn.dataset.sid, p_offering:'reveal_sponsor',
+        p_age:csv(val('tg_age_'+id)), p_states:csv(val('tg_state_'+id)).map(x=>x.toUpperCase()), p_regions:csv(val('tg_region_'+id)), p_events:csv(val('tg_event_'+id)), p_ranks:csv(val('tg_rank_'+id)) });
+      toast('Targeting saved.','ok'); return load(); }
 
     btn.disabled=true;
 
