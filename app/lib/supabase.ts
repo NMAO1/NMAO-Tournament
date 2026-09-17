@@ -11,17 +11,22 @@ const SecureStorage = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
-// Force the anon key onto every request. In release (Hermes) builds the
-// `apikey` header set by supabase-js was not reaching Supabase — every call
-// failed with "No API key found in request" — even though the key is embedded
-// (verified in-bundle) and the identical client works in Node. Wrapping fetch
-// and setting the headers ourselves guarantees the key is always present, and
-// pins Supabase to React Native's global fetch.
+// React Native 0.86 release builds (New Architecture) were dropping request
+// headers, so Supabase's `apikey`/`Authorization` never reached the gateway
+// ("No API key found in request") — verified: a raw fetch with the header got
+// 401, while the same header via curl/Node gets 200. Two belt-and-suspenders
+// mitigations: (1) put the apikey in the URL (the gateway accepts ?apikey=, and
+// URL params are not affected by the header bug); (2) pass headers as a Headers
+// instance, which serializes reliably where a plain object did not.
 const fetchWithKey: typeof fetch = (input, init) => {
-  const h: Record<string, string> = { ...((init?.headers as Record<string, string>) ?? {}) };
-  h.apikey = SUPABASE_ANON_KEY;
-  if (!h.Authorization && !h.authorization) h.Authorization = `Bearer ${SUPABASE_ANON_KEY}`;
-  return fetch(input, { ...init, headers: h });
+  let url = typeof input === "string" ? input : String((input as { url?: string })?.url ?? input);
+  if (!url.includes("apikey=")) {
+    url += (url.includes("?") ? "&" : "?") + "apikey=" + encodeURIComponent(SUPABASE_ANON_KEY);
+  }
+  const headers = new Headers((init?.headers as HeadersInit) ?? {});
+  headers.set("apikey", SUPABASE_ANON_KEY);
+  if (!headers.has("authorization")) headers.set("authorization", `Bearer ${SUPABASE_ANON_KEY}`);
+  return fetch(url, { ...init, headers });
 };
 
 export const supabase = createClient(

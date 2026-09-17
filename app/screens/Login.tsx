@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabase";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/env";
 
 // Temporary release diagnostic (remove once login is confirmed on device).
-const BUILD_TAG = "b10";
+const BUILD_TAG = "b11";
 
 export default function Login({ onSignup }: { onSignup: () => void }) {
   const [email, setEmail] = useState("");
@@ -18,9 +18,12 @@ export default function Login({ onSignup }: { onSignup: () => void }) {
   // Raw fetch to Supabase with the apikey header — isolates whether RN's fetch
   // can reach Supabase with a key at all, independent of the supabase-js client.
   useEffect(() => {
-    fetch(`${SUPABASE_URL}/auth/v1/health`, { headers: { apikey: SUPABASE_ANON_KEY } })
-      .then((r) => setProbe(`health:${r.status}`))
-      .catch((e) => setProbe(`health:err ${String(e?.message ?? e).slice(0, 20)}`));
+    (async () => {
+      let hdr = "?"; let qp = "?";
+      try { const r = await fetch(`${SUPABASE_URL}/auth/v1/health`, { headers: new Headers({ apikey: SUPABASE_ANON_KEY }) }); hdr = String(r.status); } catch { hdr = "err"; }
+      try { const r = await fetch(`${SUPABASE_URL}/auth/v1/health?apikey=${encodeURIComponent(SUPABASE_ANON_KEY)}`); qp = String(r.status); } catch { qp = "err"; }
+      setProbe(`hdr:${hdr} qp:${qp}`);
+    })();
   }, []);
 
   async function signIn() {
