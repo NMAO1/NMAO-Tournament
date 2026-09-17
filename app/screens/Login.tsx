@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, metalStops, spectrum as _spectrum, status } from "@nmao/design-tokens";
@@ -6,13 +6,22 @@ import { supabase } from "../lib/supabase";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/env";
 
 // Temporary release diagnostic (remove once login is confirmed on device).
-const BUILD_TAG = "b9";
+const BUILD_TAG = "b10";
 
 export default function Login({ onSignup }: { onSignup: () => void }) {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [probe, setProbe] = useState("probe…");
+
+  // Raw fetch to Supabase with the apikey header — isolates whether RN's fetch
+  // can reach Supabase with a key at all, independent of the supabase-js client.
+  useEffect(() => {
+    fetch(`${SUPABASE_URL}/auth/v1/health`, { headers: { apikey: SUPABASE_ANON_KEY } })
+      .then((r) => setProbe(`health:${r.status}`))
+      .catch((e) => setProbe(`health:err ${String(e?.message ?? e).slice(0, 20)}`));
+  }, []);
 
   async function signIn() {
     setBusy(true); setMsg("");
@@ -60,7 +69,7 @@ export default function Login({ onSignup }: { onSignup: () => void }) {
 
       {msg ? <Text style={{ color: msg.startsWith("Check") ? status.success : status.danger, textAlign: "center", marginTop: 16 }}>{msg}</Text> : null}
       <Text style={{ color: neutrals.muted2, fontSize: 10, textAlign: "center", marginTop: 26 }}>
-        {BUILD_TAG} · url {SUPABASE_URL ? SUPABASE_URL.replace("https://", "").slice(0, 8) : "MISSING"} · key {SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.slice(0, 8) : "MISSING"} ({SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.length : 0})
+        {BUILD_TAG} · key {SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.slice(0, 6) : "MISSING"} ({SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.length : 0}) · {probe}
       </Text>
       </View>
     </KeyboardAvoidingView>
