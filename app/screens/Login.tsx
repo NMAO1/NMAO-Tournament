@@ -3,6 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvo
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, metalStops, spectrum as _spectrum, status } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
+import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/env";
+
+// Temporary release diagnostic (remove once login is confirmed on device).
+const BUILD_TAG = "b9";
 
 export default function Login({ onSignup }: { onSignup: () => void }) {
   const [email, setEmail] = useState("");
@@ -55,6 +59,9 @@ export default function Login({ onSignup }: { onSignup: () => void }) {
       </TouchableOpacity>
 
       {msg ? <Text style={{ color: msg.startsWith("Check") ? status.success : status.danger, textAlign: "center", marginTop: 16 }}>{msg}</Text> : null}
+      <Text style={{ color: neutrals.muted2, fontSize: 10, textAlign: "center", marginTop: 26 }}>
+        {BUILD_TAG} · url {SUPABASE_URL ? SUPABASE_URL.replace("https://", "").slice(0, 8) : "MISSING"} · key {SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.slice(0, 8) : "MISSING"} ({SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.length : 0})
+      </Text>
       </View>
     </KeyboardAvoidingView>
   );
