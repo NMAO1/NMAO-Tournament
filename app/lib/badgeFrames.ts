@@ -1,4 +1,5 @@
 import type { FrameRarity } from "../components/BadgeFrame";
+import { SUPABASE_URL } from "./env";
 
 // ── "Living frames" — per-badge Arena borders that grow with the competitor's
 // progress VALUE (e.g. journal entries). A frame = a base rarity border + motif
@@ -441,7 +442,7 @@ export const ELEMENT_GLYPH: Record<string, string> = {
 // Real element art from the public badge-frames bucket (?v busts the image cache
 // when a file is re-uploaded); null → renderer uses the glyph.
 export function frameElementUrl(img: string): string | null {
-  const base = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const base = SUPABASE_URL;
   if (!base) return null;
   return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=16`;
 }

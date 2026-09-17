@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { SUPABASE_URL } from "./env";
 
 export type BadgeAward = {
   id: string;
@@ -14,7 +15,7 @@ export type BadgeAward = {
 // object path incl. extension, e.g. "perfect_season_champion.png".
 export function emblemUrl(emblemKey: string | null): string | null {
   if (!emblemKey) return null;
-  const base = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const base = SUPABASE_URL;
   return `${base}/storage/v1/object/public/badge-emblems/${emblemKey}`;
 }
 

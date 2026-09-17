@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./env";
 import type { Rarity } from "@nmao/design-tokens";
 
 // ============================================================
@@ -230,9 +231,9 @@ export async function sponsorImpression(id: string): Promise<void> {
 export async function playbackUrls(duelId: string): Promise<{ challenger: string | null; opponent: string | null }> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/get-playback-url`, {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/get-playback-url`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${session?.access_token ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}` },
+      headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY!, Authorization: `Bearer ${session?.access_token ?? SUPABASE_ANON_KEY}` },
       body: JSON.stringify({ duel_id: duelId }),
     });
     const j = await res.json();

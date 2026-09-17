@@ -2,7 +2,8 @@
 // reveal-music bucket. Nine tracks, one per season round, growing toward the
 // finale. Season 1 round 1 = Jan 2027; any period wraps into 1..9 so a track
 // always resolves (the reveal never blocks on this).
-const SUPA = process.env.EXPO_PUBLIC_SUPABASE_URL;
+import { SUPABASE_URL } from "./env";
+const SUPA = SUPABASE_URL;
 const ANCHOR = 2027 * 12 + 1; // Jan 2027 = round 1
 
 export function revealRound(period: string): number {

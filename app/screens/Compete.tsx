@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { neutrals, hues, metalStops, spectrumStops, status } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/env";
 import { uploadEntryVideo, PickedVideo } from "../lib/upload";
 import { myCompetitors } from "../lib/competitors";
 import { getActiveCompetitorId, setActiveCompetitorId } from "../lib/activeCompetitor";
@@ -127,9 +128,9 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
     setPhase("working"); setStep("Registering…");
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/create-entry-checkout`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-entry-checkout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${session?.access_token}` },
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY!, Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ competitor_id: cid, event: evt }),
       });
       const j = await res.json();
@@ -168,11 +169,11 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
 
       setStep("Registering your entry…");
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/submit-entry`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-entry`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!,
+          apikey: SUPABASE_ANON_KEY!,
           Authorization: `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({ competitor_id: competitorId, event, video_path: path1, video_path_2: path2 }),

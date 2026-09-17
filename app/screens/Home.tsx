@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
 import { neutrals, hues, tierHue, metalStops } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/env";
 import { myCompetitors, MyCompetitor as Competitor } from "../lib/competitors";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import Reveal, { RevealResult } from "./Reveal";
@@ -39,9 +40,9 @@ export default function Home({ onCompete }: { onCompete: () => void }) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return { dues: [], videos: [] };
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/my-inhouse-dues`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/my-inhouse-dues`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${session.access_token}` },
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY!, Authorization: `Bearer ${session.access_token}` },
         body: "{}",
       });
       const j = await res.json();
@@ -53,9 +54,9 @@ export default function Home({ onCompete }: { onCompete: () => void }) {
   async function payDue(d: Due) {
     setPayingId(d.entrant_id);
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/inhouse-checkout`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/inhouse-checkout`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY}` },
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY!, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
         body: JSON.stringify({ entrant_id: d.entrant_id }),
       });
       const j = await res.json();

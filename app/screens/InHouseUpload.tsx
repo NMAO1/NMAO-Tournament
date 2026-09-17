@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { neutrals, hues, metalStops } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "../lib/env";
 import { uploadInhouseVideo, PickedVideo } from "../lib/upload";
 
 const EXPORT_PRESET = ImagePicker.VideoExportPreset.H264_1920x1080;
@@ -38,9 +39,9 @@ export default function InHouseUpload({ task, onDone, onClose }: { task: VideoTa
       const path = await uploadInhouseVideo(task.competitor_id, task.entrant_id, vid);
       setStep("Submitting…");
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/submit-inhouse-video`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-inhouse-video`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${session?.access_token}` },
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY!, Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ entrant_id: task.entrant_id, video_path: path }),
       });
       const j = await res.json();

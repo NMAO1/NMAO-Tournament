@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { SUPABASE_URL } from "./env";
 import type { Rarity } from "@nmao/design-tokens";
 
 // Badge vault + medal case (via the badge_vault definer RPC).
@@ -28,5 +29,5 @@ export async function markBadgesSeen(competitorId: string): Promise<void> {
   await supabase.rpc("mark_badges_seen", { p_competitor_id: competitorId });
 }
 export function emblemUrl(key: string | null): string | null {
-  return key ? `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/badge-emblems/${key}` : null;
+  return key ? `${SUPABASE_URL}/storage/v1/object/public/badge-emblems/${key}` : null;
 }
