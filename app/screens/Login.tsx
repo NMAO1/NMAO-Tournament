@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabase";
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/env";
 
 // Temporary release diagnostic (remove once login is confirmed on device).
-const BUILD_TAG = "b11";
+const BUILD_TAG = "b12";
 
 export default function Login({ onSignup }: { onSignup: () => void }) {
   const [email, setEmail] = useState("");
@@ -72,7 +72,7 @@ export default function Login({ onSignup }: { onSignup: () => void }) {
 
       {msg ? <Text style={{ color: msg.startsWith("Check") ? status.success : status.danger, textAlign: "center", marginTop: 16 }}>{msg}</Text> : null}
       <Text style={{ color: neutrals.muted2, fontSize: 10, textAlign: "center", marginTop: 26 }}>
-        {BUILD_TAG} · key {SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.slice(0, 6) : "MISSING"} ({SUPABASE_ANON_KEY ? SUPABASE_ANON_KEY.length : 0}) · {probe}
+        {BUILD_TAG} · key {SUPABASE_ANON_KEY.slice(0, 5)}..{SUPABASE_ANON_KEY.slice(-4)} ({SUPABASE_ANON_KEY.length}) · {probe}
       </Text>
       </View>
     </KeyboardAvoidingView>
