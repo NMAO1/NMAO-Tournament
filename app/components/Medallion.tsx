@@ -81,3 +81,37 @@ export function Medallion({ tiers, season, size = 300, centerTier = null }: {
     </Canvas>
   );
 }
+
+// A single Season-Medallion segment as a standalone "medal" — the EXACT wedge
+// geometry + metallic yin-yang shaders (gold/silver/bronze/participation), auto-fit
+// to its own canvas. Used for the earned-medal fly-in and the tray.
+export function WedgeSegment({ tier, size = 60, season = { hi: "#66A9FF", b: "#1F7BFF", sh: "#0B3FD6" } }: {
+  tier: Tier; size?: number; season?: { hi: string; b: string; sh: string };
+}) {
+  const { clip, taijitu, tf } = useMemo(() => {
+    const clip = Skia.Path.MakeFromSVGString(waveStr(0))!;
+    const taijitu = Skia.Path.MakeFromSVGString(TAIJITU_STR)!;
+    const b = clip.getBounds();
+    const pad = size * 0.09;
+    const s = (size - pad * 2) / Math.max(b.width, b.height);
+    const tx = (size - b.width * s) / 2 - b.x * s;
+    const ty = (size - b.height * s) / 2 - b.y * s;
+    return { clip, taijitu, tf: [{ translateX: tx }, { translateY: ty }, { scale: s }] };
+  }, [size]);
+  const lt = METAL[tier].light;
+  const dk = tier === "part" ? [season.hi, season.b, season.sh] : METAL[tier].dark;
+  const hiV = vec(C - 34, C - 46);
+  return (
+    <Canvas style={{ width: size, height: size }}>
+      <Group transform={tf}>
+        <Group clip={clip}>
+          <Circle cx={C} cy={C} r={R}><RadialGradient c={hiV} r={R} colors={lt} /></Circle>
+          <Path path={taijitu}><RadialGradient c={hiV} r={R} colors={dk} /></Path>
+          <Circle cx={C} cy={C - h} r={EYR} color={season.b} />
+          <Circle cx={C} cy={C + h} r={EYR} color="#FFFFFF" />
+        </Group>
+        <Path path={clip} style="stroke" strokeWidth={2.2} color="#0b0b0d" />
+      </Group>
+    </Canvas>
+  );
+}

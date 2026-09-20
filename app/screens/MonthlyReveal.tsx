@@ -8,8 +8,7 @@ import { neutrals, hues, rarityBase, type Rarity, type MedalType } from "@nmao/d
 // rarity ranking — the rarest earned badge crowns the invocation title
 const RRANK: Record<string, number> = { legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
 import { Medal } from "../components/Medal";
-import { Medallion, type Tier } from "../components/Medallion";
-import { Frame } from "../components/Frame";
+import { Medallion, WedgeSegment, type Tier } from "../components/Medallion";
 import { markMonthlySeen } from "../lib/notifications";
 import { useSeasonLabel } from "../lib/season";
 import { startMusic, stopMusic, fadeOutMusic, initSounds, play } from "../lib/sound";
@@ -32,6 +31,22 @@ const SEASON = { hi: "#66A9FF", b: "#1F7BFF", sh: "#0B3FD6" }; // S1 Sapphire
 // The Tournament League emblem — the spectrum dragon coin (replaces the old gold crest).
 const EMBLEM = require("../assets/tournament-emblem.png");
 const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
+// Event names arrive either human ("Traditional Forms") or as codes ("trad_forms");
+// normalize to a clean display label for the reveal.
+const EVENT_LABELS: Record<string, string> = {
+  trad_forms: "Traditional Forms", traditional_forms: "Traditional Forms",
+  trad_weapons: "Traditional Weapons", traditional_weapons: "Traditional Weapons",
+  open_forms: "Open Forms", open_weapons: "Open Weapons",
+  creative_forms: "Creative Forms", creative_weapons: "Creative Weapons",
+};
+function eventName(e: unknown): string {
+  const s = String(e ?? "").trim();
+  if (!s) return "";
+  const k = s.toLowerCase();
+  if (EVENT_LABELS[k]) return EVENT_LABELS[k];
+  if (s.includes("_")) return s.split("_").map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w)).join(" ");
+  return s;
+}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function earnText(b: any): string {
   const ea = b.earned_action;
@@ -93,7 +108,7 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
     ...(hasSponsor ? ["presenter"] : []),
     "title",   // ACT 1 — the org name lands + Tournament League
     "name",    // ACT 2 — the dragon crest, their name, their honors
-    ...(medals.length ? ["medals"] : []),
+    ...(medals.length ? ["medallion", "medals"] : []),
     ...(badges.length ? ["badges"] : []),
     "summary",
     "close",
@@ -126,6 +141,7 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
         {kind === "presenter" ? <Presenter sponsor={sponsor!} /> : null}
         {kind === "title" ? <Title /> : null}
         {kind === "name" ? <NameCard message={str(payload, "message")} badges={badges} name={heroName} /> : null}
+        {kind === "medallion" ? <SeasonMedallion /> : null}
         {kind === "medals" ? <Medals medals={medals} /> : null}
         {kind === "badges" ? <Badges badges={badges} onDetail={setDetail} /> : null}
         {kind === "summary" ? <Summary payload={payload} viewerId={viewerId} onDetail={setDetail} /> : null}
@@ -332,148 +348,285 @@ const Bursts = forwardRef<BurstHandle, { size: number }>(function Bursts({ size 
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function Medals({ medals }: { medals: any[] }) {
-  // Phase B — the Season Medallion assembles piece by piece: each earned segment
-  // seats with a glow pulse + escalating haptic, then a climactic shockwave +
-  // flash when the medallion completes. (RN Animated — no reanimated babel plugin.)
-  const MED = 260;
-  const BEAT = 520; // ms per segment — a steady, musical cadence for the inserts
-  const target: (Tier | null)[] = Array.from({ length: 8 }, (_, i) => (medals[i] ? asTier(medals[i].tier) : null));
-  const filled = target.filter(Boolean).length;
+// A single Season-Medallion segment rendered as a standalone "medal" — a gilt-framed
+// trapezoid wedge with a season gem, colored by the earned metal. (Skia.)
+const WEDGE_METAL: Record<Tier, string> = { gold: "#EDC65C", silver: "#DFE6EE", bronze: "#D08A4E", part: "#EAF1F8" };
+function WedgePiece({ tier, size }: { tier: Tier; size: number }) {
+  return <WedgeSegment tier={tier} size={size} season={SEASON} />;
+}
+
+// ACT · The Season Medallion — the FULL nine-piece collectible assembles piece by
+// piece (the whole gilded object as the season's goal), climaxing in a flash + rings.
+function SeasonMedallion() {
+  const MED = 258;
+  const BEAT = 440;
   const [shown, setShown] = useState<(Tier | null)[]>(Array(8).fill(null));
+  const [center, setCenter] = useState<Tier | null>(null);
   const [done, setDone] = useState(false);
-  const flash = useRef(new Animated.Value(0)).current;   // per-seat glow pulse
-  const land = useRef(new Animated.Value(0)).current;    // completion shockwave + flash
-  const bursts = useRef<BurstHandle>(null);              // Skia particle bursts
+  const flash = useRef(new Animated.Value(0)).current;
+  const land = useRef(new Animated.Value(0)).current;
+  const bursts = useRef<BurstHandle>(null);
   useEffect(() => {
-    setShown(Array(8).fill(null)); setDone(false);
+    setShown(Array(8).fill(null)); setCenter(null); setDone(false);
     flash.setValue(0); land.setValue(0);
-    try { play("mriser"); } catch { /* optional */ } // tension build as the assembly begins
+    try { play("mriser"); } catch { /* optional */ }
     let i = 0;
     const id = setInterval(() => {
       i++;
-      setShown(target.map((t, idx) => (idx < i ? t : null)));
+      if (i <= 8) setShown(Array.from({ length: 8 }, (_, idx) => (idx < i ? "gold" : null)));
       flash.setValue(0);
       Animated.sequence([
         Animated.timing(flash, { toValue: 1, duration: 90, useNativeDriver: true }),
         Animated.timing(flash, { toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       ]).start();
-      // burst of sparks at the seating segment, in its earned metal
       const idx = i - 1;
-      if (idx >= 0 && idx < 8 && target[idx]) {
+      if (idx >= 0 && idx < 8) {
         const ang = -Math.PI / 2 + (idx + 0.5) * (Math.PI / 4);
         const rr = 95 * (MED / 340);
-        bursts.current?.fire(MED / 2 + rr * Math.cos(ang), MED / 2 + rr * Math.sin(ang),
-          { count: 20, spd: MED * 0.34, r: 3, color: sparkColor(target[idx]!), life: 720 });
+        bursts.current?.fire(MED / 2 + rr * Math.cos(ang), MED / 2 + rr * Math.sin(ang), { count: 18, spd: MED * 0.34, r: 3, color: "#FFE488", life: 700 });
       }
-      try { Haptics.impactAsync(i >= filled ? Haptics.ImpactFeedbackStyle.Heavy : Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
-      try { play("clink"); } catch { /* optional */ } // a soft tick on each seat, on the beat
-      if (i >= filled || i >= 8) {
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
+      try { play("clink"); } catch { /* optional */ }
+      if (i >= 9) {
         clearInterval(id);
+        setCenter("gold"); // the keystone (R9) seats last
         setTimeout(() => {
           setDone(true);
           try { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); } catch { /* optional */ }
-          try { play("clang"); } catch { /* optional */ } // triumphant hit as the medallion completes
+          try { play("clang"); } catch { /* optional */ }
           bursts.current?.fire(MED / 2, MED / 2, { count: 54, spd: MED * 0.62, r: 4, color: "#FFE9B0", life: 1150 });
           Animated.timing(land, { toValue: 1, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-        }, 300);
+        }, 260);
       }
     }, BEAT);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medals]);
+  }, []);
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>◈ Your Season Medallion ◈</Text>
+      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 16 }}>◈ The Season Medallion ◈</Text>
       <View style={{ width: MED, height: MED, alignItems: "center", justifyContent: "center" }}>
-        {/* completion shockwave ring */}
         <Animated.View pointerEvents="none" style={{ position: "absolute", width: MED * 0.7, height: MED * 0.7, borderRadius: MED * 0.35, borderWidth: 3, borderColor: hues.gold.hi,
           opacity: land.interpolate({ inputRange: [0, 0.1, 1], outputRange: [0, 0.9, 0] }),
           transform: [{ scale: land.interpolate({ inputRange: [0, 1], outputRange: [0.5, 2.3] }) }] }} />
-        {/* per-seat central glow */}
         <Animated.View pointerEvents="none" style={{ position: "absolute", width: MED * 0.55, height: MED * 0.55, borderRadius: MED * 0.275, backgroundColor: hues.gold.hi,
-          opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.45] }),
+          opacity: flash.interpolate({ inputRange: [0, 1], outputRange: [0, 0.4] }),
           transform: [{ scale: flash.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1.5] }) }] }} />
-        <Medallion tiers={shown} season={SEASON} size={MED} />
-        {/* Skia particle bursts (over the medallion) */}
+        <Medallion tiers={shown} season={SEASON} size={MED} centerTier={center} />
         <Bursts ref={bursts} size={MED} />
-        {/* completion white flash */}
         <Animated.View pointerEvents="none" style={{ position: "absolute", width: MED, height: MED, borderRadius: MED / 2, backgroundColor: "#FFFFFF",
           opacity: land.interpolate({ inputRange: [0, 0.12, 1], outputRange: [0, 0.8, 0] }) }} />
       </View>
-      <Text style={{ color: done ? hues.gold.hi : neutrals.muted2, fontSize: 11, marginTop: 8, marginBottom: 4, fontWeight: done ? "800" : "400", letterSpacing: done ? 1 : 0 }}>{done ? "The season takes shape" : "Each medal takes its place"}</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", marginTop: 8 }}>
-        {medals.map((m, i) => (
-          <View key={i} style={{ alignItems: "center", margin: 8, width: 84 }}>
-            <Medal type={asMedal(m.tier)} place={typeof m.place === "number" ? m.place : null} size={44} />
-            <Text style={{ color: neutrals.text, fontSize: 10, fontWeight: "700", marginTop: 6, textAlign: "center" }} numberOfLines={1}>{String(m.event ?? "")}</Text>
-            <Text style={{ color: neutrals.muted2, fontSize: 9, textTransform: "capitalize" }}>{String(m.tier ?? "")}{typeof m.place === "number" ? ` · ${ordinal(m.place)}` : ""}</Text>
+      <Text style={{ color: done ? hues.gold.hi : neutrals.muted2, fontSize: 12, marginTop: 10, fontWeight: done ? "800" : "400", letterSpacing: done ? 1 : 0 }}>{done ? "The whole is the goal" : "Nine pieces — one for every tournament"}</Text>
+      <Text style={{ color: neutrals.muted2, fontSize: 11, marginTop: 4, textAlign: "center", maxWidth: 280 }}>Earn a piece each tournament of the season.</Text>
+    </View>
+  );
+}
+
+// ACT · Medals Earned — each medal you won this round spins in on a stardust trail
+// from a random direction, snaps to center on the reticle, holds with its tier/event/
+// place, then shrinks to the tray below (as its wedge segment).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function Medals({ medals }: { medals: any[] }) {
+  const STAGE_W = 320, STAGE_H = 300;
+  const cx0 = STAGE_W / 2, cy0 = STAGE_H * 0.42;
+  const WSIZE = 96;
+  const bursts = useRef<BurstHandle>(null);
+  const [i, setI] = useState(-1);        // medal currently flying / holding
+  const [trayN, setTrayN] = useState(0); // medals seated in the tray
+  const [label, setLabel] = useState(false);
+  const fly = useRef(new Animated.Value(0)).current;
+  const entry = useRef({ dx: 0, dy: 0, spin: 0 }).current;
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const runMedal = useCallback((k: number) => {
+    if (k >= medals.length) return;
+    const ang = Math.random() * Math.PI * 2, R = 250;
+    entry.dx = Math.cos(ang) * R; entry.dy = Math.sin(ang) * R - 24;
+    entry.spin = (Math.random() < 0.5 ? 1 : -1) * (1.6 + Math.random() * 1.3);
+    setLabel(false); setI(k); fly.setValue(0);
+    try { play("mriser"); } catch { /* optional */ }
+    const col = sparkColor(asTier(medals[k].tier));
+    const sub = fly.addListener(({ value }) => {
+      const rp = Math.min(1, value / 0.86), snap = rp * rp * rp;
+      const mx = cx0 + entry.dx * (1 - snap), my = cy0 + entry.dy * (1 - snap);
+      if (rp < 0.95 && Math.random() < 0.85) bursts.current?.fire(mx, my, { count: 2, spd: 26, r: 2, color: col, life: 520 });
+    });
+    Animated.timing(fly, { toValue: 1, duration: 1500, easing: Easing.linear, useNativeDriver: false }).start(() => {
+      fly.removeListener(sub);
+      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch { /* optional */ }
+      try { play("clang"); } catch { /* optional */ }
+      bursts.current?.fire(cx0, cy0, { count: 42, spd: 210, r: 4, color: "#FFE9B0", life: 900 });
+      bursts.current?.fire(cx0, cy0, { count: 24, spd: 120, r: 3, color: col, life: 760 });
+      setLabel(true);
+      const t1 = setTimeout(() => {
+        setTrayN((n) => Math.max(n, k + 1));
+        const t2 = setTimeout(() => runMedal(k + 1), 520);
+        timers.current.push(t2);
+      }, 1600);
+      timers.current.push(t1);
+    });
+  }, [medals, cx0, cy0, entry, fly]);
+  useEffect(() => {
+    setI(-1); setTrayN(0); setLabel(false);
+    const t = setTimeout(() => runMedal(0), 400);
+    timers.current.push(t);
+    const list = timers.current;
+    return () => { list.forEach(clearTimeout); fly.removeAllListeners(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [medals]);
+  // flight transforms (snap into center at ~86% of the flight, then hold)
+  const seg = [0, 0.86, 1];
+  const tx = fly.interpolate({ inputRange: seg, outputRange: [entry.dx, 0, 0] });
+  const ty = fly.interpolate({ inputRange: seg, outputRange: [entry.dy, 0, 0] });
+  const sc = fly.interpolate({ inputRange: seg, outputRange: [0.3, 1, 1] });
+  const rot = fly.interpolate({ inputRange: seg, outputRange: [`${entry.spin * 360}deg`, "0deg", "0deg"] });
+  const showFlyer = i >= 0 && i < medals.length && trayN <= i;
+  const cur = i >= 0 && i < medals.length ? medals[i] : null;
+  const N = medals.length, gap = Math.min(70, (STAGE_W - 24) / Math.max(N, 1));
+  return (
+    <View style={{ alignItems: "center", width: "100%" }}>
+      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase" }}>◈ Medals Earned ◈</Text>
+      <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginTop: 3, marginBottom: 6 }}>{medals.length} this round</Text>
+      <View style={{ width: STAGE_W, height: STAGE_H }}>
+        {/* reticle */}
+        <View pointerEvents="none" style={{ position: "absolute", left: cx0 - STAGE_H * 0.36, top: cy0 - STAGE_H * 0.36, width: STAGE_H * 0.72, height: STAGE_H * 0.72, borderRadius: STAGE_H * 0.36, borderWidth: 1, borderColor: "rgba(255,255,255,0.09)" }} />
+        <View pointerEvents="none" style={{ position: "absolute", left: cx0 - STAGE_H * 0.22, top: cy0 - STAGE_H * 0.22, width: STAGE_H * 0.44, height: STAGE_H * 0.44, borderRadius: STAGE_H * 0.22, borderWidth: 1, borderColor: "rgba(255,255,255,0.07)" }} />
+        {/* stardust particle layer */}
+        <View style={{ position: "absolute", left: 0, top: 0 }}><Bursts ref={bursts} size={STAGE_W} /></View>
+        {/* the flying medal wedge */}
+        {showFlyer && cur ? (
+          <Animated.View pointerEvents="none" style={{ position: "absolute", left: cx0 - WSIZE / 2, top: cy0 - (WSIZE * 1.05) / 2, transform: [{ translateX: tx }, { translateY: ty }, { rotate: rot }, { scale: sc }] }}>
+            <WedgePiece tier={asTier(cur.tier)} size={WSIZE} />
+          </Animated.View>
+        ) : null}
+        {/* landed label */}
+        {label && cur ? (
+          <View pointerEvents="none" style={{ position: "absolute", left: 0, right: 0, top: cy0 + WSIZE * 0.62, alignItems: "center" }}>
+            <Text style={{ color: WEDGE_METAL[asTier(cur.tier)], fontFamily: "Georgia", fontSize: 24, fontWeight: "900", letterSpacing: 2, textTransform: "uppercase" }}>{String(cur.tier ?? "")}</Text>
+            <Text style={{ color: neutrals.text, fontSize: 14, fontWeight: "700", marginTop: 2 }}>{eventName(cur.event)}</Text>
+            <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 1, textTransform: "uppercase", marginTop: 2 }}>{typeof cur.place === "number" ? `${ordinal(cur.place)} place` : "every competitor"}</Text>
           </View>
-        ))}
+        ) : null}
+        {/* tray of seated wedges */}
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 6, flexDirection: "row", justifyContent: "center", alignItems: "flex-end" }}>
+          {medals.slice(0, trayN).map((m, k) => (
+            <View key={k} style={{ width: gap, alignItems: "center" }}>
+              <WedgePiece tier={asTier(m.tier)} size={44} />
+              <Text style={{ color: neutrals.muted2, fontSize: 8.5, marginTop: 3, textAlign: "center" }} numberOfLines={1}>{eventName(m.event)}</Text>
+            </View>
+          ))}
+        </View>
       </View>
     </View>
   );
 }
 
-// Phase B — badges flip in one by one (3D rotateY) with their real emblem art,
-// each with a clink + haptic. Emblem keys aren't in the payload, so we look them
-// up by code (graceful ◆ fallback if art is missing).
+// ACT · Badges Earned — each new honor is brought in BIG and center with its real
+// emblem art + a rarity-colored glow, holds with name/rarity/story, then shelves to
+// the row below. Tap the hero or any shelf badge for how it was earned.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function Badges({ badges, onDetail }: { badges: any[]; onDetail: (d: Detail) => void }) {
   const [emblems, setEmblems] = useState<Record<string, string | null>>({});
-  const flips = useMemo(() => badges.map(() => new Animated.Value(0)), [badges.length]);
+  const [descs, setDescs] = useState<Record<string, string>>({});
+  const [i, setI] = useState(-1);          // current hero badge
+  const [shelfN, setShelfN] = useState(0); // badges seated on the shelf
+  const [label, setLabel] = useState(false);
+  const intro = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0)).current;
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   useEffect(() => {
     const codes = badges.map((b) => b?.code).filter(Boolean);
-    if (codes.length) {
-      supabase.from("badges").select("code, emblem_key").in("code", codes).then(({ data }) => {
-        const m: Record<string, string | null> = {};
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ((data as any[] | null) ?? []).forEach((r) => { m[r.code] = r.emblem_key ?? null; });
-        setEmblems(m);
-      });
-    }
-    // slowed population — each badge lands with room to breathe before the next
-    const timers = badges.map((_, i) => setTimeout(() => {
-      Animated.timing(flips[i], { toValue: 1, duration: 560, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-      try { play("badge"); } catch { /* optional */ }
-      try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
-    }, 300 + i * 900));
-    return () => timers.forEach(clearTimeout);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (!codes.length) return;
+    supabase.from("badges").select("code, emblem_key, description").in("code", codes).then(({ data }) => {
+      const m: Record<string, string | null> = {}; const d: Record<string, string> = {};
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((data as any[] | null) ?? []).forEach((r) => { m[r.code] = r.emblem_key ?? null; if (r.description) d[r.code] = String(r.description); });
+      setEmblems(m); setDescs(d);
+    });
   }, [badges.length]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const openBadge = (b: any, url: string | null) => onDetail({
     emblem: url || null, emblemFallback: "◆",
-    title: String(b.name ?? ""), titleColor: "#F7F3E9",
-    tag: `${String(b.rarity ?? "")} badge`, tagColor: rarityBase(asRarity(b.rarity)),
-    rows: [{ ic: "✦", color: rarityBase(asRarity(b.rarity)), mn: "How you earned it", ms: earnText(b) || String(b.description ?? "") }],
+    title: String(b?.name ?? ""), titleColor: "#F7F3E9",
+    tag: `${String(b?.rarity ?? "")} badge`, tagColor: rarityBase(asRarity(b?.rarity)),
+    rows: [{ ic: "✦", color: rarityBase(asRarity(b?.rarity)), mn: "How you earned it", ms: earnText(b) || descs[String(b?.code)] || String(b?.description ?? "") || "A new honor added to your case." }],
   });
+  const runBadge = useCallback((k: number) => {
+    if (k >= badges.length) return;
+    setLabel(false); setI(k); intro.setValue(0); glow.setValue(0);
+    try { play("badge"); } catch { /* optional */ }
+    try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ }
+    Animated.parallel([
+      Animated.spring(intro, { toValue: 1, friction: 6, tension: 55, useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 1, duration: 600, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start(() => {
+      setLabel(true);
+      const t1 = setTimeout(() => {
+        setShelfN((n) => Math.max(n, k + 1));
+        const t2 = setTimeout(() => runBadge(k + 1), 520);
+        timers.current.push(t2);
+      }, 1900);
+      timers.current.push(t1);
+    });
+  }, [badges, intro, glow]);
+  useEffect(() => {
+    setI(-1); setShelfN(0); setLabel(false);
+    const t = setTimeout(() => runBadge(0), 500);
+    timers.current.push(t);
+    const list = timers.current;
+    return () => list.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [badges.length]);
+
+  const BIG = 148;
+  const cur = i >= 0 && i < badges.length ? badges[i] : null;
+  const curUrl = cur ? emblemUrl(emblems[String(cur?.code)] ?? null) : null;
+  const rc = cur ? rarityBase(asRarity(cur.rarity)) : hues.gold.base;
+  const showBig = i >= 0 && i < badges.length && shelfN <= i;
+  const N = badges.length, gap = Math.min(66, 300 / Math.max(N, 1));
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
-      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 18 }}>✦ {badges.length} new badge{badges.length === 1 ? "" : "s"} ✦</Text>
-      {badges.map((b, i) => {
-        const url = emblemUrl(emblems[String(b?.code)] ?? null);
-        const f = flips[i] ?? new Animated.Value(1);
-        return (
-          <Animated.View key={i} style={{ width: "100%", maxWidth: 320,
-            opacity: f.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] }),
-            transform: [{ perspective: 800 }, { rotateY: f.interpolate({ inputRange: [0, 1], outputRange: ["100deg", "0deg"] }) }, { scale: f.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }}>
-            <TouchableOpacity activeOpacity={0.8} onPress={() => openBadge(b, url)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
-              <Frame rarity={asRarity(b.rarity)} size="mini" radius={26}>
-                <View style={{ width: 46, height: 46, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
-                  {url ? <Image source={{ uri: url }} style={{ width: 44, height: 44 }} resizeMode="contain" /> : <Text style={{ color: "#EFC24E", fontSize: 18 }}>◆</Text>}
-                </View>
-              </Frame>
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }}>{String(b.name ?? "")}</Text>
-                <Text style={{ color: rarityBase(asRarity(b.rarity)), fontSize: 8, letterSpacing: 1, textTransform: "uppercase" }}>{String(b.rarity ?? "")}</Text>
-                <Text style={{ color: neutrals.muted, fontSize: 11, marginTop: 3, lineHeight: 15 }} numberOfLines={2}>{earnText(b)}</Text>
+      <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase" }}>✦ {badges.length} New Badge{badges.length === 1 ? "" : "s"} ✦</Text>
+      <View style={{ width: 320, height: 344, marginTop: 8 }}>
+        {/* BIG center badge */}
+        {showBig && cur ? (
+          <Animated.View style={{ position: "absolute", top: 20, left: 0, right: 0, alignItems: "center",
+            opacity: intro.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
+            transform: [{ scale: intro.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }] }}>
+            <Animated.View pointerEvents="none" style={{ position: "absolute", top: -BIG * 0.24, width: BIG * 1.5, height: BIG * 1.5, borderRadius: BIG * 0.75, backgroundColor: rc,
+              opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0, 0.3] }),
+              transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }) }] }} />
+            <TouchableOpacity activeOpacity={0.85} onPress={() => openBadge(cur, curUrl)}>
+              <View style={{ width: BIG, height: BIG, borderRadius: BIG / 2, borderWidth: 3, borderColor: rc, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center", overflow: "hidden",
+                shadowColor: rc, shadowOpacity: 0.7, shadowRadius: 24, shadowOffset: { width: 0, height: 0 } }}>
+                {curUrl ? <Image source={{ uri: curUrl }} style={{ width: BIG, height: BIG }} resizeMode="cover" /> : <Text style={{ color: "#EFC24E", fontSize: 54 }}>◆</Text>}
               </View>
-              <Text style={{ color: neutrals.muted2, fontSize: 16, marginLeft: 6 }}>›</Text>
             </TouchableOpacity>
           </Animated.View>
-        );
-      })}
-      <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>tap a badge to see how you earned it</Text>
+        ) : null}
+        {/* name / rarity / story */}
+        {label && cur ? (
+          <View pointerEvents="box-none" style={{ position: "absolute", top: 20 + BIG + 16, left: 0, right: 0, alignItems: "center" }}>
+            <Text style={{ color: neutrals.text, fontFamily: "Georgia", fontWeight: "900", fontSize: 24, textAlign: "center" }}>{String(cur.name ?? "")}</Text>
+            <Text style={{ color: rc, fontSize: 11, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase", marginTop: 3 }}>{String(cur.rarity ?? "")} badge</Text>
+            <Text style={{ color: neutrals.muted, fontSize: 12.5, textAlign: "center", marginTop: 8, maxWidth: 280, lineHeight: 17 }}>{earnText(cur) || descs[String(cur.code)] || String(cur.description ?? "")}</Text>
+          </View>
+        ) : null}
+        {/* shelf */}
+        <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", justifyContent: "center", alignItems: "flex-end" }}>
+          {badges.slice(0, shelfN).map((b, k) => {
+            const u = emblemUrl(emblems[String(b?.code)] ?? null);
+            return (
+              <TouchableOpacity key={k} activeOpacity={0.8} onPress={() => openBadge(b, u)} style={{ width: gap, alignItems: "center" }}>
+                <View style={{ width: 46, height: 46, borderRadius: 23, borderWidth: 1.5, borderColor: rarityBase(asRarity(b?.rarity)), backgroundColor: "#100d07", overflow: "hidden", alignItems: "center", justifyContent: "center" }}>
+                  {u ? <Image source={{ uri: u }} style={{ width: 46, height: 46 }} resizeMode="cover" /> : <Text style={{ color: "#EFC24E", fontSize: 18 }}>◆</Text>}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+      <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 1, textTransform: "uppercase" }}>tap a badge to see how you earned it</Text>
     </View>
   );
 }
@@ -557,7 +710,23 @@ function Summary({ payload, viewerId, onDetail }: { payload: Payload; viewerId?:
   const tiles = candidates.filter((c) => c.value != null && c.value > 0).slice(0, 6);
   const accents = [hues.sapphire.hi, hues.ruby.hi, hues.amethyst.hi, hues.gold.hi, hues.emerald?.hi ?? hues.sapphire.hi, hues.gold.hi];
   const GOLD = hues.gold.hi, SAP = hues.sapphire.hi, EMER = hues.emerald?.hi ?? "#3FB37F";
-  const openStat = (label: string, value: number, accent: string) => onDetail({ title: label, titleColor: accent, bigValue: String(value), sub: STAT_INFO[label], rows: [] });
+  const openStat = (label: string, value: number, accent: string) => {
+    let rows: DetailRow[] = [];
+    if (label === "Badges") {
+      rows = arr(payload, "badges").slice(0, 8).map((b) => ({ ic: "◆", color: rarityBase(asRarity(b?.rarity)), mn: String(b?.name ?? "Badge"), ms: String(b?.rarity ?? "") }));
+    } else if (label === "Medals") {
+      rows = arr(payload, "medals").slice(0, 8).map((m) => ({ ic: "◈", color: accent, mn: `${String(m?.tier ?? "")} · ${eventName(m?.event)}`, ms: typeof m?.place === "number" ? `${ordinal(m.place)} place` : "every competitor" }));
+    } else if (label === "Duels won") {
+      rows = arr(payload, "duels_won_list").slice(0, 8).map((d) => ({ ic: "✓", color: accent, mn: `def. ${String(d?.opp ?? "")}`, rr: typeof d?.pct === "number" ? `${d.pct}%` : undefined }));
+    } else if (label === "Best streak") {
+      rows = arr(payload, "streak_list").slice(0, 8).map((d, k) => ({ ic: String(k + 1), color: accent, mn: `def. ${String(d?.opp ?? "")}` }));
+    } else if (label === "Schools faced") {
+      rows = arr(payload, "schools_list").slice(0, 8).map((s) => ({ ic: "⛩", color: accent, mn: String(s ?? "") }));
+    } else if (label === "Landslides") {
+      rows = arr(payload, "landslide_list").slice(0, 8).map((d) => ({ ic: typeof d?.pct === "number" ? `${d.pct}%` : "◈", color: accent, mn: `def. ${String(d?.opp ?? "")}` }));
+    }
+    onDetail({ title: label, titleColor: accent, bigValue: String(value), sub: STAT_INFO[label], rows });
+  };
   const openDuel = () => onDetail({ title: "Duel Rating", titleColor: SAP, bigValue: String(rating ?? 0), tag: gain && gain > 0 ? `▲ +${gain}` : undefined, tagColor: EMER, sub: "Your head-to-head Elo across all duels this season.", rows: [] });
   const openTour = () => onDetail({ title: "Tournament Rating", titleColor: GOLD, bigValue: String(skill ?? 0), tag: provisional ? "Provisional" : undefined, tagColor: GOLD, sub: provisional ? "Your national judged-skill rating — provisional until you log more judged entries." : "Your national judged-skill rating.", rows: [] });
   const bothRatings = skill != null && rating != null;
@@ -616,11 +785,12 @@ function GainChip({ gain }: { gain: number }) {
 // signal, the NMAO crest returning to bookend the Invocation, a "next battle"
 // tile, and the Onward CTA — revealed in a staggered gilded sequence over
 // rising embers. (RN Animated; a single `intro` value drives all beats.)
+// Keyed to the payload's `signal` (run_monthly_reveal: champion | voter | growth | effort).
 const CHARGE: Record<string, { head: string; sub: string }> = {
-  effort: { head: "Sharper than last month.", sub: "Now bring it to the tournament." },
-  dominant: { head: "The throne is yours to defend.", sub: "Round 9 comes for the crown." },
-  rising: { head: "You're climbing. Don't stop now.", sub: "The next rung is Round 9." },
-  steady: { head: "Keep stacking the work.", sub: "Round 9 is the next brick." },
+  champion: { head: "The throne is yours to defend.", sub: "Carry the crown into the next round." },
+  growth:   { head: "You're climbing. Don't stop now.", sub: "The next round is the next rung." },
+  voter:    { head: "The arena runs on your eye.", sub: "Keep shaping the results — and your own." },
+  effort:   { head: "Sharper than last month.", sub: "Now bring it to the next round." },
 };
 
 // Embers drifting upward behind the Charge — a quiet "carry it forward" motion.
