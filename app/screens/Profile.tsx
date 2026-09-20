@@ -43,10 +43,29 @@ const NOTIF_TYPES = [
 export default function Profile({ unread = 0, onBell }: { unread?: number; onBell?: () => void }) {
   const [me, setMe] = useState<string | null>(null);
   const [info, setInfo] = useState<ProfileInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [sub, setSub] = useState<Sub>(null);
 
-  const { activeId } = useActiveCompetitor();
-  useEffect(() => { setMe(activeId); if (activeId) loadProfile(activeId).then(setInfo); }, [activeId]);
+  const { activeId, ready } = useActiveCompetitor();
+  useEffect(() => {
+    setMe(activeId);
+    // No competitor resolved for this login: keep the spinner only until the
+    // resolver reports `ready`. Once it's done with no competitor, leave the
+    // loading state and fall through to the resilient fallback below (which
+    // still exposes Sign out + Delete account) instead of spinning forever.
+    if (!activeId) {
+      if (ready) { setInfo(null); setLoading(false); }
+      return;
+    }
+    let alive = true;
+    setLoading(true);
+    loadProfile(activeId)
+      .then((p) => { if (alive) setInfo(p); })
+      .catch(() => { if (alive) setInfo(null); }) // a failed/timed-out fetch must never hang the screen
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [activeId, ready, reloadKey]);
 
   if (sub === "journal" && me) return <Journal competitorId={me} onClose={() => setSub(null)} />;
   if (sub === "home") return <Home onCompete={() => setSub(null)} />;
@@ -61,7 +80,20 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
   if (sub === "deleteaccount") return <DeleteAccount onBack={() => setSub(null)} />;
   if (sub === "blocked" && me) return <BlockedAccounts competitorId={me} onBack={() => setSub(null)} />;
 
-  if (!info) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
+  // Still resolving — a brief spinner is fine.
+  if (loading) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
+  // Loaded, but there's no profile to show (a sparse/new account, or the fetch
+  // failed). NEVER strand the user on a spinner: render a graceful state that
+  // still lets them retry, sign out, and — critically for Apple's account-
+  // deletion requirement — delete their account.
+  if (!info) return (
+    <ProfileUnavailable
+      canRetry={!!activeId}
+      onRetry={() => { setLoading(true); setReloadKey((k) => k + 1); }}
+      onSignOut={() => supabase.auth.signOut()}
+      onDelete={() => setSub("deleteaccount")}
+    />
+  );
 
   const initials = `${info.firstName?.[0] ?? ""}${info.lastName?.[0] ?? ""}`.toUpperCase();
   const frameRarity: Rarity = info.equippedBadgeRarity ?? beltRarity(info.rank);
@@ -159,6 +191,34 @@ function BlockedAccounts({ competitorId, onBack }: { competitorId: string; onBac
         ))
       )}
     </Panel>
+  );
+}
+
+// Shown when the profile can't be loaded (sparse/new account, or a failed
+// fetch). Guarantees the reviewer — and any real user in the same state — can
+// always sign out and reach Delete account, which used to be trapped behind the
+// loading spinner.
+function ProfileUnavailable({ canRetry, onRetry, onSignOut, onDelete }: { canRetry: boolean; onRetry: () => void; onSignOut: () => void; onDelete: () => void }) {
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 34, width: "100%", maxWidth: 640, alignSelf: "center" }}>
+      <Text style={{ color: neutrals.text, fontSize: 16, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 18 }}>Profile</Text>
+      <View style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 16, backgroundColor: neutrals.surface, padding: 18, marginBottom: 16 }}>
+        <Text style={{ color: neutrals.text, fontSize: 15, fontWeight: "700", marginBottom: 6 }}>We couldn't load your profile</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 20 }}>Your profile details aren't available right now. You can still manage your account below.</Text>
+        {canRetry ? (
+          <TouchableOpacity onPress={onRetry} activeOpacity={0.85} style={{ marginTop: 14, alignSelf: "flex-start", borderWidth: 1, borderColor: neutrals.border, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 16 }}>
+            <Text style={{ color: hues.gold.hi, fontSize: 13, fontWeight: "700" }}>Try again</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      <Row icon="🔒" label="Privacy Policy" onPress={() => WebBrowser.openBrowserAsync("https://school.nmao.us/privacy.html")} />
+      <TouchableOpacity onPress={onSignOut} style={{ marginTop: 18, alignItems: "center" }}>
+        <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onDelete} style={{ marginTop: 12, alignItems: "center" }}>
+        <Text style={{ color: "#8a6b6b", fontSize: 12 }}>Delete account</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 

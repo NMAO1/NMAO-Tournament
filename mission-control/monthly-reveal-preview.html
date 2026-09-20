@@ -65,7 +65,7 @@
   <div id="b5slot"></div>
   <div id="b5cap"></div>
   <div id="b5shelf"></div>
-  <div id="b5hint">tap to skip ›</div>
+  <div id="b5hint">tap a badge to see how you earned it</div>
   <button id="b5replay">↻ Replay</button>
 </div>
 <div id="s6" class="scene" data-k="s6">
@@ -73,12 +73,15 @@
   <div id="s6wrap">
     <div id="s6eyebrow" class="beat">Your Season, So Far</div>
     <div id="s6chips"></div>
-    <div id="s6hero" class="beat"><div class="num" id="s6rating">0</div><div class="lab">Duel Rating</div></div>
+    <div id="s6hero" class="beat"><div class="ratings2">
+      <div class="rt2 rtT" data-stat="tour"><div class="rnum tnum" id="s6tourn">0</div><div class="rlab">Tournament</div><div class="rchip tchip">Provisional</div></div>
+      <div class="rt2 rtD" data-stat="duel"><div class="rnum dnum" id="s6rating">0</div><div class="rlab">Duel</div><div class="rchip dchip">&#9650; +42</div></div>
+    </div></div>
     <div id="s6headline"></div>
     <div id="s6grid"></div>
     <div id="s6saying" class="beat"></div>
   </div>
-  <div id="s6hint">tap to skip &rsaquo;</div>
+  <div id="s6hint">tap a rating or tile for detail</div>
   <button id="s6replay">&#8635; Replay</button>
 </div>
 <div id="c7" class="scene" data-k="c7">
@@ -106,7 +109,7 @@
   </div>
   <button id="e8replay">↻ Replay</button>
 </div>
-<div id="cerCover"><div class="eb">NMAO Tournament League</div><h1>The Monthly Reveal</h1><p>After every round, each competitor experiences this ceremony. This is the premium, front-and-center placement your sponsorship receives — shown here with <b>Your Logo Here</b> placeholders.</p><button class="go">▶&nbsp; Preview the reveal</button><div class="fn">Tap “Continue” to move through at your own pace.</div></div><div id="cerTap"></div><div id="cerDots"></div><button id="cerNext">Continue →</button>
+<div id="cerCover"><div class="eb">NMAO Tournament League</div><h1>The Monthly Reveal</h1><p>After every round, each competitor experiences this ceremony. This is the premium, front-and-center placement your sponsorship receives — shown here with <b>Your Logo Here</b> placeholders.</p><button class="go">▶&nbsp; Preview the reveal</button><div class="fn">Tap “Continue” to move through at your own pace.</div></div><div id="cerTap"></div><div id="cerDots"></div><button id="cerNext">Continue →</button><div id="dSheet"><div id="dSback">&#8249; Back</div><div id="dSc"></div></div>
 </div>
 <style>
 html,body{background:#0a0a0c}
@@ -344,6 +347,33 @@ html,body{background:#0a0a0c}
 @keyframes s6_pul{0%,100%{opacity:.35}50%{opacity:.8}}
 #s6replay{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:6;opacity:0;pointer-events:none;transition:opacity .5s;font:800 13px inherit;color:#141210;background:linear-gradient(90deg,#FFE488,#E6B93F);border:none;border-radius:99px;padding:11px 26px;cursor:pointer}
 #s6replay.on{opacity:1;pointer-events:auto}
+.ratings2{display:flex;gap:12px;justify-content:center;width:100%;max-width:322px}
+.rt2{flex:1;position:relative;z-index:16;cursor:pointer;text-align:center;border-radius:15px;padding:10px 8px 9px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.006));transition:transform .12s,border-color .2s}
+.rt2:active{transform:scale(.97)}
+.rnum{font-family:inherit;font-weight:900;font-size:clamp(34px,10vw,46px);line-height:.95;font-variant-numeric:tabular-nums}
+.tnum{background:linear-gradient(180deg,#fff6d6,#E6B93F 60%,#b98f34);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 2px 30px rgba(230,185,63,.28)}
+.dnum{color:#66A9FF;text-shadow:0 2px 30px rgba(102,169,255,.3)}
+.rlab{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#8a8271;margin-top:3px}
+.rchip{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.06em;padding:2px 8px;border-radius:99px;margin-top:6px}
+.tchip{background:rgba(230,185,63,.16);color:#E6B93F}
+.dchip{background:rgba(84,214,160,.16);color:#54D6A0}
+.tile{position:relative;z-index:16;cursor:pointer}
+/* advancing is via the Continue button only (static hold) — kill tap-to-advance so scene content is interactive */
+#cerTap{pointer-events:none}
+#dSheet{position:absolute;inset:0;z-index:60;background:radial-gradient(120% 90% at 50% 12%,#1b1526 0%,#0a090e 74%);transform:translateY(100%);transition:transform .34s cubic-bezier(.2,.8,.2,1);padding:52px 22px 22px;text-align:left;overflow:auto;pointer-events:none;opacity:0}
+#dSheet.open{transform:translateY(0);pointer-events:auto;opacity:1}
+#dSback{position:absolute;top:16px;left:16px;font-size:14px;font-weight:700;color:#E6B93F;cursor:pointer;z-index:3}
+#dSc .sh-h{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;text-align:center}
+#dSc .sh-big{font-family:inherit;font-weight:900;font-size:46px;text-align:center;margin-top:2px;font-variant-numeric:tabular-nums;line-height:1}
+#dSc .sh-em{text-align:center;font-size:44px;margin-top:6px}
+#dSc .sh-sub{text-align:center;color:#a49c8e;font-size:12.5px;margin-top:4px;max-width:300px;margin-left:auto;margin-right:auto}
+#dSc .list{margin-top:16px}
+#dSc .lr{display:flex;align-items:center;gap:11px;padding:10px 2px;border-top:1px solid rgba(255,255,255,.07);font-size:13.5px}
+#dSc .lr:first-child{border-top:0}
+#dSc .lr .ic{width:32px;height:32px;border-radius:8px;flex:none;display:grid;place-items:center;font-weight:900;font-size:12px}
+#dSc .lr .mn{font-weight:700;color:#F7F3E9}
+#dSc .lr .ms{font-size:11px;color:#9a927f;margin-top:1px}
+#dSc .lr .rr{margin-left:auto;font-weight:800;font-size:12.5px}
 
 /* --- c7 --- */
 
@@ -716,9 +746,9 @@ html,body{background:#0a0a0c}
   var RRGB={rare:"59,130,246",epic:"139,92,246",legendary:"239,190,60"};
   // ascending to the rarest (epic Deadlock last = climax)
   var BADGES=[
-    {key:"weapon-master",name:"Weapon Master",rarity:"rare",desc:"Win gold medals in weapon events."},
-    {key:"first-gold",name:"Gold Path",rarity:"rare",desc:"Earn gold medals across the season."},
-    {key:"deadlock",name:"Deadlock",rarity:"epic",desc:"Battle to a true draw that survives sudden death."}
+    {key:"weapon-master",name:"Weapon Master",rarity:"rare",desc:"Win gold medals in weapon events.",how:"You took Gold in Open Weapons this round — your first weapon-event gold.",when:"Round 8 · Sep 14"},
+    {key:"first-gold",name:"Gold Path",rarity:"rare",desc:"Earn gold medals across the season.",how:"Your Traditional Forms gold is the 3rd gold of your season — the Gold Path lights up.",when:"Round 8 · Sep 14"},
+    {key:"deadlock",name:"Deadlock",rarity:"epic",desc:"Battle to a true draw that survives sudden death.",how:"Your duel with Kai Y. went to sudden death and ended dead-even — a true draw you both survived.",when:"Round 8 · Sep 9"}
   ];
 
   var canvas=document.getElementById("b5c"),ctx=canvas.getContext("2d"),DPR=Math.min(2,window.devicePixelRatio||1);
@@ -745,11 +775,26 @@ html,body{background:#0a0a0c}
   function at2(ms,fn){timers.push(setTimeout(fn,(seqBase+ms)*(window.__SLOW||1)));}
   function clr(){timers.forEach(clearTimeout);timers=[];}
   function doShock(rc){shock.style.setProperty("--rc",rc);shock.style.transition="none";shock.style.opacity="0.9";shock.style.transform="translate(-50%,-50%) scale(.3)";requestAnimationFrame(function(){shock.style.transition="transform .7s cubic-bezier(.15,.7,.2,1), opacity .7s ease";shock.style.opacity="0";shock.style.transform="translate(-50%,-50%) scale(2.4)";});}
+  // #5 — tap a badge (centered or on the shelf) to see how it was earned
+  function openBadgeDetail(i){
+    var bd=BADGES[i]; if(!bd||!window.__openDetail) return;
+    var rc=RCOL[bd.rarity], rgb=RRGB[bd.rarity]||"230,185,63";
+    var html='<div style="text-align:center;margin-top:4px"><img src="'+IMG[bd.key]+'" style="width:118px;height:118px;object-fit:cover;border-radius:50%;box-shadow:0 0 0 2px rgba('+rgb+',.55),0 0 44px rgba('+rgb+',.5)"></div>'+
+      '<div class="sh-big" style="font-size:30px;color:#F7F3E9">'+bd.name+'</div>'+
+      '<div class="sh-sub"><span style="color:'+rc+';font-weight:800;text-transform:uppercase;letter-spacing:.12em">'+bd.rarity+' badge</span></div>'+
+      '<div class="list">'+
+        '<div class="lr"><div class="ic" style="background:rgba('+rgb+',.18);color:'+rc+'">&#10022;</div><div><div class="mn">How you earned it</div><div class="ms">'+bd.how+'</div></div></div>'+
+        '<div class="lr"><div class="ic" style="background:rgba('+rgb+',.18);color:'+rc+'">&#9201;</div><div><div class="mn">'+bd.when+'</div><div class="ms">when it unlocked</div></div></div>'+
+        '<div class="lr"><div class="ic" style="background:rgba('+rgb+',.18);color:'+rc+'">&#9670;</div><div><div class="mn">Criteria</div><div class="ms">'+bd.desc+'</div></div></div>'+
+      '</div>';
+    window.__openDetail(html);
+  }
   function reveal(i){
     var bd=BADGES[i],rc=RCOL[bd.rarity],spk=RSPK[bd.rarity],rgb=RRGB[bd.rarity]||"255,222,132";
     rays.style.setProperty("--rc",rc);
     slot.innerHTML="";var wrap=document.createElement("div");wrap.className="badgeWrap";wrap.style.boxShadow="0 0 0 2px rgba("+rgb+",.5),0 0 42px rgba("+rgb+",.55)";
     var img=document.createElement("img");img.src=IMG[bd.key];wrap.appendChild(img);slot.appendChild(wrap);
+    wrap.style.cursor="pointer";wrap.onclick=function(e){e.stopPropagation();openBadgeDetail(i);};
     void wrap.offsetWidth;wrap.classList.add("in");
     at2(680,function(){
       var c=slotCenter();rays.style.opacity=".6";
@@ -762,7 +807,7 @@ html,body{background:#0a0a0c}
     });
     /* badge lingers until the next Continue click clears it */
   }
-  function addShelf(bd){var rgb=RRGB[bd.rarity]||"255,222,132";var s=document.createElement("div");s.className="shelfB";s.style.boxShadow="0 0 0 1.5px rgba("+rgb+",.6)";var im=document.createElement("img");im.src=IMG[bd.key];s.appendChild(im);shelf.appendChild(s);void s.offsetWidth;s.classList.add("pop");}
+  function addShelf(bd){var rgb=RRGB[bd.rarity]||"255,222,132";var s=document.createElement("div");s.className="shelfB";s.style.boxShadow="0 0 0 1.5px rgba("+rgb+",.6)";s.style.cursor="pointer";var bi=BADGES.indexOf(bd);s.onclick=function(e){e.stopPropagation();openBadgeDetail(bi);};var im=document.createElement("img");im.src=IMG[bd.key];s.appendChild(im);shelf.appendChild(s);void s.offsetWidth;s.classList.add("pop");}
   function schedule(){var base=700;for(var i=0;i<BADGES.length;i++){(function(i){at(base,function(){seqBase=0;reveal(i);});})(i);base+=2550;}var endAt=base+250;at(endAt,function(){hd.textContent=BADGES.length+" Badges Earned";ended=true;hint.classList.add("hide");replay.classList.add("on");});BADGES.forEach(function(bd,k){at(endAt+k*170,function(){addShelf(bd);});});}
   function revealAll(){clr();slot.innerHTML="";cap.classList.remove("show");rays.style.opacity="0";shelf.innerHTML="";BADGES.forEach(function(bd){var rgb=RRGB[bd.rarity]||"255,222,132";var s=document.createElement("div");s.className="shelfB pop";s.style.boxShadow="0 0 0 1.5px rgba("+rgb+",.6)";var im=document.createElement("img");im.src=IMG[bd.key];s.appendChild(im);shelf.appendChild(s);});hd.textContent=BADGES.length+" Badges Earned";ended=true;hint.classList.add("hide");replay.classList.add("on");}
   function reset(){clr();ended=false;slot.innerHTML="";cap.classList.remove("show");cap.innerHTML="";shelf.innerHTML="";rays.style.opacity="0";hd.textContent="Badges Earned";hint.classList.remove("hide");replay.classList.remove("on");parts=[];bursts=[];flares=[];}
@@ -817,7 +862,7 @@ html,body{background:#0a0a0c}
     if(st.text)return '<div class="tv">'+st.v+'</div>';
     return '<div class="tv">'+(st.fire?'<span class="fire">🔥</span>':'')+'<span data-count="'+st.v+'">0</span>'+(st.suffix||'')+'</div>';
   }
-  function tile(id,acc,wide){var st=STATS[id];return '<div class="tile beat '+acc+(wide?' wide':'')+'">'+tvHTML(st)+'<div class="tl">'+st.label+'</div></div>';}
+  function tile(id,acc,wide){var st=STATS[id];return '<div class="tile beat '+acc+(wide?' wide':'')+'" data-stat="'+id+'">'+tvHTML(st)+'<div class="tl">'+st.label+'</div></div>';}
   function buildChips(){
     chipsEl.innerHTML="";
     Object.keys(SIGNAL).forEach(function(sig){
@@ -834,18 +879,39 @@ html,body{background:#0a0a0c}
     play();
   }
   function beats(){return [].slice.call(wrap.querySelectorAll(".beat"));}
+  // --- clickable stat/rating detail (#6a) ---
+  function lr(col,ic,mn,ms,rr){return '<div class="lr"><div class="ic" style="background:rgba('+col+',.18);color:rgb('+col+')">'+ic+'</div><div><div class="mn">'+mn+'</div>'+(ms?'<div class="ms">'+ms+'</div>':'')+'</div>'+(rr?'<div class="rr" style="color:rgb('+col+')">'+rr+'</div>':'')+'</div>';}
+  function sh(hcol,h,big,sub,rows){return '<div class="sh-h" style="color:rgb('+hcol+')">'+h+'</div><div class="sh-big" style="color:rgb('+hcol+')">'+big+'</div><div class="sh-sub">'+sub+'</div><div class="list">'+(rows||'')+'</div>';}
+  var GLD="230,185,63",SAP="102,169,255",GRN="84,214,160",RED="239,68,68",PUR="139,92,246",SLV="207,213,218",BRZ="205,142,82";
+  var DETAIL={
+    tour:sh(GLD,"Tournament Rating","62","National skill &middot; Provisional — 3 more judged entries to lock",lr(GLD,"&#129351;","Traditional Forms — Gold","judged 9.4 / 10 avg","+18")+lr(SLV,"&#129352;","Open Weapons — Silver","judged 8.9 / 10 avg","+11")+lr(GLD,"&#9650;","Top 28% nationally","","")),
+    duel:sh(SAP,"Duel Rating","1340","&#9650; +42 this month &middot; peak 1360 &middot; 11–5",lr(GRN,"&#8593;","Biggest gain +19","beat an opponent rated 1640","+19")+lr(RED,"&#8595;","Only loss −8","split-decision to Maya S.","−8")),
+    streak:sh(RED,"Best Streak","5","consecutive duel wins &middot; Sep 3–16",["Kai Y.","Ryan C.","Nora F.","Julian B.","Priya M."].map(function(n,i){return lr(RED,String(i+1),"def. "+n,"","");}).join("")),
+    rank:sh(PUR,"Season Rank","Top 8%","among all competitors this season",lr(PUR,"&#9650;","Climbed 40 places this round","","")),
+    bestScore:sh(GLD,"Best Score","94","your highest judged score",lr(GLD,"&#129351;","Traditional Forms","9.4 avg across 6 judges","")),
+    medals:sh(GLD,"Medals","4","this season",lr(GLD,"&#129351;","Gold &times;1","Traditional Forms","")+lr(SLV,"&#129352;","Silver &times;1","Open Weapons","")+lr(BRZ,"&#129353;","Bronze &times;1","Open Forms","")+lr(SAP,"&#9670;","Participation &times;1","","")),
+    comeback:sh(GRN,"Comeback","&#10003;","wins after trailing the vote",lr(GRN,"&#8635;","def. Kai Y.","trailed 40% → won 58%","")),
+    sharpEye:sh(PUR,"Sharp-Eye","55%","your vote matched the final crowd",lr(PUR,"&#128065;","22 of 40 duels","voted with the majority","")),
+    badges:sh(PUR,"Badges","16","earned this season",lr(SAP,"&#9670;","Weapon Master","Rare · gold medals in weapon events","")+lr(GLD,"&#9670;","Gold Path","Rare · gold medals across the season","")+lr(PUR,"&#9670;","Deadlock","Epic · survived sudden death","")),
+    winRate:sh(SAP,"Win Rate","69%","18 duels &middot; 11 wins",lr(GRN,"&#8593;","11 wins","","")+lr(RED,"&#8595;","5 losses &middot; 2 draws","","")),
+    record:sh(SAP,"Record","11–5–2","wins &middot; losses &middot; draws",""),
+    pbs:sh(GLD,"Personal Bests","3","new highs this round",lr(SAP,"&#9650;","Duel rating peak","1360","")+lr(GLD,"&#129351;","Best judged score","94","")+lr(RED,"&#128293;","Longest streak","5","")),
+    duels:sh(SAP,"Duels Fought","18","this season","")
+  };
+  function wireDetails(){document.querySelectorAll('#s6 [data-stat]').forEach(function(elx){elx.onclick=function(e){e.stopPropagation();var d=DETAIL[elx.getAttribute('data-stat')];if(d&&window.__openDetail)window.__openDetail(d);};});}
   function schedule(){
+    wireDetails();
     at(150,function(){document.getElementById("s6eyebrow").classList.add("on");chipsEl.querySelectorAll(".chip").forEach(function(c){c.classList.add("_"); });});
     at(150,function(){chipsEl.style.opacity=1;});
-    at(400,function(){document.getElementById("s6hero").classList.add("on");countUp(ratingEl,1340,1200);});
+    at(400,function(){document.getElementById("s6hero").classList.add("on");countUp(ratingEl,1340,1200);countUp(document.getElementById("s6tourn"),62,1200);});
     at(1050,function(){headEl.firstChild&&headEl.firstChild.classList.add("on");var c=headEl.querySelector("[data-count]");if(c)countUp(c,+c.getAttribute("data-count"),900);});
     var tiles=[].slice.call(gridEl.children);
     tiles.forEach(function(t,i){at(1350+i*200,function(){t.classList.add("on");var c=t.querySelector("[data-count]");if(c)countUp(c,+c.getAttribute("data-count"),850);});});
     at(2450,function(){sayEl.classList.add("on");});
     at(3100,function(){ended=true;hint.classList.add("hide");replay.classList.add("on");});
   }
-  function revealAll(){clr();beats().forEach(function(b){b.classList.add("on");});ratingEl.textContent="1340";document.querySelectorAll("#s6 [data-count]").forEach(function(c){c.textContent=c.getAttribute("data-count");});ended=true;hint.classList.add("hide");replay.classList.add("on");}
-  function reset(){clr();ended=false;beats().forEach(function(b){b.classList.remove("on");});ratingEl.textContent="0";hint.classList.remove("hide");replay.classList.remove("on");}
+  function revealAll(){clr();beats().forEach(function(b){b.classList.add("on");});ratingEl.textContent="1340";document.getElementById("s6tourn").textContent="62";document.querySelectorAll("#s6 [data-count]").forEach(function(c){c.textContent=c.getAttribute("data-count");});wireDetails();ended=true;hint.classList.add("hide");replay.classList.add("on");}
+  function reset(){clr();ended=false;beats().forEach(function(b){b.classList.remove("on");});ratingEl.textContent="0";document.getElementById("s6tourn").textContent="0";hint.classList.remove("hide");replay.classList.remove("on");}
   function play(){reset();schedule();}
   document.getElementById("s6").addEventListener("click",function(e){if(e.target===replay||e.target.classList.contains("chip"))return;if(!ended)revealAll();});
   replay.addEventListener("click",function(e){e.stopPropagation();render();});
@@ -932,6 +998,11 @@ html,body{background:#0a0a0c}
   ORDER.forEach(function(){var i=document.createElement("i");dots.appendChild(i);});
   var di=[].slice.call(dots.children);
   var idx=-1, btnT=null;
+  // shared detail sheet (clickable badges + stat tiles open into it)
+  var dSheet=document.getElementById("dSheet"),dSc=document.getElementById("dSc"),dSback=document.getElementById("dSback");
+  window.__openDetail=function(html){dSc.innerHTML=html;dSheet.classList.add("open");};
+  window.__closeDetail=function(){dSheet.classList.remove("open");};
+  dSback.addEventListener("click",function(e){e.stopPropagation();window.__closeDetail();});
   function scene(k){return document.querySelector('.scene[data-k="'+k+'"]');}
   function enter(k){try{window.__scenes[k].enter();}catch(e){}}
   function exit(k){try{window.__scenes[k].exit();}catch(e){}}
@@ -942,14 +1013,14 @@ html,body{background:#0a0a0c}
     // let the act's intro breathe, then offer Continue
     btn.classList.remove("on");clearTimeout(btnT);btnT=setTimeout(function(){showBtn(i===ORDER.length-1);},1400);
   }
-  function toNext(){var k=ORDER[idx];scene(k).classList.remove("active");setTimeout(function(){exit(k);},750);playScene(idx+1);}
+  function toNext(){window.__closeDetail&&window.__closeDetail();var k=ORDER[idx];scene(k).classList.remove("active");setTimeout(function(){exit(k);},750);playScene(idx+1);}
   function advanceOrNext(){
     var k=ORDER[idx],sc=window.__scenes[k];
     if(sc&&sc.advance){ if(sc.advance()){ return; } }  // stepped internally (badges)
     if(idx>=ORDER.length-1){ startAll(); return; }     // end -> replay
     toNext();
   }
-  function startAll(){clearTimeout(btnT);btn.classList.remove("on");ORDER.forEach(function(k){exit(k);scene(k).classList.remove("active");});setTimeout(function(){playScene(0);},60);}
+  function startAll(){window.__closeDetail&&window.__closeDetail();clearTimeout(btnT);btn.classList.remove("on");ORDER.forEach(function(k){exit(k);scene(k).classList.remove("active");});setTimeout(function(){playScene(0);},60);}
   btn.addEventListener("click",function(e){e.stopPropagation();advanceOrNext();});
   tap.addEventListener("click",function(){advanceOrNext();});
   var cov=document.getElementById("cerCover");cov.querySelector(".go").addEventListener("click",function(e){e.stopPropagation();cov.classList.add("gone");startAll();});
