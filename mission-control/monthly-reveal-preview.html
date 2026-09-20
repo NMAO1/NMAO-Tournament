@@ -4,7 +4,7 @@
   <div id="p1rays"></div>
   <div id="p1vig"></div>
   <div id="p1wrap">
-    <div id="p1pre" class="beat">This round of the<br><b>Tournament of Champions</b><br>is presented by</div>
+    <div id="p1pre" class="beat">This round of the<br><b>Tournament League</b><br>is presented by</div>
     <div id="p1logo" class="beat"><div class="phlogo">YOUR LOGO HERE</div></div>
     <div id="p1tag" class="beat">Your tagline here</div>
     <div id="p1line" class="beat"></div>
@@ -22,8 +22,8 @@
       <div id="ivOrg" class="ivRow"><span>National</span> <span>Martial</span> <span>Arts</span> <span>Organization</span></div>
       <div id="ivTitle3">
         <div id="wTourn" class="slam">TOURNAMENT</div>
-        <div id="wOf" class="of">OF</div>
-        <div id="wChamp" class="slam">CHAMPIONS</div>
+        <div id="wOf" class="of" style="display:none"></div>
+        <div id="wChamp" class="slam">LEAGUE</div>
         <div id="ivRound">Round 8</div>
       </div>
     </div>
@@ -106,7 +106,7 @@
   </div>
   <button id="e8replay">↻ Replay</button>
 </div>
-<div id="cerCover"><div class="eb">NMAO Tournament of Champions</div><h1>The Monthly Reveal</h1><p>After every round, each competitor experiences this ceremony. This is the premium, front-and-center placement your sponsorship receives — shown here with <b>Your Logo Here</b> placeholders.</p><button class="go">▶&nbsp; Preview the reveal</button><div class="fn">Tap “Continue” to move through at your own pace.</div></div><div id="cerTap"></div><div id="cerDots"></div><button id="cerNext">Continue →</button>
+<div id="cerCover"><div class="eb">NMAO Tournament League</div><h1>The Monthly Reveal</h1><p>After every round, each competitor experiences this ceremony. This is the premium, front-and-center placement your sponsorship receives — shown here with <b>Your Logo Here</b> placeholders.</p><button class="go">▶&nbsp; Preview the reveal</button><div class="fn">Tap “Continue” to move through at your own pace.</div></div><div id="cerTap"></div><div id="cerDots"></div><button id="cerNext">Continue →</button>
 </div>
 <style>
 html,body{background:#0a0a0c}
@@ -179,8 +179,8 @@ html,body{background:#0a0a0c}
 .card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:34px 26px;text-align:center;opacity:0;transition:opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1)}
 .card.show{opacity:1}
 .card.out{opacity:0;transform:translateY(-16px);filter:blur(4px)}
-.ivRow{font-size:clamp(14px,3.4vw,17px);font-weight:800;line-height:1.2;letter-spacing:.12em;text-transform:uppercase;max-width:300px;color:#E9C25A}
-.ivRow span{display:inline-block;opacity:0;filter:blur(9px);transform:translateY(10px);transition:opacity .9s ease, filter .9s ease, transform .9s cubic-bezier(.2,.7,.2,1)}
+.ivRow{font-size:clamp(18px,4.7vw,23px);font-weight:800;line-height:1.22;letter-spacing:.16em;text-transform:uppercase;max-width:330px;color:#E9C25A;text-shadow:0 2px 30px rgba(230,185,63,.22)}
+.ivRow span{display:inline-block;opacity:0;filter:blur(11px);transform:translateY(16px);transition:opacity 1.05s ease, filter 1.05s ease, transform 1.05s cubic-bezier(.2,.7,.2,1)}
 .ivRow span.on{opacity:1;filter:blur(0);transform:none}
 #ivTitle3{margin-top:14px;display:flex;flex-direction:column;align-items:center;gap:2px}
 #ivRound{font-size:15px;font-weight:800;letter-spacing:.34em;text-transform:uppercase;margin-top:12px;color:#E6B93F;opacity:0;transform:translateY(6px);transition:opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1)}
@@ -458,30 +458,48 @@ html,body{background:#0a0a0c}
   var timers=[],ended=false;
   function at(ms,fn){timers.push(setTimeout(fn,ms*(window.__SLOW||1)));}
   function clr(){timers.forEach(clearTimeout);timers=[];}
-  function schedule(){
+  var phase=0;
+  function nextBtn(){return document.getElementById("cerNext");}
+  // ACT 1 — the org name slides in (larger, cinematic) and the title lands; HOLDS for Continue.
+  function scheduleCard1(){
     iv.classList.add("go"); card1.classList.add("show");
-    org.forEach(function(w,i){at(500+i*520,function(){w.classList.add("on");});});
-    at(2650,function(){wT.classList.add("on");impact(wT,true);});
-    at(3150,function(){wO.classList.add("on");flashPulse(50);});
-    at(3550,function(){wC.classList.add("on");impact(wC,true);});
-    at(3980,function(){document.getElementById("ivRound").classList.add("on");});
-    at(4900,function(){card1.classList.add("out");});
-    at(5250,function(){card1.style.display="none";card2.classList.add("show");coin.classList.add("ignite");sparksAt(coin,40);});
-    at(6000,function(){season.classList.add("show2");season.style.opacity=1;});
-    at(6600,function(){name.style.opacity=1;name.style.transform="none";sparksAt(name,30);});
-    at(7300,function(){title.style.opacity=1;});
-    at(8100,function(){line.style.opacity=1;});
-    at(9700,function(){ended=true;hint.classList.add("hide");replay.classList.add("on");});
+    org.forEach(function(w,i){at(500+i*560,function(){w.classList.add("on");});});
+    at(2950,function(){wT.classList.add("on");impact(wT,true);});
+    at(3700,function(){wC.classList.add("on");impact(wC,true);});
+    at(4200,function(){document.getElementById("ivRound").classList.add("on");});
+  }
+  // ACT 2 — the dragon badge ignites, then the competitor's name + honors; HOLDS for Continue.
+  function scheduleCard2(){
+    card1.classList.add("out");
+    at(360,function(){card1.style.display="none";card2.classList.add("show");coin.classList.add("ignite");sparksAt(coin,40);flashPulse(30);});
+    at(1150,function(){season.classList.add("show2");season.style.opacity=1;});
+    at(1750,function(){name.style.opacity=1;name.style.transform="none";sparksAt(name,30);});
+    at(2450,function(){title.style.opacity=1;});
+    at(3250,function(){line.style.opacity=1;});
+    at(4300,function(){ended=true;hint.classList.add("hide");replay.classList.add("on");});
   }
   // card2 items start hidden
   [season,name,title,line].forEach(function(e){e.style.opacity=0;e.style.transition="opacity .8s ease, transform .8s cubic-bezier(.2,.7,.2,1)";});
   name.style.transform="translateY(8px)";
-  function revealAll(){clr();org.forEach(function(w){w.classList.add("on");});wT.classList.add("on");wO.classList.add("on");wC.classList.add("on");document.getElementById("ivRound").classList.add("on");card1.style.display="none";card2.classList.add("show");coin.classList.add("ignite");[season,name,title,line].forEach(function(e){e.style.opacity=1;e.style.transform="none";});ended=true;hint.classList.add("hide");replay.classList.add("on");}
-  function reset(){clr();ended=false;iv.classList.remove("go");card1.style.display="";card1.classList.remove("show","out");card2.classList.remove("show");org.forEach(function(w){w.classList.remove("on");});[wT,wC].forEach(function(e){e.classList.remove("on");});wO.classList.remove("on");document.getElementById("ivRound").classList.remove("on");coin.classList.remove("ignite");[season,name,title,line].forEach(function(e){e.style.opacity=0;});name.style.transform="translateY(8px)";hint.classList.remove("hide");replay.classList.remove("on");bp=[];}
-  function play(){reset();if(window.__SAYINGS&&window.__SAYINGS.length){line.textContent="“"+window.__SAYINGS[(Math.random()*window.__SAYINGS.length)|0]+"”";}embers=[];for(var i=0;i<70;i++)embers.push(seed(false));running=true;cancelAnimationFrame(raf);raf=requestAnimationFrame(fx);schedule();}
+  // Continue steps ACT 1 → ACT 2 inside this scene; a second Continue lets the master move on.
+  function advance(){
+    if(phase===0){
+      phase=1; clr();
+      var nb=nextBtn(); if(nb){nb.classList.remove("on");setTimeout(function(){nb.classList.add("on");},2600*(window.__SLOW||1));}
+      scheduleCard2(); return true;
+    }
+    return false;
+  }
+  function revealAll(){
+    clr();
+    if(phase===0){org.forEach(function(w){w.classList.add("on");});wT.classList.add("on");wC.classList.add("on");document.getElementById("ivRound").classList.add("on");}
+    else{card1.style.display="none";card2.classList.add("show");coin.classList.add("ignite");[season,name,title,line].forEach(function(e){e.style.opacity=1;e.style.transform="none";});hint.classList.add("hide");replay.classList.add("on");}
+  }
+  function reset(){clr();ended=false;phase=0;iv.classList.remove("go");card1.style.display="";card1.classList.remove("show","out");card2.classList.remove("show");org.forEach(function(w){w.classList.remove("on");});[wT,wC].forEach(function(e){e.classList.remove("on");});wO.classList.remove("on");document.getElementById("ivRound").classList.remove("on");coin.classList.remove("ignite");[season,name,title,line].forEach(function(e){e.style.opacity=0;});name.style.transform="translateY(8px)";hint.classList.remove("hide");replay.classList.remove("on");bp=[];}
+  function play(){reset();if(window.__SAYINGS&&window.__SAYINGS.length){line.textContent="“"+window.__SAYINGS[(Math.random()*window.__SAYINGS.length)|0]+"”";}embers=[];for(var i=0;i<70;i++)embers.push(seed(false));running=true;cancelAnimationFrame(raf);raf=requestAnimationFrame(fx);scheduleCard1();}
   iv.addEventListener("click",function(e){if(e.target===replay)return;if(!ended)revealAll();});
   replay.addEventListener("click",function(e){e.stopPropagation();play();});
-  window.__scenes["iv"]={enter:function(){fit();play();},exit:function(){try{running=false;}catch(e){}cancelAnimationFrame(raf);try{clr();}catch(e){}}};})();
+  window.__scenes["iv"]={enter:function(){fit();play();},exit:function(){try{running=false;}catch(e){}cancelAnimationFrame(raf);try{clr();}catch(e){}},advance:function(){return advance();}};})();
 </script>
 <script>
 
@@ -619,10 +637,12 @@ html,body{background:#0a0a0c}
       var ang=active.A0+active.dir*active.turns*6.283185*eIO(p);
       var rad=active.Rbig*(1-eIn(p));
       var dx=Math.cos(ang)*rad, dy=Math.sin(ang)*rad;
-      var sc=0.26+0.74*eOut(p), rot=active.spin*360*(1-Math.pow(1-p,2));
+      var sc=0.26+0.74*eOut(p), rot=active.spin*360*(1-p);
       active.el.style.transform="translate(-50%,-50%) translate("+dx.toFixed(1)+"px,"+dy.toFixed(1)+"px) rotate("+rot.toFixed(1)+"deg) scale("+sc.toFixed(3)+")";
       var mx=CX()+dx, my=CY()+dy;
-      stardust(mx,my, p<0.96?5:2, active.m.trail);
+      // denser, more scattered comet-trail as it spins/floats in (random pattern)
+      stardust(mx,my, p<0.96?11:3, active.m.trail);
+      if(p<0.9 && Math.random()<0.6) stardust(mx+(Math.random()-.5)*26, my+(Math.random()-.5)*26, 3, active.m.trail);
     }
     ctx.clearRect(0,0,cw,ch);
     var i,b,age;
@@ -646,12 +666,13 @@ html,body{background:#0a0a0c}
       ringEl.style.transition="transform .72s cubic-bezier(.15,.7,.2,1), opacity .72s ease";ringEl.style.opacity="0";ringEl.style.transform="translate(-50%,-50%) scale(5.5)";
     });
   }
+  function shakeM4(){try{document.getElementById("m4").animate([{transform:"translate(0,0)"},{transform:"translate(-5px,3px)"},{transform:"translate(5px,-3px)"},{transform:"translate(-3px,2px)"},{transform:"translate(2px,-1px)"},{transform:"translate(0,0)"}],{duration:360,easing:"ease-out"});}catch(e){}}
   function settle(i,md,m,el){
     if(active&&active.el===el)active=null;
     el.style.transform="translate(-50%,-50%) rotate(0deg) scale(1)";
     el.classList.remove("pop");void el.offsetWidth;el.classList.add("pop");
-    var c=[CX(),CY()];flashPop();
-    burst(c[0],c[1],240,m.rgb,now());burst(c[0],c[1],160,"255,255,255",now());flare(c[0],c[1],cw*.95,now());poof(c[0],c[1],74,m.trail);spark(c[0],c[1],42,.6,3.6,m.trail);
+    var c=[CX(),CY()];flashPop();shakeM4();
+    burst(c[0],c[1],300,m.rgb,now());burst(c[0],c[1],190,"255,255,255",now());flare(c[0],c[1],cw*1.05,now());poof(c[0],c[1],120,m.trail);spark(c[0],c[1],70,.7,4.2,m.trail);
     showCap(md,m);
     at(1500,function(){toShelf(i,md,el);});
   }
@@ -668,7 +689,7 @@ html,body{background:#0a0a0c}
     if(i>=MEDALS.length){finish();return;}
     var md=MEDALS[i],m=MET[md.tier];
     var el=document.createElement("div");el.className="pieceHero";el.appendChild(pieceSVG(md.tier,232));layer.appendChild(el);
-    active={el:el,md:md,m:m,startT:performance.now(),A0:Math.random()*6.283,dir:Math.random()<.5?1:-1,turns:1+Math.random()*1.3,Rbig:Math.min(cw,ch)*0.62,spin:0,DUR:1.9};
+    active={el:el,md:md,m:m,startT:performance.now(),A0:Math.random()*6.283,dir:Math.random()<.5?1:-1,turns:1+Math.random()*1.4,Rbig:Math.min(cw,ch)*0.62,spin:(Math.random()<.5?1:-1)*(1.4+Math.random()*1.3),DUR:2.0};
     active.spin=(2+Math.floor(Math.random()*3))*active.dir;
     at(active.DUR*1000+40, function(){ settle(i,md,m,el); });  // whole turns → rests upright (smooth stop, no snap)
   }

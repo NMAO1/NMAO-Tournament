@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useMemo, forwardRef, useImperativeHandle, useCallback } from "react";
-import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image, Dimensions, Linking } from "react-native";
-import { Canvas, Circle } from "@shopify/react-native-skia";
+import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image, Dimensions, Linking, StyleSheet } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Canvas, Circle, RadialGradient, vec } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, rarityBase, type Rarity, type MedalType } from "@nmao/design-tokens";
 
@@ -48,6 +49,20 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
   const ready = sponsor !== undefined;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { let a = true; revealSponsor(viewerId).then((s) => { if (a) setSponsor(s); }).catch(() => { if (a) setSponsor(null); }); return () => { a = false; }; }, [viewerId]);
+  // The competitor's own name for the Invocation name-card (their own reveal, so
+  // the full name is fine here — the masked display_name is for peers).
+  const [heroName, setHeroName] = useState<string | null>(null);
+  useEffect(() => {
+    let a = true;
+    (async () => {
+      if (!viewerId) return;
+      try {
+        const { data } = await supabase.from("competitors").select("first_name,last_name").eq("id", viewerId).maybeSingle();
+        if (a && data) setHeroName([data.first_name, data.last_name].filter(Boolean).join(" ") || null);
+      } catch { /* name is optional */ }
+    })();
+    return () => { a = false; };
+  }, [viewerId]);
   useEffect(() => { if (ready) { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } } }, [step, ready]);
   // Score: stream this round's soundtrack under the ceremony; stop on exit.
   // initSounds loads the one-shot SFX (riser/tick/win) layered over the music.
@@ -78,7 +93,7 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
   // badges scale with count). The close and end-card acts hold on their CTAs.
   function durMs(k: string): number {
     if (k === "presenter") return 4800;
-    if (k === "open") return 5600;
+    if (k === "open") return 7600;
     if (k === "medals") return 9500;
     if (k === "badges") return Math.max(6500, badges.length * 2800);
     if (k === "summary") return 6500;
@@ -104,14 +119,16 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
   if (!ready) return <View style={{ flex: 1, backgroundColor: "#070605" }} />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#070605" }}>
+    <View style={{ flex: 1, backgroundColor: "#050308" }}>
+      <LinearGradient colors={["#180b2c", "#0a0512", "#1d0a16"]} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={StyleSheet.absoluteFill} />
+      <Starfield />
       {kind === "close" ? <RisingEmbers /> : null}
       <View style={{ flexDirection: "row", paddingHorizontal: 16, paddingTop: 50 }}>
         {steps.map((_, i) => <View key={i} style={{ flex: 1, height: 3, borderRadius: 3, marginHorizontal: 2, backgroundColor: i <= step ? hues.gold.base : "rgba(255,255,255,0.15)" }} />)}
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 22, paddingVertical: 20 }}>
         {kind === "presenter" ? <Presenter sponsor={sponsor!} /> : null}
-        {kind === "open" ? <Open message={str(payload, "message")} badges={badges} /> : null}
+        {kind === "open" ? <Open message={str(payload, "message")} badges={badges} name={heroName} /> : null}
         {kind === "medals" ? <Medals medals={medals} /> : null}
         {kind === "badges" ? <Badges badges={badges} /> : null}
         {kind === "summary" ? <Summary payload={payload} /> : null}
@@ -131,41 +148,108 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
   );
 }
 
-// The Invocation — the ceremonial open: NMAO mark, the competitor's earned
-// honorific (from their rarest badge), and a saying, revealed in a staggered
-// gilded sequence. (RN Animated; a single `intro` value drives all beats.)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function Open({ message, badges }: { message: string | null; badges: any[] }) {
-  const season = useSeasonLabel();
-  const intro = useRef(new Animated.Value(0)).current;
-  const rarest = useMemo(() => badges.slice().sort((a, b) => (RRANK[String(b?.rarity)] || 0) - (RRANK[String(a?.rarity)] || 0))[0], [badges]);
+// A drifting starfield + faint twinkle behind the whole ceremony (Skia, RAF).
+// Cheap: ~64 dots, re-rendered each frame only while the reveal is mounted.
+function Starfield() {
+  const { width, height } = Dimensions.get("window");
+  const stars = useMemo(() => Array.from({ length: 64 }, () => ({
+    x: Math.random() * width, y: Math.random() * height,
+    r: Math.random() * 1.5 + 0.4, tw: Math.random() * Math.PI * 2,
+    sp: Math.random() * 0.7 + 0.25, drift: Math.random() * 7 + 2,
+    gold: Math.random() < 0.16,
+  })), [width, height]);
+  const start = useRef(Date.now());
+  const [, setNow] = useState(0);
+  const raf = useRef<number | null>(null);
   useEffect(() => {
-    intro.setValue(0);
-    Animated.timing(intro, { toValue: 1, duration: 1900, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
-    const h = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); } catch { /* optional */ } }, 950);
-    return () => clearTimeout(h);
-  }, [intro]);
-  const fade = (a: number, b: number) => intro.interpolate({ inputRange: [a, b], outputRange: [0, 1], extrapolate: "clamp" });
-  const grow = (a: number, b: number, from: number) => intro.interpolate({ inputRange: [a, b], outputRange: [from, 1], extrapolate: "clamp" });
-  const rise = (a: number, b: number, d: number) => intro.interpolate({ inputRange: [a, b], outputRange: [d, 0], extrapolate: "clamp" });
+    const loop = () => { setNow(Date.now()); raf.current = requestAnimationFrame(loop); };
+    raf.current = requestAnimationFrame(loop);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, []);
+  const t = (Date.now() - start.current) / 1000;
+  return (
+    <Canvas style={{ position: "absolute", width, height }} pointerEvents="none">
+      {stars.map((s, i) => {
+        let y = (s.y - t * s.drift) % height; if (y < 0) y += height;
+        const op = 0.28 + 0.5 * (0.5 + 0.5 * Math.sin(t * s.sp * 3 + s.tw));
+        return <Circle key={i} cx={s.x} cy={y} r={s.r} color={s.gold ? "#FFE488" : "#FFFFFF"} opacity={op} />;
+      })}
+    </Canvas>
+  );
+}
+
+// The Invocation — a cinematic open modeled on the reveal prototype: the org name
+// TYPES in over the starfield, "TOURNAMENT OF CHAMPIONS" slams in and blooms out,
+// the crest IGNITES from a glow halo, then the competitor's name + honorific land.
+// One linear driver `t` (0→1 over ~7.2s) gates every beat via opacity/scale windows.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function Open({ message, badges, name }: { message: string | null; badges: any[]; name: string | null }) {
+  const season = useSeasonLabel();
+  const t = useRef(new Animated.Value(0)).current;
+  const [typed, setTyped] = useState(0);
+  const ORG = "NATIONAL MARTIAL ARTS ORGANIZATION";
+  const rarest = useMemo(() => badges.slice().sort((a, b) => (RRANK[String(b?.rarity)] || 0) - (RRANK[String(a?.rarity)] || 0))[0], [badges]);
   const honor = rarest ? String(rarest.name || "") : null;
   const rCol = rarest ? rarityBase(asRarity(rarest.rarity)) : hues.gold.base;
+  useEffect(() => {
+    t.setValue(0);
+    Animated.timing(t, { toValue: 1, duration: 7200, easing: Easing.linear, useNativeDriver: true }).start();
+    let i = 0; const iv = setInterval(() => { i += 1; setTyped(i); if (i >= ORG.length) clearInterval(iv); }, 40);
+    const h1 = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); } catch { /* opt */ } }, 1750);
+    const h2 = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch { /* opt */ } }, 3600);
+    return () => { clearInterval(iv); clearTimeout(h1); clearTimeout(h2); };
+  }, [t]);
+  const seg = (pts: number[], out: number[]) => t.interpolate({ inputRange: pts, outputRange: out, extrapolate: "clamp" });
+  const orgOp = seg([0.0, 0.04, 0.42, 0.5], [0, 1, 1, 0]);
+  const titleOp = seg([0.2, 0.28, 0.42, 0.5], [0, 1, 1, 0]);
+  const titleScale = seg([0.2, 0.3, 0.44, 0.5], [1.22, 1, 1.04, 1.6]);
+  const subOp = seg([0.3, 0.37, 0.44, 0.5], [0, 1, 1, 0]);
+  const haloOp = seg([0.5, 0.62, 0.8, 1.0], [0, 0.9, 0.6, 0.5]);
+  const haloScale = seg([0.5, 0.86], [0.4, 1.18]);
+  const crestOp = seg([0.5, 0.62], [0, 1]);
+  const crestScale = seg([0.5, 0.67], [0.5, 1]);
+  const seasonOp = seg([0.66, 0.74], [0, 1]);
+  const nameOp = seg([0.7, 0.8], [0, 1]);
+  const nameRise = seg([0.7, 0.82], [18, 0]);
+  const honorOp = seg([0.82, 0.9], [0, 1]);
+  const msgOp = seg([0.9, 1.0], [0, 1]);
   return (
-    <View style={{ alignItems: "center" }}>
-      <Animated.Text style={{ opacity: fade(0, 0.15), color: hues.gold.base, fontSize: 12, fontWeight: "800", letterSpacing: 3, textTransform: "uppercase", textAlign: "center" }}>National Martial Arts Organization</Animated.Text>
-      {season ? <Animated.Text style={{ opacity: fade(0.05, 0.22), color: hues.gold.hi, fontSize: 14, fontStyle: "italic", marginTop: 6 }}>{season} · Tournament of Champions</Animated.Text> : null}
-      <Animated.View style={{ opacity: fade(0.12, 0.4), transform: [{ scale: grow(0.12, 0.4, 0.7) }], marginTop: 22, marginBottom: 6 }}>
-        <Coin size={116} />
+    <View style={{ width: "100%", maxWidth: 420, height: 520, alignItems: "center", justifyContent: "center" }}>
+      {/* org typewriter — above the title, leaves with it */}
+      <Animated.Text pointerEvents="none" style={{ position: "absolute", top: 120, left: 0, right: 0, opacity: orgOp, color: hues.gold.base, fontSize: 11, fontWeight: "800", letterSpacing: 3, textAlign: "center" }}>{ORG.slice(0, typed)}</Animated.Text>
+
+      {/* TITLE SLAM — occupies center, then blooms away */}
+      <Animated.View pointerEvents="none" style={{ position: "absolute", top: 170, left: 0, right: 0, alignItems: "center", opacity: titleOp, transform: [{ scale: titleScale }] }}>
+        <Text style={{ color: hues.gold.hi, fontSize: 34, fontWeight: "900", letterSpacing: 1, lineHeight: 38, textAlign: "center", textShadowColor: "rgba(230,185,63,0.6)", textShadowRadius: 24 }}>TOURNAMENT{"\n"}OF CHAMPIONS</Text>
+        <Animated.Text style={{ opacity: subOp, color: hues.gold.base, fontSize: 11, fontWeight: "800", letterSpacing: 4, marginTop: 12, textTransform: "uppercase" }}>{season ?? "Season 1 · Sapphire"}</Animated.Text>
       </Animated.View>
-      {honor ? (
-        <>
-          <Animated.Text style={{ opacity: fade(0.36, 0.7), transform: [{ translateY: rise(0.36, 0.7, 18) }, { scale: grow(0.36, 0.72, 0.86) }], color: hues.gold.hi, fontFamily: "Georgia", fontSize: 30, fontWeight: "700", textAlign: "center", marginTop: 16, textShadowColor: "rgba(230,185,63,0.55)", textShadowRadius: 16, maxWidth: 320, lineHeight: 36 }}>&ldquo;{honor}&rdquo;</Animated.Text>
-          <Animated.Text style={{ opacity: fade(0.6, 0.82), color: rCol, fontSize: 12, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase", marginTop: 8 }}>{String(rarest.rarity)} badge earned</Animated.Text>
-        </>
-      ) : (
-        <Animated.Text style={{ opacity: fade(0.36, 0.7), transform: [{ scale: grow(0.36, 0.72, 0.86) }], color: hues.gold.hi, fontFamily: "Georgia", fontSize: 26, fontWeight: "700", textAlign: "center", marginTop: 16 }}>A month worth framing</Animated.Text>
-      )}
-      <Animated.Text style={{ opacity: fade(0.76, 1), transform: [{ translateY: rise(0.76, 1, 10) }], color: hues.gold.hi, fontSize: 14, fontStyle: "italic", textAlign: "center", marginTop: 22, maxWidth: 300, lineHeight: 20 }}>&ldquo;{message ?? "The season is yours to shape. Onward."}&rdquo;</Animated.Text>
+
+      {/* CREST IGNITION — soft glow halo + crest */}
+      <Animated.View pointerEvents="none" style={{ position: "absolute", top: 108, left: 0, right: 0, alignItems: "center", opacity: haloOp, transform: [{ scale: haloScale }] }}>
+        <Canvas style={{ width: 260, height: 260 }}>
+          <Circle cx={130} cy={130} r={130}>
+            <RadialGradient c={vec(130, 130)} r={130} colors={[SEASON.hi, SEASON.b + "00"]} />
+          </Circle>
+        </Canvas>
+      </Animated.View>
+      <Animated.View style={{ position: "absolute", top: 173, left: 0, right: 0, alignItems: "center", opacity: crestOp, transform: [{ scale: crestScale }] }}>
+        <Coin size={128} />
+      </Animated.View>
+
+      {/* NAME CARD — below the crest */}
+      <View style={{ position: "absolute", top: 322, left: 0, right: 0, alignItems: "center" }}>
+        <Animated.Text style={{ opacity: seasonOp, color: SEASON.hi, fontSize: 12, fontStyle: "italic", marginBottom: 4 }}>{season ?? "Season 1 · Sapphire"}</Animated.Text>
+        {name ? <Animated.Text style={{ opacity: nameOp, transform: [{ translateY: nameRise }], color: hues.gold.hi, fontFamily: "Georgia", fontSize: 38, fontWeight: "900", letterSpacing: 1, textTransform: "uppercase", textAlign: "center", textShadowColor: "rgba(230,185,63,0.5)", textShadowRadius: 16 }}>{name}</Animated.Text> : null}
+        {honor ? (
+          <>
+            <Animated.Text style={{ opacity: honorOp, color: hues.gold.hi, fontFamily: "Georgia", fontSize: 18, fontStyle: "italic", marginTop: 8, textAlign: "center" }}>&ldquo;{honor}&rdquo;</Animated.Text>
+            <Animated.Text style={{ opacity: honorOp, color: rCol, fontSize: 10.5, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase", marginTop: 5 }}>{String(rarest.rarity)} badge · earned</Animated.Text>
+          </>
+        ) : (
+          <Animated.Text style={{ opacity: honorOp, color: hues.gold.hi, fontFamily: "Georgia", fontSize: 20, fontStyle: "italic", marginTop: 8 }}>A month worth framing</Animated.Text>
+        )}
+        <Animated.Text style={{ opacity: msgOp, color: neutrals.text, fontSize: 13, fontStyle: "italic", textAlign: "center", marginTop: 16, maxWidth: 300, lineHeight: 19 }}>&ldquo;{message ?? "The season is yours to shape. Onward."}&rdquo;</Animated.Text>
+      </View>
     </View>
   );
 }
