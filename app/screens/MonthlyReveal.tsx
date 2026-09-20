@@ -1,13 +1,12 @@
 import { useEffect, useState, useRef, useMemo, forwardRef, useImperativeHandle, useCallback } from "react";
 import { View, Text, TouchableOpacity, ScrollView, AppState, Animated, Easing, Image, Dimensions, Linking, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Canvas, Circle, RadialGradient, vec } from "@shopify/react-native-skia";
+import { Canvas, Circle } from "@shopify/react-native-skia";
 import * as Haptics from "expo-haptics";
 import { neutrals, hues, rarityBase, type Rarity, type MedalType } from "@nmao/design-tokens";
 
 // rarity ranking — the rarest earned badge crowns the invocation title
 const RRANK: Record<string, number> = { legendary: 5, epic: 4, rare: 3, uncommon: 2, common: 1 };
-import { Coin } from "../components/Coin";
 import { Medal } from "../components/Medal";
 import { Medallion, type Tier } from "../components/Medallion";
 import { Frame } from "../components/Frame";
@@ -30,6 +29,8 @@ const asRarity = (r: unknown): Rarity => (r === "legendary" || r === "epic" || r
 const asMedal = (t: unknown): MedalType => (t === "gold" || t === "silver" || t === "bronze" || t === "participation" ? t : "participation");
 const asTier = (t: unknown): Tier => (t === "gold" || t === "silver" || t === "bronze" ? (t as Tier) : "part");
 const SEASON = { hi: "#66A9FF", b: "#1F7BFF", sh: "#0B3FD6" }; // S1 Sapphire
+// The Tournament League emblem — the spectrum dragon coin (replaces the old gold crest).
+const EMBLEM = require("../assets/tournament-emblem.png");
 const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function earnText(b: any): string {
@@ -39,15 +40,25 @@ function earnText(b: any): string {
   return typeof b.description === "string" ? b.description : "";
 }
 
+// A tap-into detail (clickable badges + stat tiles open one of these).
+type DetailRow = { ic: string; color: string; mn: string; ms?: string; rr?: string };
+export type Detail = {
+  emblem?: string | null; emblemFallback?: string;
+  title: string; titleColor?: string;
+  bigValue?: string;
+  tag?: string; tagColor?: string;
+  sub?: string;
+  rows: DetailRow[];
+};
+
 export default function MonthlyReveal({ period, payload, onClose, viewerId }: { period: string; payload: Payload; onClose: () => void; viewerId?: string }) {
   const [step, setStep] = useState(0);
-  const [auto, setAuto] = useState(true); // phase C: the ceremony plays itself
+  const [detail, setDetail] = useState<Detail | null>(null); // tap-into overlay (badges / stats)
   // Bookend sponsor — resolved at view time (segment-targeted). `undefined` while
   // it loads: the ceremony holds until it settles so the step list can't shift
   // out from under an in-flight step. `null` = no sponsor → both bookends skip.
   const [sponsor, setSponsor] = useState<RevealSponsor | null | undefined>(undefined);
   const ready = sponsor !== undefined;
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { let a = true; revealSponsor(viewerId).then((s) => { if (a) setSponsor(s); }).catch(() => { if (a) setSponsor(null); }); return () => { a = false; }; }, [viewerId]);
   // The competitor's own name for the Invocation name-card (their own reveal, so
   // the full name is fine here — the masked display_name is for peers).
@@ -76,10 +87,12 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
   const medals = arr(payload, "medals");
   const badges = arr(payload, "badges");
   const hasSponsor = !!sponsor;
-  // Sponsor bookends wrap the ceremony: pre-roll first, end-card last.
+  // The competitor moves through the ceremony at their own pace — each act holds
+  // until they press Continue (no auto-advance). Sponsor bookends wrap it.
   const steps: string[] = [
     ...(hasSponsor ? ["presenter"] : []),
-    "open",
+    "title",   // ACT 1 — the org name lands + Tournament League
+    "name",    // ACT 2 — the dragon crest, their name, their honors
     ...(medals.length ? ["medals"] : []),
     ...(badges.length ? ["badges"] : []),
     "summary",
@@ -89,31 +102,14 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
   const kind = steps[step];
   const last = steps.length - 1;
 
-  // How long each act holds before the film advances (phase C: proportional-ish;
-  // badges scale with count). The close and end-card acts hold on their CTAs.
-  function durMs(k: string): number {
-    if (k === "presenter") return 4800;
-    if (k === "open") return 7600;
-    if (k === "medals") return 9500;
-    if (k === "badges") return Math.max(6500, badges.length * 2800);
-    if (k === "summary") return 6500;
-    return 0;
-  }
-  // Auto-advance timeline; pausing (setAuto false) or a manual skip re-drives it.
-  useEffect(() => {
-    if (timer.current) clearTimeout(timer.current);
-    if (ready && auto && step < last && kind !== "close") timer.current = setTimeout(() => setStep((s) => Math.min(s + 1, last)), durMs(kind));
-    return () => { if (timer.current) clearTimeout(timer.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, auto, kind, last, ready]);
-
   // Finale: once the ceremony reaches its last card (the Charge, or the sponsor
   // end-card when there is one), let the score fade out rather than loop on.
   useEffect(() => { if (ready && step === last) fadeOutMusic(1400); }, [ready, step, last]);
 
   function done() { stopMusic(); markMonthlySeen(period); onClose(); }
+  function next() { setStep((s) => Math.min(s + 1, last)); }
   // The Charge's Onward advances to the sponsor end-card when there is one, else closes.
-  function advanceOrDone() { if (step < last) { setAuto(false); setStep((s) => Math.min(s + 1, last)); } else done(); }
+  function advanceOrDone() { if (step < last) next(); else done(); }
 
   // Hold on black while the sponsor resolves (a beat, under the modal's own fade).
   if (!ready) return <View style={{ flex: 1, backgroundColor: "#070605" }} />;
@@ -128,22 +124,56 @@ export default function MonthlyReveal({ period, payload, onClose, viewerId }: { 
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexGrow: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 22, paddingVertical: 20 }}>
         {kind === "presenter" ? <Presenter sponsor={sponsor!} /> : null}
-        {kind === "open" ? <Open message={str(payload, "message")} badges={badges} name={heroName} /> : null}
+        {kind === "title" ? <Title /> : null}
+        {kind === "name" ? <NameCard message={str(payload, "message")} badges={badges} name={heroName} /> : null}
         {kind === "medals" ? <Medals medals={medals} /> : null}
-        {kind === "badges" ? <Badges badges={badges} /> : null}
-        {kind === "summary" ? <Summary payload={payload} /> : null}
+        {kind === "badges" ? <Badges badges={badges} onDetail={setDetail} /> : null}
+        {kind === "summary" ? <Summary payload={payload} viewerId={viewerId} onDetail={setDetail} /> : null}
         {kind === "close" ? <Close onDone={advanceOrDone} signal={str(payload, "signal")} /> : null}
         {kind === "sponsor_end" ? <SponsorEnd sponsor={sponsor!} onDone={done} /> : null}
       </ScrollView>
       <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", paddingBottom: 34 }}>
-        {step < last && kind !== "close" ? (
-          <>
-            <Ghost label={auto ? "❚❚ Pause" : "▶ Play"} onPress={() => setAuto((a) => !a)} />
-            <View style={{ width: 12 }} />
-            <Gold label="Skip ›" onPress={() => { setAuto(false); setStep((s) => Math.min(s + 1, last)); }} />
-          </>
-        ) : null}
+        {kind !== "close" && kind !== "sponsor_end" ? <Gold label="Continue →" onPress={next} /> : null}
       </View>
+      {detail ? <DetailSheet detail={detail} onClose={() => setDetail(null)} /> : null}
+    </View>
+  );
+}
+
+// The tap-into detail overlay — a bottom sheet over the whole ceremony. Opened by
+// tapping a badge (how you earned it) or a stat tile / rating (its breakdown).
+function DetailSheet({ detail, onClose }: { detail: Detail; onClose: () => void }) {
+  return (
+    <View style={[StyleSheet.absoluteFill, { zIndex: 50 }]}>
+      <LinearGradient colors={["#1b1526", "#0a090e"]} style={StyleSheet.absoluteFill} />
+      <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={{ position: "absolute", top: 52, left: 16, zIndex: 3, padding: 6 }}>
+        <Text style={{ color: hues.gold.base, fontSize: 15, fontWeight: "700" }}>‹ Back</Text>
+      </TouchableOpacity>
+      <ScrollView contentContainerStyle={{ paddingTop: 92, paddingHorizontal: 24, paddingBottom: 40 }}>
+        {detail.emblem !== undefined ? (
+          <View style={{ alignItems: "center", marginBottom: 10 }}>
+            {detail.emblem ? <Image source={{ uri: detail.emblem }} style={{ width: 112, height: 112, borderRadius: 56 }} resizeMode="cover" /> : <Text style={{ fontSize: 52 }}>{detail.emblemFallback ?? "◆"}</Text>}
+          </View>
+        ) : null}
+        <Text style={{ color: detail.titleColor ?? "#F7F3E9", fontFamily: "Georgia", fontWeight: "900", fontSize: 27, textAlign: "center" }}>{detail.title}</Text>
+        {detail.bigValue ? <Text style={{ color: detail.titleColor ?? hues.gold.hi, fontFamily: "Georgia", fontWeight: "900", fontSize: 52, textAlign: "center", marginTop: 2 }}>{detail.bigValue}</Text> : null}
+        {detail.tag ? <Text style={{ color: detail.tagColor ?? hues.gold.base, fontSize: 11, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase", textAlign: "center", marginTop: 6 }}>{detail.tag}</Text> : null}
+        {detail.sub ? <Text style={{ color: neutrals.muted, fontSize: 13, textAlign: "center", marginTop: 8, lineHeight: 19, alignSelf: "center", maxWidth: 300 }}>{detail.sub}</Text> : null}
+        <View style={{ marginTop: 18 }}>
+          {detail.rows.map((r, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11, borderTopWidth: i === 0 ? 0 : StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.09)" }}>
+              <View style={{ width: 34, height: 34, borderRadius: 9, backgroundColor: r.color + "2e", alignItems: "center", justifyContent: "center", marginRight: 12 }}>
+                <Text style={{ color: r.color, fontWeight: "900", fontSize: 13 }}>{r.ic}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: "#F7F3E9", fontWeight: "700", fontSize: 14 }}>{r.mn}</Text>
+                {r.ms ? <Text style={{ color: neutrals.muted2, fontSize: 11.5, marginTop: 2, lineHeight: 16 }}>{r.ms}</Text> : null}
+              </View>
+              {r.rr ? <Text style={{ color: r.color, fontWeight: "800", fontSize: 13, marginLeft: 8 }}>{r.rr}</Text> : null}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -178,78 +208,84 @@ function Starfield() {
   );
 }
 
-// The Invocation — a cinematic open modeled on the reveal prototype: the org name
-// TYPES in over the starfield, "TOURNAMENT OF CHAMPIONS" slams in and blooms out,
-// the crest IGNITES from a glow halo, then the competitor's name + honorific land.
-// One linear driver `t` (0→1 over ~7.2s) gates every beat via opacity/scale windows.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function Open({ message, badges, name }: { message: string | null; badges: any[]; name: string | null }) {
+// The Tournament League emblem crest — the spectrum dragon coin in a gilded ring,
+// with a soft season-blue glow. Replaces the old gold Coin as the ceremony's crest.
+function Crest({ size }: { size: number }) {
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center",
+      shadowColor: SEASON.hi, shadowOpacity: 0.7, shadowRadius: size * 0.3, shadowOffset: { width: 0, height: 0 } }}>
+      <Image source={EMBLEM} style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: "rgba(230,185,63,0.55)" }} resizeMode="cover" />
+    </View>
+  );
+}
+
+// ACT 1 · Title — the org name slides in larger + cinematic and HOLDS, the
+// "TOURNAMENT LEAGUE" title lands beneath it. One driver `t` gates the beats.
+function Title() {
   const season = useSeasonLabel();
   const t = useRef(new Animated.Value(0)).current;
   const [typed, setTyped] = useState(0);
   const ORG = "NATIONAL MARTIAL ARTS ORGANIZATION";
+  useEffect(() => {
+    t.setValue(0);
+    Animated.timing(t, { toValue: 1, duration: 3800, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    let i = 0; const iv = setInterval(() => { i += 1; setTyped(i); if (i >= ORG.length) clearInterval(iv); }, 34);
+    const h1 = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); } catch { /* opt */ } }, 1500);
+    const h2 = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch { /* opt */ } }, 2200);
+    return () => { clearInterval(iv); clearTimeout(h1); clearTimeout(h2); };
+  }, [t]);
+  const seg = (pts: number[], out: number[]) => t.interpolate({ inputRange: pts, outputRange: out, extrapolate: "clamp" });
+  const orgOp = seg([0, 0.14], [0, 1]);
+  const orgRise = seg([0, 0.22], [16, 0]);
+  const titleOp = seg([0.42, 0.56], [0, 1]);
+  const titleScale = seg([0.42, 0.6, 0.74], [1.5, 0.96, 1]);
+  const subOp = seg([0.72, 0.9], [0, 1]);
+  return (
+    <View style={{ width: "100%", maxWidth: 420, alignItems: "center", justifyContent: "center" }}>
+      <Animated.Text style={{ opacity: orgOp, transform: [{ translateY: orgRise }], color: hues.gold.base, fontSize: 16, fontWeight: "800", letterSpacing: 3, textAlign: "center", textTransform: "uppercase", lineHeight: 24, marginBottom: 22 }}>{ORG.slice(0, typed)}</Animated.Text>
+      <Animated.Text style={{ opacity: titleOp, transform: [{ scale: titleScale }], color: hues.gold.hi, fontSize: 44, fontWeight: "900", letterSpacing: 1, lineHeight: 46, textAlign: "center", textShadowColor: "rgba(230,185,63,0.6)", textShadowRadius: 26 }}>TOURNAMENT{"\n"}LEAGUE</Animated.Text>
+      <Animated.Text style={{ opacity: subOp, color: hues.gold.base, fontSize: 12, fontWeight: "800", letterSpacing: 4, marginTop: 16, textTransform: "uppercase" }}>{season ?? "Season 1 · Sapphire"}</Animated.Text>
+    </View>
+  );
+}
+
+// ACT 2 · Name card — the dragon crest ignites, then the competitor's name +
+// their rarest badge as an honorific + a closing line. HOLDS for Continue.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function NameCard({ message, badges, name }: { message: string | null; badges: any[]; name: string | null }) {
+  const season = useSeasonLabel();
+  const t = useRef(new Animated.Value(0)).current;
   const rarest = useMemo(() => badges.slice().sort((a, b) => (RRANK[String(b?.rarity)] || 0) - (RRANK[String(a?.rarity)] || 0))[0], [badges]);
   const honor = rarest ? String(rarest.name || "") : null;
   const rCol = rarest ? rarityBase(asRarity(rarest.rarity)) : hues.gold.base;
   useEffect(() => {
     t.setValue(0);
-    Animated.timing(t, { toValue: 1, duration: 7200, easing: Easing.linear, useNativeDriver: true }).start();
-    let i = 0; const iv = setInterval(() => { i += 1; setTyped(i); if (i >= ORG.length) clearInterval(iv); }, 40);
-    const h1 = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid); } catch { /* opt */ } }, 1750);
-    const h2 = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch { /* opt */ } }, 3600);
-    return () => { clearInterval(iv); clearTimeout(h1); clearTimeout(h2); };
+    Animated.timing(t, { toValue: 1, duration: 2800, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    const h = setTimeout(() => { try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); } catch { /* opt */ } }, 320);
+    return () => clearTimeout(h);
   }, [t]);
   const seg = (pts: number[], out: number[]) => t.interpolate({ inputRange: pts, outputRange: out, extrapolate: "clamp" });
-  const orgOp = seg([0.0, 0.04, 0.42, 0.5], [0, 1, 1, 0]);
-  const titleOp = seg([0.2, 0.28, 0.42, 0.5], [0, 1, 1, 0]);
-  const titleScale = seg([0.2, 0.3, 0.44, 0.5], [1.22, 1, 1.04, 1.6]);
-  const subOp = seg([0.3, 0.37, 0.44, 0.5], [0, 1, 1, 0]);
-  const haloOp = seg([0.5, 0.62, 0.8, 1.0], [0, 0.9, 0.6, 0.5]);
-  const haloScale = seg([0.5, 0.86], [0.4, 1.18]);
-  const crestOp = seg([0.5, 0.62], [0, 1]);
-  const crestScale = seg([0.5, 0.67], [0.5, 1]);
-  const seasonOp = seg([0.66, 0.74], [0, 1]);
-  const nameOp = seg([0.7, 0.8], [0, 1]);
-  const nameRise = seg([0.7, 0.82], [18, 0]);
-  const honorOp = seg([0.82, 0.9], [0, 1]);
-  const msgOp = seg([0.9, 1.0], [0, 1]);
+  const crestOp = seg([0, 0.24], [0, 1]);
+  const crestScale = seg([0, 0.3], [0.5, 1]);
+  const seasonOp = seg([0.3, 0.45], [0, 1]);
+  const nameOp = seg([0.4, 0.56], [0, 1]);
+  const nameRise = seg([0.4, 0.58], [18, 0]);
+  const honorOp = seg([0.6, 0.76], [0, 1]);
+  const msgOp = seg([0.8, 0.96], [0, 1]);
   return (
-    <View style={{ width: "100%", maxWidth: 420, height: 520, alignItems: "center", justifyContent: "center" }}>
-      {/* org typewriter — above the title, leaves with it */}
-      <Animated.Text pointerEvents="none" style={{ position: "absolute", top: 120, left: 0, right: 0, opacity: orgOp, color: hues.gold.base, fontSize: 11, fontWeight: "800", letterSpacing: 3, textAlign: "center" }}>{ORG.slice(0, typed)}</Animated.Text>
-
-      {/* TITLE SLAM — occupies center, then blooms away */}
-      <Animated.View pointerEvents="none" style={{ position: "absolute", top: 170, left: 0, right: 0, alignItems: "center", opacity: titleOp, transform: [{ scale: titleScale }] }}>
-        <Text style={{ color: hues.gold.hi, fontSize: 34, fontWeight: "900", letterSpacing: 1, lineHeight: 38, textAlign: "center", textShadowColor: "rgba(230,185,63,0.6)", textShadowRadius: 24 }}>TOURNAMENT{"\n"}OF CHAMPIONS</Text>
-        <Animated.Text style={{ opacity: subOp, color: hues.gold.base, fontSize: 11, fontWeight: "800", letterSpacing: 4, marginTop: 12, textTransform: "uppercase" }}>{season ?? "Season 1 · Sapphire"}</Animated.Text>
-      </Animated.View>
-
-      {/* CREST IGNITION — soft glow halo + crest */}
-      <Animated.View pointerEvents="none" style={{ position: "absolute", top: 108, left: 0, right: 0, alignItems: "center", opacity: haloOp, transform: [{ scale: haloScale }] }}>
-        <Canvas style={{ width: 260, height: 260 }}>
-          <Circle cx={130} cy={130} r={130}>
-            <RadialGradient c={vec(130, 130)} r={130} colors={[SEASON.hi, SEASON.b + "00"]} />
-          </Circle>
-        </Canvas>
-      </Animated.View>
-      <Animated.View style={{ position: "absolute", top: 173, left: 0, right: 0, alignItems: "center", opacity: crestOp, transform: [{ scale: crestScale }] }}>
-        <Coin size={128} />
-      </Animated.View>
-
-      {/* NAME CARD — below the crest */}
-      <View style={{ position: "absolute", top: 322, left: 0, right: 0, alignItems: "center" }}>
-        <Animated.Text style={{ opacity: seasonOp, color: SEASON.hi, fontSize: 12, fontStyle: "italic", marginBottom: 4 }}>{season ?? "Season 1 · Sapphire"}</Animated.Text>
-        {name ? <Animated.Text style={{ opacity: nameOp, transform: [{ translateY: nameRise }], color: hues.gold.hi, fontFamily: "Georgia", fontSize: 38, fontWeight: "900", letterSpacing: 1, textTransform: "uppercase", textAlign: "center", textShadowColor: "rgba(230,185,63,0.5)", textShadowRadius: 16 }}>{name}</Animated.Text> : null}
-        {honor ? (
-          <>
-            <Animated.Text style={{ opacity: honorOp, color: hues.gold.hi, fontFamily: "Georgia", fontSize: 18, fontStyle: "italic", marginTop: 8, textAlign: "center" }}>&ldquo;{honor}&rdquo;</Animated.Text>
-            <Animated.Text style={{ opacity: honorOp, color: rCol, fontSize: 10.5, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase", marginTop: 5 }}>{String(rarest.rarity)} badge · earned</Animated.Text>
-          </>
-        ) : (
-          <Animated.Text style={{ opacity: honorOp, color: hues.gold.hi, fontFamily: "Georgia", fontSize: 20, fontStyle: "italic", marginTop: 8 }}>A month worth framing</Animated.Text>
-        )}
-        <Animated.Text style={{ opacity: msgOp, color: neutrals.text, fontSize: 13, fontStyle: "italic", textAlign: "center", marginTop: 16, maxWidth: 300, lineHeight: 19 }}>&ldquo;{message ?? "The season is yours to shape. Onward."}&rdquo;</Animated.Text>
-      </View>
+    <View style={{ alignItems: "center", width: "100%", maxWidth: 420 }}>
+      <Animated.View style={{ opacity: crestOp, transform: [{ scale: crestScale }] }}><Crest size={134} /></Animated.View>
+      <Animated.Text style={{ opacity: seasonOp, color: SEASON.hi, fontSize: 13, fontStyle: "italic", marginTop: 18 }}>{season ?? "Season 1 · Sapphire"}</Animated.Text>
+      {name ? <Animated.Text style={{ opacity: nameOp, transform: [{ translateY: nameRise }], color: hues.gold.hi, fontFamily: "Georgia", fontSize: 38, fontWeight: "900", letterSpacing: 1, textTransform: "uppercase", textAlign: "center", marginTop: 6, textShadowColor: "rgba(230,185,63,0.5)", textShadowRadius: 16 }}>{name}</Animated.Text> : null}
+      {honor ? (
+        <>
+          <Animated.Text style={{ opacity: honorOp, color: hues.gold.hi, fontFamily: "Georgia", fontSize: 18, fontStyle: "italic", marginTop: 10, textAlign: "center" }}>&ldquo;{honor}&rdquo;</Animated.Text>
+          <Animated.Text style={{ opacity: honorOp, color: rCol, fontSize: 10.5, fontWeight: "800", letterSpacing: 2, textTransform: "uppercase", marginTop: 5 }}>{String(rarest.rarity)} badge · earned</Animated.Text>
+        </>
+      ) : (
+        <Animated.Text style={{ opacity: honorOp, color: hues.gold.hi, fontFamily: "Georgia", fontSize: 20, fontStyle: "italic", marginTop: 10 }}>A month worth framing</Animated.Text>
+      )}
+      <Animated.Text style={{ opacity: msgOp, color: neutrals.text, fontSize: 13, fontStyle: "italic", textAlign: "center", marginTop: 16, maxWidth: 300, lineHeight: 19 }}>&ldquo;{message ?? "The season is yours to shape. Onward."}&rdquo;</Animated.Text>
     </View>
   );
 }
@@ -383,7 +419,7 @@ function Medals({ medals }: { medals: any[] }) {
 // each with a clink + haptic. Emblem keys aren't in the payload, so we look them
 // up by code (graceful ◆ fallback if art is missing).
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function Badges({ badges }: { badges: any[] }) {
+function Badges({ badges, onDetail }: { badges: any[]; onDetail: (d: Detail) => void }) {
   const [emblems, setEmblems] = useState<Record<string, string | null>>({});
   const flips = useMemo(() => badges.map(() => new Animated.Value(0)), [badges.length]);
   useEffect(() => {
@@ -396,14 +432,21 @@ function Badges({ badges }: { badges: any[] }) {
         setEmblems(m);
       });
     }
+    // slowed population — each badge lands with room to breathe before the next
     const timers = badges.map((_, i) => setTimeout(() => {
-      Animated.timing(flips[i], { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+      Animated.timing(flips[i], { toValue: 1, duration: 560, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
       try { play("badge"); } catch { /* optional */ }
       try { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } catch { /* optional */ }
-    }, 260 + i * 430));
+    }, 300 + i * 900));
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [badges.length]);
+  const openBadge = (b: any, url: string | null) => onDetail({
+    emblem: url || null, emblemFallback: "◆",
+    title: String(b.name ?? ""), titleColor: "#F7F3E9",
+    tag: `${String(b.rarity ?? "")} badge`, tagColor: rarityBase(asRarity(b.rarity)),
+    rows: [{ ic: "✦", color: rarityBase(asRarity(b.rarity)), mn: "How you earned it", ms: earnText(b) || String(b.description ?? "") }],
+  });
   return (
     <View style={{ alignItems: "center", width: "100%" }}>
       <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginBottom: 18 }}>✦ {badges.length} new badge{badges.length === 1 ? "" : "s"} ✦</Text>
@@ -411,22 +454,26 @@ function Badges({ badges }: { badges: any[] }) {
         const url = emblemUrl(emblems[String(b?.code)] ?? null);
         const f = flips[i] ?? new Animated.Value(1);
         return (
-          <Animated.View key={i} style={{ flexDirection: "row", alignItems: "center", marginBottom: 14, width: "100%", maxWidth: 320,
+          <Animated.View key={i} style={{ width: "100%", maxWidth: 320,
             opacity: f.interpolate({ inputRange: [0, 0.35, 1], outputRange: [0, 1, 1] }),
             transform: [{ perspective: 800 }, { rotateY: f.interpolate({ inputRange: [0, 1], outputRange: ["100deg", "0deg"] }) }, { scale: f.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }}>
-            <Frame rarity={asRarity(b.rarity)} size="mini" radius={26}>
-              <View style={{ width: 46, height: 46, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
-                {url ? <Image source={{ uri: url }} style={{ width: 44, height: 44 }} resizeMode="contain" /> : <Text style={{ color: "#EFC24E", fontSize: 18 }}>◆</Text>}
+            <TouchableOpacity activeOpacity={0.8} onPress={() => openBadge(b, url)} style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+              <Frame rarity={asRarity(b.rarity)} size="mini" radius={26}>
+                <View style={{ width: 46, height: 46, backgroundColor: "#100d07", alignItems: "center", justifyContent: "center" }}>
+                  {url ? <Image source={{ uri: url }} style={{ width: 44, height: 44 }} resizeMode="contain" /> : <Text style={{ color: "#EFC24E", fontSize: 18 }}>◆</Text>}
+                </View>
+              </Frame>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }}>{String(b.name ?? "")}</Text>
+                <Text style={{ color: rarityBase(asRarity(b.rarity)), fontSize: 8, letterSpacing: 1, textTransform: "uppercase" }}>{String(b.rarity ?? "")}</Text>
+                <Text style={{ color: neutrals.muted, fontSize: 11, marginTop: 3, lineHeight: 15 }} numberOfLines={2}>{earnText(b)}</Text>
               </View>
-            </Frame>
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 13 }}>{String(b.name ?? "")}</Text>
-              <Text style={{ color: rarityBase(asRarity(b.rarity)), fontSize: 8, letterSpacing: 1, textTransform: "uppercase" }}>{String(b.rarity ?? "")}</Text>
-              <Text style={{ color: neutrals.muted, fontSize: 11, marginTop: 3, lineHeight: 15 }}>{earnText(b)}</Text>
-            </View>
+              <Text style={{ color: neutrals.muted2, fontSize: 16, marginLeft: 6 }}>›</Text>
+            </TouchableOpacity>
           </Animated.View>
         );
       })}
+      <Text style={{ color: neutrals.muted2, fontSize: 10, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>tap a badge to see how you earned it</Text>
     </View>
   );
 }
@@ -447,25 +494,55 @@ function Count({ to, dur = 900, delay = 0, suffix = "", style }: { to: number; d
   return <Text style={style}>{n}{suffix}</Text>;
 }
 
-// One stat tile — rises + fades in on its stagger, then counts up in its accent.
-function StatTile({ value, label, accent, delay }: { value: number; label: string; accent: string; delay: number }) {
+// One stat tile — rises + fades in on its stagger, counts up in its accent, and
+// taps into its detail.
+function StatTile({ value, label, accent, delay, onPress }: { value: number; label: string; accent: string; delay: number; onPress: () => void }) {
   const a = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const t = setTimeout(() => Animated.timing(a, { toValue: 1, duration: 440, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(), delay);
     return () => clearTimeout(t);
   }, []);
   return (
-    <Animated.View style={{ opacity: a, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
-      width: 150, alignItems: "center", borderWidth: 1, borderColor: accent + "55", borderRadius: 14, backgroundColor: accent + "12", paddingVertical: 18, paddingHorizontal: 12, margin: 6 }}>
-      <Count to={value} delay={delay} style={{ color: accent, fontSize: 30, fontWeight: "900" }} />
-      <Text style={{ color: neutrals.muted, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 6, textAlign: "center" }}>{label}</Text>
+    <Animated.View style={{ opacity: a, transform: [{ translateY: a.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }], margin: 6 }}>
+      <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={{ width: 150, alignItems: "center", borderWidth: 1, borderColor: accent + "55", borderRadius: 14, backgroundColor: accent + "12", paddingVertical: 16, paddingHorizontal: 12 }}>
+        <Count to={value} delay={delay} style={{ color: accent, fontSize: 30, fontWeight: "900" }} />
+        <Text style={{ color: neutrals.muted, fontSize: 11, fontWeight: "700", letterSpacing: 1, textTransform: "uppercase", marginTop: 6, textAlign: "center" }}>{label}</Text>
+        <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>tap ›</Text>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
 
-function Summary({ payload }: { payload: Payload }) {
+const STAT_INFO: Record<string, string> = {
+  "Duels won": "Head-to-head duels you won this period.",
+  "Best streak": "Your longest run of consecutive duel wins.",
+  "Medals": "Judged-event medals earned this period.",
+  "Badges": "New honors unlocked this period — open the badges act to read each story.",
+  "Backed you": "People who voted for you in the arena.",
+  "Schools faced": "Distinct dojos your opponents came from.",
+  "Landslides": "Wins by 80%+ of the community vote.",
+  "Helped decide": "Duels where your vote matched the crowd.",
+};
+
+function Summary({ payload, viewerId, onDetail }: { payload: Payload; viewerId?: string; onDetail: (d: Detail) => void }) {
   const rating = num(payload, "rating");
   const gain = num(payload, "rating_gain");
+  // National tournament (skill) rating isn't in the reveal payload — pull it live so
+  // it can sit beside the duel rating. Falls back to the single duel hero if absent.
+  const [skillRow, setSkillRow] = useState<{ rating: number; provisional: boolean } | null>(null);
+  useEffect(() => {
+    let a = true;
+    (async () => {
+      if (!viewerId) return;
+      try {
+        const { data } = await supabase.from("skill_ratings").select("rating, events_count").eq("competitor_id", viewerId).maybeSingle();
+        if (a && data && typeof data.rating === "number") setSkillRow({ rating: Math.round(data.rating), provisional: (typeof data.events_count === "number" ? data.events_count : 0) < 3 });
+      } catch { /* tournament rating is optional here */ }
+    })();
+    return () => { a = false; };
+  }, [viewerId]);
+  const skill = skillRow ? skillRow.rating : null;
+  const provisional = skillRow ? skillRow.provisional : false;
   // candidate tiles in priority order — show only the ones that carry signal
   const candidates: { value: number | null; label: string }[] = [
     { value: num(payload, "duels_won"), label: "Duels won" },
@@ -479,22 +556,42 @@ function Summary({ payload }: { payload: Payload }) {
   ];
   const tiles = candidates.filter((c) => c.value != null && c.value > 0).slice(0, 6);
   const accents = [hues.sapphire.hi, hues.ruby.hi, hues.amethyst.hi, hues.gold.hi, hues.emerald?.hi ?? hues.sapphire.hi, hues.gold.hi];
+  const GOLD = hues.gold.hi, SAP = hues.sapphire.hi, EMER = hues.emerald?.hi ?? "#3FB37F";
+  const openStat = (label: string, value: number, accent: string) => onDetail({ title: label, titleColor: accent, bigValue: String(value), sub: STAT_INFO[label], rows: [] });
+  const openDuel = () => onDetail({ title: "Duel Rating", titleColor: SAP, bigValue: String(rating ?? 0), tag: gain && gain > 0 ? `▲ +${gain}` : undefined, tagColor: EMER, sub: "Your head-to-head Elo across all duels this season.", rows: [] });
+  const openTour = () => onDetail({ title: "Tournament Rating", titleColor: GOLD, bigValue: String(skill ?? 0), tag: provisional ? "Provisional" : undefined, tagColor: GOLD, sub: provisional ? "Your national judged-skill rating — provisional until you log more judged entries." : "Your national judged-skill rating.", rows: [] });
+  const bothRatings = skill != null && rating != null;
   return (
     <View style={{ alignItems: "center" }}>
       <Text style={{ color: hues.gold.hi, fontSize: 11, letterSpacing: 2.5, textTransform: "uppercase", marginBottom: 16 }}>Your season, so far</Text>
 
-      {rating != null ? (
-        <View style={{ alignItems: "center", marginBottom: 18 }}>
+      {bothRatings ? (
+        <View style={{ flexDirection: "row", marginBottom: 18, width: "100%", maxWidth: 336, justifyContent: "center" }}>
+          <TouchableOpacity activeOpacity={0.85} onPress={openTour} style={{ flex: 1, marginRight: 6, alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: 16, paddingVertical: 14, backgroundColor: "rgba(255,255,255,0.02)" }}>
+            <Text style={{ color: neutrals.muted2, fontSize: 9.5, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" }}>Tournament</Text>
+            <Count to={skill as number} dur={1200} delay={300} style={{ color: GOLD, fontFamily: "Georgia", fontSize: 40, fontWeight: "900", lineHeight: 44 }} />
+            {provisional ? <Text style={{ color: GOLD, fontSize: 9, fontWeight: "800", letterSpacing: 0.5, marginTop: 2 }}>PROVISIONAL</Text> : null}
+            <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>tap ›</Text>
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.85} onPress={openDuel} style={{ flex: 1, marginLeft: 6, alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: 16, paddingVertical: 14, backgroundColor: "rgba(255,255,255,0.02)" }}>
+            <Text style={{ color: neutrals.muted2, fontSize: 9.5, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" }}>Duel</Text>
+            <Count to={rating as number} dur={1200} delay={300} style={{ color: SAP, fontFamily: "Georgia", fontSize: 40, fontWeight: "900", lineHeight: 44 }} />
+            {gain && gain > 0 ? <Text style={{ color: EMER, fontSize: 10, fontWeight: "800", marginTop: 2 }}>▲ +{gain}</Text> : null}
+            <Text style={{ color: neutrals.muted2, fontSize: 8, letterSpacing: 1, textTransform: "uppercase", marginTop: 4 }}>tap ›</Text>
+          </TouchableOpacity>
+        </View>
+      ) : rating != null ? (
+        <TouchableOpacity activeOpacity={0.85} onPress={openDuel} style={{ alignItems: "center", marginBottom: 18 }}>
           <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
             <Count to={rating} dur={1200} delay={300} style={{ color: hues.gold.hi, fontFamily: "Georgia", fontSize: 58, fontWeight: "900", lineHeight: 60, textShadowColor: "rgba(230,185,63,0.4)", textShadowRadius: 18 }} />
             {gain && gain > 0 ? <GainChip gain={gain} /> : null}
           </View>
-          <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>Duel Rating</Text>
-        </View>
+          <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>Duel Rating · tap ›</Text>
+        </TouchableOpacity>
       ) : null}
 
       <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", maxWidth: 336 }}>
-        {tiles.map((t, i) => <StatTile key={t.label} value={t.value as number} label={t.label} accent={accents[i % accents.length]} delay={700 + i * 190} />)}
+        {tiles.map((t, i) => { const accent = accents[i % accents.length]; return <StatTile key={t.label} value={t.value as number} label={t.label} accent={accent} delay={700 + i * 190} onPress={() => openStat(t.label, t.value as number, accent)} />; })}
       </View>
     </View>
   );
@@ -652,7 +749,7 @@ function Close({ onDone, signal }: { onDone: () => void; signal: string | null }
       <Animated.Text style={{ opacity: fade(0, 0.12), color: hues.gold.base, fontSize: 12, fontWeight: "800", letterSpacing: 3, textTransform: "uppercase" }}>Carry It Forward</Animated.Text>
       <Animated.View style={{ opacity: fade(0.08, 0.34), transform: [{ scale: grow(0.08, 0.34, 0.7) }], marginTop: 18, marginBottom: 4,
         shadowColor: hues.amethyst.hi, shadowOpacity: 0.6, shadowRadius: 22, shadowOffset: { width: 0, height: 0 } }}>
-        <Coin size={92} />
+        <Crest size={96} />
       </Animated.View>
       <Animated.Text style={{ opacity: fade(0.26, 0.52), transform: [{ translateY: rise(0.26, 0.52, 16) }], color: hues.gold.hi, fontSize: 30, fontWeight: "900", textAlign: "center", marginTop: 18, maxWidth: 320, lineHeight: 35, textShadowColor: "rgba(230,185,63,0.4)", textShadowRadius: 18 }}>{c.head}</Animated.Text>
       <Animated.Text style={{ opacity: fade(0.46, 0.68), color: "#d9cfb6", fontSize: 15, fontStyle: "italic", textAlign: "center", marginTop: 12, maxWidth: 290, lineHeight: 21 }}>{c.sub}</Animated.Text>
@@ -672,15 +769,6 @@ function Gold({ label, onPress, full }: { label: string; onPress: () => void; fu
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={{ minWidth: full ? undefined : 104, alignSelf: full ? "stretch" : "auto" }}>
       <View style={{ borderRadius: 11, paddingVertical: 12, paddingHorizontal: 18, alignItems: "center", backgroundColor: hues.gold.base }}>
         <Text style={{ color: "#141210", fontWeight: "800", fontSize: 13 }}>{label}</Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
-function Ghost({ label, onPress }: { label: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={{ minWidth: 104 }}>
-      <View style={{ borderRadius: 11, paddingVertical: 12, paddingHorizontal: 18, alignItems: "center", borderWidth: 1, borderColor: neutrals.border }}>
-        <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 13 }}>{label}</Text>
       </View>
     </TouchableOpacity>
   );
