@@ -42,7 +42,7 @@ export async function joinSchoolByCode(joinCode: string, competitorId?: string):
 export type InvitePrefill = {
   status: string;
   expires_at: string | null;
-  school: { tournament_school_id: string; name: string | null };
+  school: { tournament_school_id: string; name: string | null; join_code?: string | null };
   competitor: { external_member_student_id: string; first_name: string; last_name: string; dob: string | null; belt_name: string | null; rank: string | null };
 };
 

@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
   const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
   const { data: p } = await svc
     .from("bridge_pending_athletes")
-    .select("school_id, external_member_student_id, first_name, last_name, dob, belt_name, declared_rank, status, expires_at, schools(name)")
+    .select("school_id, external_member_student_id, first_name, last_name, dob, belt_name, declared_rank, status, expires_at, schools(name, join_code)")
     .eq("invite_token", t)
     .maybeSingle();
 
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
     invite: {
       status,
       expires_at: (p as any).expires_at,
-      school: { tournament_school_id: (p as any).school_id, name: (p as any).schools?.name ?? null },
+      school: { tournament_school_id: (p as any).school_id, name: (p as any).schools?.name ?? null, join_code: (p as any).schools?.join_code ?? null },
       competitor: {
         external_member_student_id: (p as any).external_member_student_id,
         first_name: (p as any).first_name,

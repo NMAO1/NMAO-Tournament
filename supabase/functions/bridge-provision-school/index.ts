@@ -160,7 +160,10 @@ Deno.serve(async (req) => {
     invites.push({ external_member_student_id: extStu, invite_url: `${INVITE_BASE}?t=${tok}`, expires_at: expiresAt });
   }
 
-  const response = { ok: true, school: { tournament_school_id: tournamentSchoolId, created, owner_linked: ownerLinked }, athletes: { seeded, already, invites } };
+  // Surface the school's join code so the Membership welcome message can include
+  // it — a safety net for invited families whose deep link drops the token.
+  const { data: schRow } = await svc.from("schools").select("join_code").eq("id", tournamentSchoolId).maybeSingle();
+  const response = { ok: true, school: { tournament_school_id: tournamentSchoolId, join_code: (schRow as any)?.join_code ?? null, created, owner_linked: ownerLinked }, athletes: { seeded, already, invites } };
   await svc.from("bridge_provisions").insert({ jti: payload.jti, external_member_school_id: extSchool, response });
   return json(response);
 });

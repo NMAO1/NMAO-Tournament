@@ -93,6 +93,11 @@ export default function InviteRedeem({ token, onDone, onCancel }: { token: strin
         <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 4 }}>
           <Text style={{ color: hues.gold.hi, fontWeight: "800" }}>{invite.school.name || "Your school"}</Text> invited this competitor. Confirm the details, add yourself as guardian, and consent to finish. Your rank is set by your school.
         </Text>
+        {invite.school.join_code ? (
+          <Text style={{ color: neutrals.muted2, fontSize: 12, lineHeight: 18, marginBottom: 4 }}>
+            Your school code is <Text style={{ color: hues.gold.hi, fontWeight: "800", letterSpacing: 1 }}>{invite.school.join_code}</Text> — keep it handy if you ever add another competitor without a link.
+          </Text>
+        ) : null}
 
         <Section title="The competitor" />
         <Row><Field label="First name" value={first} onChange={setFirst} flex /><View style={{ width: 10 }} /><Field label="Last name" value={last} onChange={setLast} flex /></Row>
