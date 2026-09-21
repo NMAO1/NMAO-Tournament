@@ -2,15 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 
-type Tournament = { name: string; event_date: string | null; entry_fee_cents: number | null; registration_open: boolean; state: string; format: string; school_name: string | null };
-const AGE_GROUPS = [
-  { value: "7_9", label: "Ages 7–9" },
-  { value: "10_12", label: "Ages 10–12" },
-  { value: "13_15", label: "Ages 13–15" },
-  { value: "16_17", label: "Ages 16–17" },
-  { value: "18_plus", label: "Ages 18+" },
-];
-const SKILLS = ["Beginner", "Intermediate", "Advanced"];
+type Tournament = { name: string; event_date: string | null; entry_fee_cents: number | null; registration_open: boolean; state: string; format: string; school_name: string | null; school_join_code: string | null; division_ages: string[]; division_ranks: string[] };
 // TODO: set NEXT_PUBLIC_APP_URL to the real App Store / TestFlight link once the app ships.
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://nmao.us/app";
 const FN = (n: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${n}`;
@@ -40,8 +32,8 @@ export default function PublicRegister() {
 
   async function submit() {
     if (!form.athlete.trim()) { setErr("Please enter the athlete's name."); return; }
-    if (!form.ageGroup) { setErr("Please select an age group."); return; }
-    if (!form.skill) { setErr("Please select a division."); return; }
+    if ((t?.division_ages?.length ?? 0) > 0 && !form.ageGroup) { setErr("Please select an age group."); return; }
+    if ((t?.division_ranks?.length ?? 0) > 0 && !form.skill) { setErr("Please select a division."); return; }
     setBusy(true); setErr("");
     try {
       const res = await fetch(FN("inhouse-register-pay"), {
@@ -70,6 +62,13 @@ export default function PublicRegister() {
       <p style={{ color: "#9a9aa2", fontSize: 15 }}>Your entry to <b style={{ color: "#ececec" }}>{t?.name}</b> is confirmed. See you on the mat.</p>
       <a href={APP_URL} style={{ ...gold, display: "inline-block", width: "auto", textDecoration: "none", padding: "12px 22px", marginTop: 20 }}>Get the NMAO Compete app</a>
       <p style={{ color: "#66666e", fontSize: 12, marginTop: 10 }}>Track results, reveals, and future events.</p>
+      {t?.school_join_code && (
+        <div style={{ marginTop: 22, padding: "14px 16px", background: "#0e0e11", border: "1px solid #26262b", borderRadius: 12 }}>
+          <div style={{ color: "#9a9aa2", fontSize: 13 }}>In the app, join <b style={{ color: "#ececec" }}>{t.school_name}</b> with your school code:</div>
+          <div style={{ marginTop: 8, fontSize: 24, fontWeight: 700, letterSpacing: 3, color: "#E8B84B" }}>{t.school_join_code}</div>
+          <div style={{ color: "#66666e", fontSize: 12, marginTop: 6 }}>Your instructor approves you, then you&apos;re in the league.</div>
+        </div>
+      )}
     </div></div>
   );
 
@@ -92,18 +91,22 @@ export default function PublicRegister() {
             <label style={label}>Athlete&apos;s full name
               <input style={inp} value={form.athlete} onChange={(e) => setForm({ ...form, athlete: e.target.value })} placeholder="e.g. Maya Ortiz" />
             </label>
-            <label style={label}>Age group
-              <select style={inp} value={form.ageGroup} onChange={(e) => setForm({ ...form, ageGroup: e.target.value })}>
-                <option value="">Select…</option>
-                {AGE_GROUPS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-              </select>
-            </label>
-            <label style={label}>Division
-              <select style={inp} value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })}>
-                <option value="">Select…</option>
-                {SKILLS.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </label>
+            {(t?.division_ages?.length ?? 0) > 0 && (
+              <label style={label}>Age group
+                <select style={inp} value={form.ageGroup} onChange={(e) => setForm({ ...form, ageGroup: e.target.value })}>
+                  <option value="">Select…</option>
+                  {t!.division_ages.map((a) => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </label>
+            )}
+            {(t?.division_ranks?.length ?? 0) > 0 && (
+              <label style={label}>Division
+                <select style={inp} value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })}>
+                  <option value="">Select…</option>
+                  {t!.division_ranks.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </label>
+            )}
             {t?.format === "video" && (
               <label style={label}>Video link <span style={{ color: "#66666e" }}>(optional — you can add it later)</span>
                 <input style={inp} value={form.video} onChange={(e) => setForm({ ...form, video: e.target.value })} placeholder="YouTube / Google Drive link" />

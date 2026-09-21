@@ -34,12 +34,12 @@ Deno.serve(async (req) => {
     if (!token) return json({ ok: false, error: "Missing token." }, 400);
 
     const { data: t } = await svc.from("in_house_tournaments")
-      .select("id, name, event_date, entry_fee_cents, registration_open, state, visibility, format, school_id")
+      .select("id, name, event_date, entry_fee_cents, registration_open, state, visibility, format, school_id, division_ages, division_ranks")
       .eq("public_token", token).maybeSingle();
     if (!t) return json({ ok: false, error: "Tournament not found." }, 404);
     if ((t as any).visibility !== "public") return json({ ok: false, error: "This tournament isn't open to public registration." }, 403);
 
-    const { data: s } = await svc.from("schools").select("name").eq("id", (t as any).school_id).maybeSingle();
+    const { data: s } = await svc.from("schools").select("name, join_code").eq("id", (t as any).school_id).maybeSingle();
 
     return json({
       ok: true,
@@ -51,6 +51,9 @@ Deno.serve(async (req) => {
         state: (t as any).state,
         format: (t as any).format,
         school_name: s ? (s as any).name : null,
+        school_join_code: s ? (s as any).join_code : null,
+        division_ages: (t as any).division_ages ?? [],
+        division_ranks: (t as any).division_ranks ?? [],
       },
     });
   } catch (e: any) {

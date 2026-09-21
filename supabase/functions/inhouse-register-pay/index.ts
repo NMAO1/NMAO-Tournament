@@ -68,10 +68,10 @@ Deno.serve(async (req) => {
     if (!(acctInfo as any).charges_enabled) return json({ ok: false, error: "This school hasn't finished its payment setup yet. Please check back soon." }, 409);
 
     // The challenge is the tournament itself (no athlete-entered event). Division
-    // is now two structured dropdowns; keep `division` as a combined display label.
+    // is two dropdowns built from the school's configured Age + Rank lists — the
+    // submitted values are already the display labels. Keep `division` combined.
     const eventName = (t as any).name as string;
-    const AGE_LABEL: Record<string, string> = { "7_9": "Ages 7–9", "10_12": "Ages 10–12", "13_15": "Ages 13–15", "16_17": "Ages 16–17", "18_plus": "Ages 18+" };
-    const division = [ageGroup ? (AGE_LABEL[ageGroup] || ageGroup) : null, skillDivision].filter(Boolean).join(" · ") || null;
+    const division = [ageGroup, skillDivision].filter(Boolean).join(" · ") || null;
 
     // Create the entrant (unpaid) first so we can tie the checkout to its id.
     const { data: ent, error: ierr } = await svc.from("ih_entrants").insert({

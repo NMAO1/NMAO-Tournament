@@ -3,8 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { neutrals, hues, status } from "@nmao/design-tokens";
 import RunTournament from "./RunTournament";
+import QrDownloads from "./QrDownloads";
 
-type Tournament = { id: string; name: string; event_date: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean; prize: string | null };
+type Tournament = { id: string; name: string; event_date: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean; prize: string | null; division_ages: string[] | null; division_ranks: string[] | null };
 type Entrant = { id: string; competitor_id: string | null; display_name: string | null; event: string | null; division: string | null; score: number | null; placement: number | null; prize: string | null; payment_status: string; self_registered: boolean; video_url: string | null; scores: Record<string, number> | null };
 type RosterLite = { id: string; first_name: string; last_name: string };
 
@@ -50,7 +51,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
 
   const loadTournaments = useCallback(async () => {
     const { data, error } = await supabase.from("in_house_tournaments")
-      .select("id, name, event_date, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid, prize")
+      .select("id, name, event_date, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid, prize, division_ages, division_ranks")
       .eq("school_id", schoolId).order("created_at", { ascending: false });
     if (error) { setErr(`Couldn't load tournaments: ${error.message}. You may be missing a database migration.`); return; }
     setTournaments((data ?? []) as Tournament[]);
@@ -169,6 +170,15 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
   const saveCriteria = () => { if (cur) supabase.from("in_house_tournaments").update({ criteria: cur.criteria ?? [] }).eq("id", cur.id).then(() => {}); };
   const addCriterion = () => { if (cur && (cur.criteria?.length ?? 0) < MAX_CRITERIA) updateTournament(cur.id, { criteria: [...(cur.criteria ?? []), ""] }); };
   const removeCriterion = (idx: number) => { if (cur) updateTournament(cur.id, { criteria: (cur.criteria ?? []).filter((_, i) => i !== idx) }); };
+
+  // Custom divisions: the school defines its own Age-group and Rank options.
+  type DivField = "division_ages" | "division_ranks";
+  const divList = (f: DivField) => (cur ? ((cur[f] as string[] | null) ?? []) : []);
+  const patchDiv = (f: DivField, arr: string[]): Partial<Tournament> => (f === "division_ages" ? { division_ages: arr } : { division_ranks: arr });
+  const setDiv = (f: DivField, idx: number, val: string) => { if (!cur) return; const next = [...divList(f)]; next[idx] = val; patchLocal(cur.id, patchDiv(f, next)); };
+  const saveDiv = (f: DivField) => { if (cur) supabase.from("in_house_tournaments").update(patchDiv(f, divList(f))).eq("id", cur.id).then(() => {}); };
+  const addDiv = (f: DivField) => { if (cur) updateTournament(cur.id, patchDiv(f, [...divList(f), ""])); };
+  const removeDiv = (f: DivField, idx: number) => { if (cur) updateTournament(cur.id, patchDiv(f, divList(f).filter((_, i) => i !== idx))); };
 
   return (
     <>
@@ -295,6 +305,24 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                 )}
               </div>
 
+              {/* editable config: divisions */}
+              <div style={{ background: "#0e0e11", border: `1px solid ${neutrals.border}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
+                <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2, marginBottom: 4 }}>Divisions</div>
+                <div style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 12 }}>Competitors pick one Age group and one Rank when they register. Customize these for your dojo — clear a list to hide that dropdown.</div>
+                {([["division_ages", "Age groups"], ["division_ranks", "Ranks"]] as [DivField, string][]).map(([f, title]) => (
+                  <div key={f} style={{ marginBottom: 12 }}>
+                    <div style={{ color: neutrals.text, fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{title}</div>
+                    {divList(f).map((v, idx) => (
+                      <div key={idx} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+                        <input style={{ ...inp, flex: 1 }} placeholder={f === "division_ages" ? "e.g. Ages 10–12" : "e.g. Beginner"} value={v} onChange={(e) => setDiv(f, idx, e.target.value)} onBlur={() => saveDiv(f)} />
+                        <button onClick={() => removeDiv(f, idx)} style={{ ...ghost, padding: "6px 12px" }}>Remove</button>
+                      </div>
+                    ))}
+                    <button onClick={() => addDiv(f)} style={{ ...ghost, border: "1px solid #3a3944", background: neutrals.surface }}>+ Add {f === "division_ages" ? "age group" : "rank"}</button>
+                  </div>
+                ))}
+              </div>
+
               {/* commit */}
               <button onClick={() => createTournamentCommit(cur)} style={{ ...gold, width: "100%", padding: "12px" }}>Create tournament</button>
               <p style={{ color: neutrals.muted2, fontSize: 12, textAlign: "center", margin: "8px 0 4px" }}>Locks the entry fee, format, and scoring. Reopen anytime with “Edit setup”.</p>
@@ -319,6 +347,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                     <code style={{ background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 8, padding: "7px 10px", fontSize: 12, color: hues.gold.hi, wordBreak: "break-all" }}>{pubBase}/inhouse/{cur.public_token}</code>
                     <button style={ghost} onClick={() => copy(`${pubBase}/inhouse/${cur.public_token}`, "reg")}>{copied === "reg" ? "Copied ✓" : "Copy link"}</button>
                   </div>
+                  <QrDownloads url={`${pubBase}/inhouse/${cur.public_token}`} title={cur.name} />
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
                     <span style={{ color: neutrals.muted2, fontSize: 12 }}>App download (for athletes new to NMAO):</span>
                     <code style={{ background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 8, padding: "7px 10px", fontSize: 12, color: neutrals.muted, wordBreak: "break-all" }}>{APP_URL}</code>
