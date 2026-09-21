@@ -110,6 +110,15 @@ Deno.serve(async (req) => {
       if (!sch) return json({ ok: false, error: "The selected school could not be found." }, 400);
       selfSchoolId = (sch as any).id;
     }
+    // Preferred self-signup path: a school JOIN CODE (case/punctuation-insensitive).
+    const joinCode = String(body.join_code || c.join_code || "").trim();
+    if (!inviteToken && !selfSchoolId && joinCode) {
+      const norm = joinCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const { data: schs } = await svc.from("schools").select("id, join_code").not("join_code", "is", null);
+      const match = ((schs ?? []) as any[]).find((s) => String(s.join_code).toUpperCase().replace(/[^A-Z0-9]/g, "") === norm);
+      if (!match) return json({ ok: false, error: "That school join code didn't match a school. Double-check with your instructor." }, 400);
+      selfSchoolId = match.id;
+    }
 
     // ---- competitor ----
     // Self-signup starts UNAFFILIATED (school_id null) — a pending request is created

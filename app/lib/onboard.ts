@@ -19,7 +19,25 @@ export type OnboardPayload = {
   season_id: string;
   consent_types: string[];
   invite_token?: string; // Membership-bridge redeem: links competitor↔pending athlete, uses school-set rank
+  join_code?: string;    // Self-signup: the school's join code → pending affiliation request
 };
+
+// School attachment state for a competitor (drives the Compete-tab gate).
+export type SchoolMembership = { status: "confirmed" | "pending" | "none" | "forbidden"; school_name?: string | null };
+
+export async function myCompetitorSchool(competitorId: string): Promise<SchoolMembership> {
+  const { data, error } = await supabase.rpc("my_competitor_school", { p_competitor: competitorId });
+  if (error || !data) return { status: "none" };
+  return data as SchoolMembership;
+}
+
+// Attach an already-registered competitor to a school by its join code → creates
+// a PENDING affiliation request (the instructor approves it in the school portal).
+export async function joinSchoolByCode(joinCode: string, competitorId?: string): Promise<{ ok: boolean; school?: { id: string; name: string }; status?: string; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("join-school-by-code", { body: { join_code: joinCode, competitor_id: competitorId } });
+  if (error) return { ok: false, error: error.message };
+  return data as { ok: boolean; school?: { id: string; name: string }; status?: string; error?: string };
+}
 
 export type InvitePrefill = {
   status: string;

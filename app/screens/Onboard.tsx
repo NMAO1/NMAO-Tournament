@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, status as statusColors } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
-import { listSeasons, listSchools, onboardCompetitor, type Season, type School } from "../lib/onboard";
+import { listSeasons, onboardCompetitor, type Season } from "../lib/onboard";
 
 const RANKS = ["beginner", "intermediate", "advanced"];
 type Lnk = { text: string; url: string };
@@ -18,20 +18,18 @@ const pad = (s: string) => (s.length === 1 ? "0" + s : s);
 // season (mandatory), and consent. Payment for entries happens later, per event.
 export default function Onboard({ onDone }: { onDone: () => void }) {
   const [seasons, setSeasons] = useState<Season[]>([]);
-  const [schools, setSchools] = useState<School[]>([]);
   const [gFirst, setGFirst] = useState(""); const [gLast, setGLast] = useState(""); const [gPhone, setGPhone] = useState("");
   const [first, setFirst] = useState(""); const [last, setLast] = useState("");
   const [mm, setMm] = useState(""); const [dd, setDd] = useState(""); const [yy, setYy] = useState("");
   const [rank, setRank] = useState<string | null>(null);
   const [style, setStyle] = useState("");
-  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [joinCode, setJoinCode] = useState("");
   const [seasonId, setSeasonId] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
 
   useEffect(() => {
     listSeasons().then((s) => { setSeasons(s); const active = s.find((x) => x.status === "active"); if (active) setSeasonId(active.id); });
-    listSchools().then(setSchools);
   }, []);
 
   const dob = useMemo(() => (mm && dd && yy.length === 4 ? `${yy}-${pad(mm)}-${pad(dd)}` : ""), [mm, dd, yy]);
@@ -43,9 +41,10 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
     setBusy(true); setMsg("");
     const r = await onboardCompetitor({
       guardian: { first_name: gFirst.trim(), last_name: gLast.trim(), phone: gPhone.trim() || undefined },
-      competitor: { first_name: first.trim(), last_name: last.trim(), dob, school_id: schoolId, declared_rank: rank!, declared_style: style.trim() },
+      competitor: { first_name: first.trim(), last_name: last.trim(), dob, declared_rank: rank!, declared_style: style.trim() },
       season_id: seasonId!,
       consent_types: CONSENTS.filter((c) => checked[c.key]).map((c) => c.key),
+      join_code: joinCode.trim() || undefined,
     });
     setBusy(false);
     if (!r.ok) { setMsg(r.error || "Something went wrong."); return; }
@@ -88,14 +87,11 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
         </View>
         <View style={{ marginTop: 6 }}><Field label="Style (e.g. Karate, Taekwondo)" value={style} onChange={setStyle} /></View>
 
-        {schools.length > 0 ? (
-          <>
-            <Section title="School (optional)" />
-            <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
-              {schools.map((s) => <Chip key={s.id} label={s.name} on={schoolId === s.id} onPress={() => setSchoolId(schoolId === s.id ? null : s.id)} />)}
-            </View>
-          </>
-        ) : null}
+        <Section title="Your school" />
+        <Text style={{ color: neutrals.muted, fontSize: 12, marginBottom: 8, lineHeight: 17 }}>
+          Enter your dojo&apos;s join code (ask your instructor). They&apos;ll approve you before your first tournament. You can also add it later.
+        </Text>
+        <Field label="School join code — e.g. TAOSD-B4H" value={joinCode} onChange={(v: string) => setJoinCode(v.toUpperCase())} />
 
         <Section title="Season" />
         {seasons.length === 0 ? <ActivityIndicator color={neutrals.muted} /> : (

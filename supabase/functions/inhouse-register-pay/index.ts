@@ -46,8 +46,8 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const token = String(body.token || "").trim();
     const athlete = String(body.athlete_name || "").trim();
-    const event = String(body.event || "").trim() || null;
-    const division = String(body.division || "").trim() || null;
+    const ageGroup = String(body.age_group || "").trim() || null;
+    const skillDivision = String(body.skill_division || "").trim() || null;
     const videoUrl = String(body.video_url || "").trim() || null;
     const payerEmail = String(body.payer_email || "").trim() || null;
     if (!token || !athlete) return json({ ok: false, error: "Athlete name is required." }, 400);
@@ -67,9 +67,16 @@ Deno.serve(async (req) => {
     const acctInfo = await stripe.accounts.retrieve(acct);
     if (!(acctInfo as any).charges_enabled) return json({ ok: false, error: "This school hasn't finished its payment setup yet. Please check back soon." }, 409);
 
+    // The challenge is the tournament itself (no athlete-entered event). Division
+    // is now two structured dropdowns; keep `division` as a combined display label.
+    const eventName = (t as any).name as string;
+    const AGE_LABEL: Record<string, string> = { "7_9": "Ages 7–9", "10_12": "Ages 10–12", "13_15": "Ages 13–15", "16_17": "Ages 16–17", "18_plus": "Ages 18+" };
+    const division = [ageGroup ? (AGE_LABEL[ageGroup] || ageGroup) : null, skillDivision].filter(Boolean).join(" · ") || null;
+
     // Create the entrant (unpaid) first so we can tie the checkout to its id.
     const { data: ent, error: ierr } = await svc.from("ih_entrants").insert({
-      tournament_id: (t as any).id, display_name: athlete, event, division, video_url: videoUrl,
+      tournament_id: (t as any).id, display_name: athlete, event: eventName, division,
+      age_group: ageGroup, skill_division: skillDivision, video_url: videoUrl,
       payer_email: payerEmail, self_registered: true, payment_status: "unpaid",
     }).select("id").single();
     if (ierr) { console.error("entrant insert:", ierr); return json({ ok: false, error: "Could not register." }, 500); }

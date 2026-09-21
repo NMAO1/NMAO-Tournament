@@ -14,6 +14,8 @@ import { competeDashboard, formatCountdown, CompeteDashboard, CompeteEvent, Comp
 import { HeaderBell } from "../components/HeaderBell";
 import { latestUnseenMonthly, MonthlyReveal as MonthlyRevealData } from "../lib/notifications";
 import BuyEntry from "./BuyEntry";
+import SchoolGate from "../components/SchoolGate";
+import { myCompetitorSchool, SchoolMembership } from "../lib/onboard";
 import * as WebBrowser from "expo-web-browser";
 
 // Export competition videos at 1080p H.264 (flip to H264_1280x720 for smaller
@@ -46,6 +48,7 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
   const [credits, setCredits] = useState<number | null>(null); // spendable entry credits for the active competitor
   const [showBuy, setShowBuy] = useState(false);
   const [dash, setDash] = useState<CompeteDashboard | null>(null); // round + per-event status + ratings
+  const [membership, setMembership] = useState<SchoolMembership | null>(null); // school-attachment gate
   const [unseenReveal, setUnseenReveal] = useState<MonthlyRevealData | null>(null);
   const [nowTs, setNowTs] = useState(Date.now()); // ticks the deadline countdown
   const [refreshing, setRefreshing] = useState(false);
@@ -59,8 +62,12 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
     if (!cid) { setDash(null); return; }
     setDash(await competeDashboard(cid));
   }
+  async function refreshMembership(cid: string | null) {
+    if (!cid) { setMembership(null); return; }
+    setMembership(await myCompetitorSchool(cid));
+  }
   async function reload(cid: string | null) {
-    try { setLoadErr(""); await Promise.all([refreshCredits(cid), refreshDash(cid)]); }
+    try { setLoadErr(""); await Promise.all([refreshCredits(cid), refreshDash(cid), refreshMembership(cid)]); }
     catch { setLoadErr("Couldn't load your competition data. Pull down to try again."); }
   }
   const onRefresh = async () => { setRefreshing(true); try { await reload(competitorId); } finally { setRefreshing(false); } };
@@ -235,6 +242,12 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
         </TouchableOpacity>
       </View>
     );
+  }
+
+  // Gate: only a competitor confirmed onto a school roster may compete. 'none' →
+  // enter a join code; 'pending' → awaiting the instructor's approval.
+  if (competitorId && membership && (membership.status === "none" || membership.status === "pending")) {
+    return <SchoolGate competitorId={competitorId} status={membership.status} schoolName={membership.school_name} onJoined={() => reload(competitorId)} />;
   }
 
   return (

@@ -3,7 +3,14 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 
 type Tournament = { name: string; event_date: string | null; entry_fee_cents: number | null; registration_open: boolean; state: string; format: string; school_name: string | null };
-const SUGGESTED = ["Traditional Forms", "Traditional Weapons", "Open Forms", "Open Weapons", "Board Breaking", "Sparring", "Fitness Challenge", "Creative"];
+const AGE_GROUPS = [
+  { value: "7_9", label: "Ages 7–9" },
+  { value: "10_12", label: "Ages 10–12" },
+  { value: "13_15", label: "Ages 13–15" },
+  { value: "16_17", label: "Ages 16–17" },
+  { value: "18_plus", label: "Ages 18+" },
+];
+const SKILLS = ["Beginner", "Intermediate", "Advanced"];
 // TODO: set NEXT_PUBLIC_APP_URL to the real App Store / TestFlight link once the app ships.
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://nmao.us/app";
 const FN = (n: string) => `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/${n}`;
@@ -16,7 +23,7 @@ export default function PublicRegister() {
   const [t, setT] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
-  const [form, setForm] = useState({ athlete: "", event: "", division: "", video: "", email: "" });
+  const [form, setForm] = useState({ athlete: "", ageGroup: "", skill: "", video: "", email: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -33,11 +40,13 @@ export default function PublicRegister() {
 
   async function submit() {
     if (!form.athlete.trim()) { setErr("Please enter the athlete's name."); return; }
+    if (!form.ageGroup) { setErr("Please select an age group."); return; }
+    if (!form.skill) { setErr("Please select a division."); return; }
     setBusy(true); setErr("");
     try {
       const res = await fetch(FN("inhouse-register-pay"), {
         method: "POST", headers: HEADERS,
-        body: JSON.stringify({ token, athlete_name: form.athlete, event: form.event, division: form.division, video_url: form.video, payer_email: form.email }),
+        body: JSON.stringify({ token, athlete_name: form.athlete, age_group: form.ageGroup, skill_division: form.skill, video_url: form.video, payer_email: form.email }),
       });
       const j = await res.json();
       if (!j.ok || !j.url) { setErr(j.error || "Could not start checkout."); setBusy(false); return; }
@@ -83,12 +92,17 @@ export default function PublicRegister() {
             <label style={label}>Athlete&apos;s full name
               <input style={inp} value={form.athlete} onChange={(e) => setForm({ ...form, athlete: e.target.value })} placeholder="e.g. Maya Ortiz" />
             </label>
-            <label style={label}>Event / challenge
-              <input style={inp} list="ev-suggest" value={form.event} onChange={(e) => setForm({ ...form, event: e.target.value })} placeholder="e.g. Traditional Forms, Board Breaking" />
-              <datalist id="ev-suggest">{SUGGESTED.map((s) => <option key={s} value={s} />)}</datalist>
+            <label style={label}>Age group
+              <select style={inp} value={form.ageGroup} onChange={(e) => setForm({ ...form, ageGroup: e.target.value })}>
+                <option value="">Select…</option>
+                {AGE_GROUPS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
+              </select>
             </label>
-            <label style={label}>Division <span style={{ color: "#66666e" }}>(optional)</span>
-              <input style={inp} value={form.division} onChange={(e) => setForm({ ...form, division: e.target.value })} placeholder="e.g. Ages 10–12 · Advanced" />
+            <label style={label}>Division
+              <select style={inp} value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })}>
+                <option value="">Select…</option>
+                {SKILLS.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
             </label>
             {t?.format === "video" && (
               <label style={label}>Video link <span style={{ color: "#66666e" }}>(optional — you can add it later)</span>
