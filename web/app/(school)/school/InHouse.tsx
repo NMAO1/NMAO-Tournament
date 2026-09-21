@@ -148,7 +148,10 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
 
   const cur = tournaments.find((t) => t.id === selected);
   const cellInp: React.CSSProperties = { ...inp, padding: "6px 8px", width: 64, fontSize: 13, textAlign: "center" };
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  // Public in-house pages (registration + pay) live on the league host
+  // (league.nmao.us), NOT this school-portal origin (school.nmao.us) — so share
+  // and pay links must point there, never window.location.origin.
+  const pubBase = process.env.NEXT_PUBLIC_SITE_URL || "https://league.nmao.us";
   const fee = cur?.entry_fee_cents ?? 0;
   const isPublic = cur?.visibility === "public";
   const isVideo = cur?.format === "video";
@@ -313,8 +316,8 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                 <div style={{ background: "#0e0e11", border: `1px solid ${neutrals.border}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
                   <div style={{ fontSize: 12, color: neutrals.muted, marginBottom: 6 }}>Share this link — parents register their athlete and pay themselves:</div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <code style={{ background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 8, padding: "7px 10px", fontSize: 12, color: hues.gold.hi, wordBreak: "break-all" }}>{origin}/inhouse/{cur.public_token}</code>
-                    <button style={ghost} onClick={() => copy(`${origin}/inhouse/${cur.public_token}`, "reg")}>{copied === "reg" ? "Copied ✓" : "Copy link"}</button>
+                    <code style={{ background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 8, padding: "7px 10px", fontSize: 12, color: hues.gold.hi, wordBreak: "break-all" }}>{pubBase}/inhouse/{cur.public_token}</code>
+                    <button style={ghost} onClick={() => copy(`${pubBase}/inhouse/${cur.public_token}`, "reg")}>{copied === "reg" ? "Copied ✓" : "Copy link"}</button>
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
                     <span style={{ color: neutrals.muted2, fontSize: 12 }}>App download (for athletes new to NMAO):</span>
@@ -401,7 +404,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                           <span style={{ color: neutrals.muted }}>Waived</span>
                         ) : fee > 0 ? (
                           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                            <button style={{ ...ghost, padding: "4px 9px" }} onClick={() => copy(`${origin}/inhouse/pay/${en.id}`, "pay-" + en.id)}>{copied === "pay-" + en.id ? "Copied ✓" : "Finalize link"}</button>
+                            <button style={{ ...ghost, padding: "4px 9px" }} onClick={() => copy(`${pubBase}/inhouse/pay/${en.id}`, "pay-" + en.id)}>{copied === "pay-" + en.id ? "Copied ✓" : "Finalize link"}</button>
                             <button style={{ background: "none", border: "none", color: neutrals.muted2, cursor: "pointer", fontSize: 11 }} title="Record a cash / in-person payment" onClick={() => updateEntrant(en.id, { payment_status: "waived" })}>cash</button>
                           </div>
                         ) : (

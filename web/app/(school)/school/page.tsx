@@ -85,7 +85,11 @@ export default function SchoolPortal() {
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getSession();
     if (!sess.session) { router.replace("/school/login"); return; }
-    const { data: sch } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier").eq("auth_user_id", sess.session.user.id).maybeSingle();
+    // Take the first owned school rather than .maybeSingle() — an owner accidentally
+    // linked to >1 school (e.g. demo/test rows) would otherwise make maybeSingle() error
+    // and return null, blanking the portal with "not linked". Prefer the oldest.
+    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
+    const sch = schList?.[0] ?? null;
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
     setProfile(sch as School);
