@@ -105,19 +105,20 @@ Deno.serve(async (req) => {
     // school_id into a roster. (Self-reported affiliation is by design — owners can
     // remove roster entries; a stricter "school must confirm" gate is a product decision.)
     let selfSchoolId: string | null = null;
+    let autoApprove = false;
     if (!inviteToken && c.school_id) {
-      const { data: sch } = await svc.from("schools").select("id").eq("id", String(c.school_id)).maybeSingle();
+      const { data: sch } = await svc.from("schools").select("id, auto_approve_join").eq("id", String(c.school_id)).maybeSingle();
       if (!sch) return json({ ok: false, error: "The selected school could not be found." }, 400);
-      selfSchoolId = (sch as any).id;
+      selfSchoolId = (sch as any).id; autoApprove = !!(sch as any).auto_approve_join;
     }
     // Preferred self-signup path: a school JOIN CODE (case/punctuation-insensitive).
     const joinCode = String(body.join_code || c.join_code || "").trim();
     if (!inviteToken && !selfSchoolId && joinCode) {
       const norm = joinCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      const { data: schs } = await svc.from("schools").select("id, join_code").not("join_code", "is", null);
+      const { data: schs } = await svc.from("schools").select("id, join_code, auto_approve_join").not("join_code", "is", null);
       const match = ((schs ?? []) as any[]).find((s) => String(s.join_code).toUpperCase().replace(/[^A-Z0-9]/g, "") === norm);
       if (!match) return json({ ok: false, error: "That school join code didn't match a school. Double-check with your instructor." }, 400);
-      selfSchoolId = match.id;
+      selfSchoolId = match.id; autoApprove = !!match.auto_approve_join;
     }
 
     // ---- competitor ----
@@ -125,7 +126,7 @@ Deno.serve(async (req) => {
     // below and the school owner must confirm before the competitor joins the roster.
     // The invite path stays a direct, school-initiated (confirmed) affiliation.
     const { data: comp, error: cErr } = await svc.from("competitors").insert({
-      school_id: inviteToken ? inviteSchoolId : null,
+      school_id: inviteToken ? inviteSchoolId : (autoApprove ? selfSchoolId : null),
       first_name: c.first_name.trim(), last_name: c.last_name.trim(),
       dob: c.dob, declared_style: (c.declared_style || "").trim() || null,
       declared_rank: inviteToken ? inviteRank : ((c.declared_rank || "").trim() || null),
@@ -139,7 +140,10 @@ Deno.serve(async (req) => {
     // Self-signup school pick → PENDING affiliation request; the school owner confirms
     // (approve → sets school_id, joins roster) or rejects from the school portal.
     if (!inviteToken && selfSchoolId) {
-      await svc.from("school_affiliation_requests").insert({ competitor_id: competitorId, school_id: selfSchoolId });
+      await svc.from("school_affiliation_requests").insert(
+        autoApprove
+          ? { competitor_id: competitorId, school_id: selfSchoolId, status: "approved", decided_at: new Date().toISOString() }
+          : { competitor_id: competitorId, school_id: selfSchoolId });
     }
 
     // ---- link + consents + enrollment ----

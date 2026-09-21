@@ -6,7 +6,7 @@ import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
 import InHouse from "./InHouse";
 
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
-type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null };
+type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean };
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
@@ -82,6 +82,7 @@ export default function SchoolPortal() {
   useEffect(() => { setHintsOn(localStorage.getItem("nmao_hints") !== "off"); }, []);
   useEffect(() => { setNowTs(Date.now()); const t = setInterval(() => setNowTs(Date.now()), 30000); return () => clearInterval(t); }, []);
   function toggleHints(v: boolean) { setHintsOn(v); localStorage.setItem("nmao_hints", v ? "on" : "off"); }
+  async function toggleAutoApprove(v: boolean) { if (!profile) return; setProfile({ ...profile, auto_approve_join: v }); await supabase.from("schools").update({ auto_approve_join: v }).eq("id", profile.id); }
 
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getSession();
@@ -89,7 +90,7 @@ export default function SchoolPortal() {
     // Take the first owned school rather than .maybeSingle() — an owner accidentally
     // linked to >1 school (e.g. demo/test rows) would otherwise make maybeSingle() error
     // and return null, blanking the portal with "not linked". Prefer the oldest.
-    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
+    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
     const sch = schList?.[0] ?? null;
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
@@ -465,6 +466,11 @@ export default function SchoolPortal() {
                 <Field label="Logo URL"><input style={inpF} placeholder="https://…" value={profile.logo_url ?? ""} onChange={(e) => setProfile({ ...profile, logo_url: e.target.value })} /></Field>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, paddingTop: 14, borderTop: `1px solid ${neutrals.border}` }}>
+                  <div style={{ maxWidth: 380 }}><div style={{ fontSize: 14 }}>Auto-accept join codes</div><div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>When on, a competitor who enters your join code joins your roster immediately. When off, you approve each request first (keeps strangers out).</div></div>
+                  <Toggle on={!!profile.auto_approve_join} onChange={toggleAutoApprove} />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${neutrals.border}` }}>
                   <div><div style={{ fontSize: 14 }}>Show hints</div><div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>Inline 💡 tips that explain the nuanced features</div></div>
                   <Toggle on={hintsOn} onChange={toggleHints} />
                 </div>

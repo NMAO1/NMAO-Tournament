@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
 
     // Resolve the school by join code (forgiving: ignore case + punctuation).
     const target = normCode(rawCode);
-    const { data: schools } = await svc.from("schools").select("id, name, join_code, status").not("join_code", "is", null);
+    const { data: schools } = await svc.from("schools").select("id, name, join_code, status, auto_approve_join").not("join_code", "is", null);
     const school = ((schools ?? []) as any[]).find((s) => normCode(String(s.join_code)) === target);
     if (!school) return json({ ok: false, error: "That code didn't match a school. Double-check with your instructor." }, 404);
     if (school.status && school.status !== "active") return json({ ok: false, error: "This school isn't active yet." }, 409);
@@ -80,7 +80,17 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "You're already a member of another school. Ask your instructor to move you." }, 409);
     }
 
-    // Create (or repoint) the single pending affiliation request → instructor approves.
+    // Auto-accept: the school opted to confirm join-code entries immediately.
+    if ((school as any).auto_approve_join) {
+      const { error: sErr } = await svc.from("competitors").update({ school_id: school.id }).eq("id", competitorId);
+      if (sErr) return json({ ok: false, error: sErr.message }, 500);
+      // clear any stale pending request + log an approved one for the audit trail
+      await svc.from("school_affiliation_requests").delete().eq("competitor_id", competitorId).eq("status", "pending");
+      await svc.from("school_affiliation_requests").insert({ competitor_id: competitorId, school_id: school.id, status: "approved", decided_at: new Date().toISOString() });
+      return json({ ok: true, school: { id: school.id, name: school.name }, status: "confirmed" });
+    }
+
+    // Otherwise create (or repoint) the single pending request → instructor approves.
     const { data: existing } = await svc.from("school_affiliation_requests")
       .select("id, school_id").eq("competitor_id", competitorId).eq("status", "pending").maybeSingle();
     if (existing) {
