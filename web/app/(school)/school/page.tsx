@@ -66,6 +66,8 @@ export default function SchoolPortal() {
   const [profile, setProfile] = useState<School | null>(null);
   const [savedMsg, setSavedMsg] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
+  const [selRoster, setSelRoster] = useState<Set<string>>(new Set());
+  const [bulkRank, setBulkRank] = useState("beginner");
   const [connect, setConnect] = useState<{ connected: boolean; payouts_enabled: boolean; details_submitted: boolean } | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [entryForm, setEntryForm] = useState({ competitor: "", event: "trad_forms" });
@@ -229,6 +231,16 @@ export default function SchoolPortal() {
     setRoster((r) => r.map((a) => (a.id === id ? { ...a, declared_rank: rank } : a)));
     const { error } = await supabase.from("competitors").update({ declared_rank: rank }).eq("id", id);
     if (error) { setErr(error.message); load(); }
+  }
+  function toggleSel(id: string) { setSelRoster((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  async function bulkSetRank() {
+    const ids = [...selRoster];
+    if (!ids.length) return;
+    setRoster((r) => r.map((a) => (selRoster.has(a.id) ? { ...a, declared_rank: bulkRank } : a)));
+    const { error } = await supabase.from("competitors").update({ declared_rank: bulkRank }).in("id", ids);
+    if (error) { setErr(error.message); load(); return; }
+    setSavedMsg(`Set ${ids.length} student${ids.length === 1 ? "" : "s"} to ${cap(bulkRank)}.`);
+    setSelRoster(new Set());
   }
   // Assign a rank to a bridge-invited (pending) athlete — school owns rank, so this
   // is set before the guardian redeems; RLS restricts it to this school's records.
@@ -396,10 +408,26 @@ export default function SchoolPortal() {
                   </div>
                   <button onClick={addAthlete} disabled={saving} style={{ marginTop: 12, border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 20px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: saving ? 0.6 : 1 }}>{saving ? "Adding…" : "Add to roster"}</button>
                 </div>
+                {roster.length > 0 && (
+                  <div style={{ ...card, padding: "10px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: neutrals.text, cursor: "pointer" }}>
+                      <input type="checkbox" checked={selRoster.size === roster.length && roster.length > 0} onChange={(e) => setSelRoster(e.target.checked ? new Set(roster.map((a) => a.id)) : new Set())} />
+                      Select all
+                    </label>
+                    <span style={{ color: neutrals.muted2, fontSize: 13 }}>{selRoster.size} selected</span>
+                    <div style={{ flex: 1 }} />
+                    <span style={{ color: neutrals.muted, fontSize: 13 }}>Set rank to</span>
+                    <select value={bulkRank} onChange={(e) => setBulkRank(e.target.value)} style={{ ...inp, width: 150, background: neutrals.surface2 }}>{RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}</select>
+                    <button onClick={bulkSetRank} disabled={selRoster.size === 0} style={{ border: "none", cursor: selRoster.size ? "pointer" : "default", fontWeight: 700, color: "#141210", borderRadius: 8, padding: "8px 16px", fontSize: 13, background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: selRoster.size ? 1 : 0.45 }}>Apply</button>
+                  </div>
+                )}
                 {roster.map((a) => (
                   <div key={a.id} style={{ ...card, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                    <div><div style={{ fontSize: 15, fontWeight: 600 }}>{a.first_name} {a.last_name}</div>
-                      <div style={{ color: neutrals.muted, fontSize: 13, marginTop: 3 }}>Age {ageOf(a.dob)} · Rating {ratings[a.id] != null ? Math.round(ratings[a.id]) : "—"}{medals[a.id] ? ` · 🏅 ${medals[a.id]}` : ""}</div></div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <input type="checkbox" checked={selRoster.has(a.id)} onChange={() => toggleSel(a.id)} />
+                      <div><div style={{ fontSize: 15, fontWeight: 600 }}>{a.first_name} {a.last_name}</div>
+                        <div style={{ color: neutrals.muted, fontSize: 13, marginTop: 3 }}>Age {ageOf(a.dob)} · Rating {ratings[a.id] != null ? Math.round(ratings[a.id]) : "—"}{medals[a.id] ? ` · 🏅 ${medals[a.id]}` : ""}</div></div>
+                    </div>
                     <select value={a.declared_rank ?? "beginner"} onChange={(e) => setRank(a.id, e.target.value)} style={{ ...inp, background: neutrals.surface2 }} title="Rank — only the school owner can change this">{RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}</select>
                   </div>
                 ))}
