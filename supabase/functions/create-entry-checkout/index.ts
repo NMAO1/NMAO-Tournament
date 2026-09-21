@@ -70,6 +70,18 @@ Deno.serve(async (req) => {
     const allowed = new Set<string>([...((own ?? []) as any[]).map((r) => r.id), ...((wards ?? []) as any[]).map((r) => r.competitor_id)]);
     if (!allowed.has(competitorId)) return json({ ok: false, error: "Not your competitor profile." }, 403);
 
+    // Only competitors confirmed onto a school roster may compete. In the
+    // affiliation model a confirmed member has school_id set; a pending join
+    // (via school code or picker) keeps school_id NULL until the instructor
+    // approves it. So a null school_id means "not yet allowed to compete".
+    const { data: member } = await svc.from("competitors").select("school_id").eq("id", competitorId).maybeSingle();
+    if (!member || !(member as any).school_id) {
+      const { data: req } = await svc.from("school_affiliation_requests").select("id").eq("competitor_id", competitorId).eq("status", "pending").maybeSingle();
+      return json({ ok: false, error: req
+        ? "Your school membership is still pending your instructor's approval."
+        : "Join your school before entering — enter your school's join code in your profile." }, 409);
+    }
+
     const { data: et } = await svc.from("event_types").select("code").eq("code", event).maybeSingle();
     if (!et) return json({ ok: false, error: "Unknown event." }, 400);
 

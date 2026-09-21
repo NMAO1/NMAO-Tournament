@@ -6,7 +6,7 @@ import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
 import InHouse from "./InHouse";
 
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
-type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null };
+type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null };
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
@@ -65,6 +65,7 @@ export default function SchoolPortal() {
   const [selStudent, setSelStudent] = useState<string>("");
   const [profile, setProfile] = useState<School | null>(null);
   const [savedMsg, setSavedMsg] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
   const [connect, setConnect] = useState<{ connected: boolean; payouts_enabled: boolean; details_submitted: boolean } | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [entryForm, setEntryForm] = useState({ competitor: "", event: "trad_forms" });
@@ -88,7 +89,7 @@ export default function SchoolPortal() {
     // Take the first owned school rather than .maybeSingle() — an owner accidentally
     // linked to >1 school (e.g. demo/test rows) would otherwise make maybeSingle() error
     // and return null, blanking the portal with "not linked". Prefer the oldest.
-    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
+    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
     const sch = schList?.[0] ?? null;
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
@@ -320,6 +321,18 @@ export default function SchoolPortal() {
 
             {section === "roster" && (
               <>
+                {school?.join_code && (
+                  <div style={{ ...card, padding: 16, marginBottom: 22, borderColor: hues.gold.base }}>
+                    <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.gold.hi, marginBottom: 4 }}>🔑 Your school join code</div>
+                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 12 }}>
+                      Share this code with your students. When they enter it in the NMAO app, they&apos;ll show up here as a join request for you to approve.
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <code style={{ background: neutrals.surface2, border: `1px solid ${neutrals.border}`, borderRadius: 10, padding: "10px 16px", fontSize: 20, fontWeight: 700, letterSpacing: 2, color: hues.gold.hi }}>{school.join_code}</code>
+                      <button onClick={() => { navigator.clipboard?.writeText(school.join_code || ""); setCodeCopied(true); setTimeout(() => setCodeCopied(false), 1500); }} style={{ border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{codeCopied ? "Copied ✓" : "Copy"}</button>
+                    </div>
+                  </div>
+                )}
                 {pending.length > 0 && (
                   <div style={{ ...card, padding: 16, marginBottom: 22, borderColor: hues.amethyst.base }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
