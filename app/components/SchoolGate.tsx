@@ -52,7 +52,7 @@ export default function SchoolGate({ competitorId, status, schoolName, onJoined 
           {busy ? <ActivityIndicator color="#141210" /> : <Text style={{ color: "#141210", fontWeight: "800", fontSize: 16 }}>Join school</Text>}
         </LinearGradient>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => Linking.openURL("https://directory.nmao.us")} style={{ marginTop: 18 }}>
+      <TouchableOpacity onPress={() => Linking.openURL("https://directory.nmao.us/?ref=app")} style={{ marginTop: 18 }}>
         <Text style={{ color: neutrals.muted, fontSize: 13, textAlign: "center" }}>Don&apos;t know your code? <Text style={{ color: neutrals.text, fontWeight: "700" }}>Find your school →</Text></Text>
       </TouchableOpacity>
     </View>
