@@ -84,18 +84,29 @@ export async function closeRound(
   roundId: string,
   actorId?: string | null,
 ): Promise<{ step: string; ran: boolean; flags: string[]; detail: unknown }> {
-  const { data: round, error } = await db.from('rounds').select('state').eq('id', roundId).single();
+  const { data: round, error } = await db.from('rounds').select('state, season_id, seq').eq('id', roundId).single();
   if (error || !round) throw new Error('Round not found.');
   const state = (round as any).state;
   const OPENISH = ['open', 'collecting'];
 
   const { data: subs } = await db
-    .from('entries').select('id, video_url').eq('round_id', roundId).eq('status', 'submitted');
+    .from('entries').select('id, video_url, competitor_id, payment_status, entitlement_id, event')
+    .eq('round_id', roundId).eq('status', 'submitted');
   const valid = (subs ?? []).filter((e: any) => e.video_url).map((e: any) => e.id);
   const voided = (subs ?? []).filter((e: any) => !e.video_url).map((e: any) => e.id);
   const now = new Date().toISOString();
   if (valid.length) await db.from('entries').update({ status: 'valid', updated_at: now }).in('id', valid);
   if (voided.length) await db.from('entries').update({ status: 'voided', updated_at: now }).in('id', voided);
+
+  // §NO-SHOW-CREDIT — a PAID entry with no video is voided above; auto-credit the
+  // competitor toward a future round (restore the consumed entitlement credit, or grant
+  // a fresh 1-credit entitlement for a direct-paid entry), then notify (in-app + email).
+  // Idempotent: re-press finds these entries already 'voided' (not 'submitted'), so they
+  // aren't re-credited.
+  const paidNoShow = (subs ?? []).filter((e: any) => !e.video_url && e.payment_status === 'paid');
+  for (const e of paidNoShow) {
+    try { await creditNoShow(db, e, round as any); } catch (err) { console.error('no-show credit failed', e.id, err); }
+  }
 
   if (!OPENISH.includes(state)) {
     return { step: 'close', ran: false, flags: [], detail: { state, validated: valid.length, voided: voided.length, note: 'already closed' } };
@@ -106,6 +117,60 @@ export async function closeRound(
     before: { state }, after: { state: 'closed' },
   });
   return { step: 'close', ran: true, flags: [], detail: { state: 'closed', from: state, validated: valid.length, voided: voided.length } };
+}
+
+// Credit a no-show competitor (paid entry, no video by close) toward a future round,
+// then notify them (in-app + email). Restores a consumed entitlement credit, or grants
+// a fresh 1-credit entitlement for a direct-paid entry. Best-effort; never throws up.
+async function creditNoShow(db: SupabaseClient, entry: any, round: any): Promise<void> {
+  const ts = new Date().toISOString();
+  if (entry.entitlement_id) {
+    const { data: ent } = await db.from('entry_entitlements').select('credits_used').eq('id', entry.entitlement_id).single();
+    if (ent && ((ent as any).credits_used ?? 0) > 0) {
+      await db.from('entry_entitlements').update({ credits_used: (ent as any).credits_used - 1, updated_at: ts }).eq('id', entry.entitlement_id);
+    }
+  } else {
+    // Direct-paid entry (no entitlement) → grant a fresh single-event credit. Lane must be
+    // one of ('alacarte','monthly','full') per the check constraint; 'alacarte' = per-event.
+    // claim_round_entry matches by competitor+season+credits (not lane), so this is usable.
+    const { error: grantErr } = await db.from('entry_entitlements').insert({
+      competitor_id: entry.competitor_id, season_id: round.season_id ?? null,
+      lane: 'alacarte', event_slots: 1, credits_total: 1, credits_used: 0,
+      status: 'active', valid_from_round: (round.seq ?? 0) + 1,
+    });
+    if (grantErr) { console.error('no-show credit grant failed', entry.id, grantErr); return; }
+  }
+  const { data: et } = await db.from('event_types').select('name').eq('code', entry.event).maybeSingle();
+  const evt = (et as any)?.name || prettyEvent(entry.event);
+  const { data: pref } = await db.from('notification_prefs').select('enabled')
+    .eq('competitor_id', entry.competitor_id).eq('type', 'entry_credit').maybeSingle();
+  if (!(pref && (pref as any).enabled === false)) {
+    await db.from('notifications').insert({
+      competitor_id: entry.competitor_id, type: 'entry_credit',
+      title: 'Entry credited 🎟️',
+      body: `No video was uploaded for ${evt} before the deadline, so your entry has been credited toward a future tournament.`,
+      data: { entry_id: entry.id, event: entry.event },
+    });
+  }
+  const RESEND = (globalThis as any).Deno?.env?.get?.('RESEND_API_KEY');
+  if (RESEND) {
+    const { data: c } = await db.from('competitors').select('email, first_name').eq('id', entry.competitor_id).maybeSingle();
+    const email = ((c as any)?.email || '').trim();
+    if (email) {
+      const name = String((c as any)?.first_name || 'there').replace(/[<&>]/g, '');
+      const html = `<!DOCTYPE html><html><body style="margin:0;background:#0b0b0d;font-family:-apple-system,Helvetica,Arial,sans-serif;color:#f5f0e8"><table width="100%" cellpadding="0" cellspacing="0" style="background:#0b0b0d"><tr><td align="center" style="padding:32px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#141416;border:1px solid #26262b"><tr><td style="padding:28px 32px 6px 32px"><div style="font-family:Georgia,'Times New Roman',serif;font-size:21px;color:#C9A84C;letter-spacing:.08em">National Martial Arts Org.</div><div style="margin-top:7px"><span style="display:inline-block;background:#7c3aed;background:linear-gradient(90deg,#2563eb 0%,#7c3aed 52%,#dc2626 100%);color:#ffffff;font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;padding:5px 12px;border-radius:5px">Tournament League</span></div></td></tr><tr><td style="padding:8px 32px 4px 32px"><h1 style="margin:0;font-size:20px;font-weight:600">Your entry was credited 🎟️</h1></td></tr><tr><td style="padding:8px 32px 24px 32px;font-size:15px;line-height:1.6;color:#d7d2c8">Hi ${name}, no video was uploaded for your <strong>${evt}</strong> entry before this month's deadline, so it wasn't judged — but we've <strong>credited your entry toward a future tournament</strong>. It's ready to use next time you compete.</td></tr></table></td></tr></table></body></html>`;
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + RESEND, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from: 'NMAO Compete <support@nmao.us>', to: email, subject: `Your ${evt} entry was credited for next time`, html }),
+        });
+      } catch (_e) { /* email best-effort */ }
+    }
+  }
+}
+
+function prettyEvent(evt: string): string {
+  return String(evt || 'your event').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // FINALIZE: distributed -> finalized. Freezes the scheme version (locked) and
