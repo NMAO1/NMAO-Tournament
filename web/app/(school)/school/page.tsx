@@ -6,7 +6,7 @@ import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
 import InHouse from "./InHouse";
 
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
-type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean };
+type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null };
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
@@ -92,7 +92,7 @@ export default function SchoolPortal() {
     // Take the first owned school rather than .maybeSingle() — an owner accidentally
     // linked to >1 school (e.g. demo/test rows) would otherwise make maybeSingle() error
     // and return null, blanking the portal with "not linked". Prefer the oldest.
-    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
+    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join, accredited, external_member_school_id").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
     const sch = schList?.[0] ?? null;
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
@@ -529,6 +529,30 @@ export default function SchoolPortal() {
                     <div style={{ color: neutrals.muted2, fontSize: 11 }}>via Stripe Connect</div>
                   </div>
                 </div>
+                {tier < 35 ? (
+                  <div style={{ ...card, padding: 18, marginTop: 4, marginBottom: 14, border: `1px solid ${hues.gold.shadow}`, background: "rgba(232,184,75,0.06)" }}>
+                    <div style={{ fontWeight: 700, color: hues.gold.hi, fontSize: 14, marginBottom: 6 }}>Earn more from every entry</div>
+                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 12, lineHeight: 1.5 }}>
+                      You currently keep <b style={{ color: neutrals.text }}>{tier}%</b> of entry fees. Reach the maximum <b style={{ color: hues.gold.hi }}>35%</b>:
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                      {!school.accredited && (
+                        <a href="https://accredit.nmao.us" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, border: `1px solid ${hues.gold.shadow}`, color: hues.gold.hi, borderRadius: 10, padding: "9px 15px", fontSize: 13, fontWeight: 600 }}>
+                          Become NMAO-accredited <span style={{ color: neutrals.muted2, fontWeight: 500 }}>+10% · free</span> →
+                        </a>
+                      )}
+                      {!school.external_member_school_id && (
+                        <a href="https://app.nmao.us" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 8, border: `1px solid ${neutrals.border}`, color: neutrals.text, borderRadius: 10, padding: "9px 15px", fontSize: 13, fontWeight: 600 }}>
+                          Run on the NMAO platform <span style={{ color: neutrals.muted2, fontWeight: 500 }}>+10%</span> →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ ...card, padding: "14px 18px", marginTop: 4, marginBottom: 14, border: `1px solid ${hues.gold.shadow}`, background: "rgba(232,184,75,0.06)", color: hues.gold.hi, fontSize: 13, fontWeight: 600 }}>
+                    You&apos;re earning the maximum 35% — accredited and on the NMAO platform. 🏅
+                  </div>
+                )}
                 <Hint on={hintsOn}>Your revenue-share tier is set by your accreditation level. Payouts run through Stripe — you enter bank details on Stripe&apos;s page and NMAO never sees or stores them.</Hint>
                 <div style={{ ...card, padding: 18, marginTop: 14 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>Bank account</div>
