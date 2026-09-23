@@ -208,17 +208,26 @@
     <h2>Bring your school in.</h2>
     <p>Season I begins January 15, 2027. Text us with any questions and we'll set your school up personally, and walk you through everything.</p>
     <a href="sms:+14304432777" class="btn btn-call">Text us · 1-430-443-2777</a>
-    <p class="or">or leave your details and we'll reach out</p>
+    <p class="or">or sign up now — we'll email your setup link</p>
     <form id="leadform" class="form" novalidate>
       <input id="lf-school" name="school_name" type="text" placeholder="Your school's name" autocomplete="organization" required />
       <input id="lf-email" name="email" type="email" placeholder="Your email" autocomplete="email" required />
       <input id="lf-phone" name="phone" type="tel" placeholder="Phone (optional)" autocomplete="tel" />
       <input id="lf-website" name="website" class="hp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
-      <button class="btn" type="submit">Reserve my school's place</button>
+      <button class="btn" type="submit">Create my school</button>
     </form>
-    <div id="thx" class="ok" style="display:none;">Thank you. We'll be in touch soon.</div>
+    <div id="thx" class="ok" style="display:none;">
+      <p id="thxmsg" style="margin:0 0 14px;">You're in! Check your email for a link to set your password and finish setup.</p>
+      <div style="text-align:left;background:rgba(232,184,75,0.06);border:1px solid rgba(232,184,75,0.35);border-radius:12px;padding:14px 16px;">
+        <div style="font-weight:700;color:#f7e08c;font-size:14px;margin-bottom:5px;">Want to earn even more from entries?</div>
+        <p style="margin:0 0 12px;font-size:13.5px;color:#c9cfe0;line-height:1.5;">Every school keeps <b>15%</b> of entry fees. Become <b>NMAO-accredited</b> and run on the <b>NMAO platform</b>, and your school keeps up to <b>35%</b> — every event.</p>
+        <a href="https://accredit.nmao.us" style="display:inline-block;margin:0 8px 6px 0;padding:8px 14px;border-radius:9px;border:1px solid rgba(232,184,75,0.5);color:#f7e08c;text-decoration:none;font-weight:600;font-size:13px;">Get accredited — free →</a>
+        <a href="https://app.nmao.us" style="display:inline-block;margin:0 0 6px 0;padding:8px 14px;border-radius:9px;border:1px solid rgba(255,255,255,0.18);color:#e6e9f2;text-decoration:none;font-weight:600;font-size:13px;">Explore the platform →</a>
+      </div>
+    </div>
     <div id="err" class="err" style="display:none;">Something went wrong on our end. Please text us at 1-430-443-2777.</div>
     <p class="cred">Built by martial artists, for the martial arts community.</p>
+    <p class="cred" style="margin-top:6px;">Accredited schools on the NMAO platform keep up to 35% of entry fees — <a href="https://accredit.nmao.us" style="color:#e8b84b;">get accredited free</a>.</p>
   </div></section>
 
   <div class="footer">National Martial Arts Organization · NMAO Inc. · support@nmao.us</div>
@@ -227,7 +236,7 @@
 
   <script>
   (function () {
-    var ENDPOINT = "https://oxzuavpyoetchwebdejp.supabase.co/functions/v1/capture-school-lead";
+    var ENDPOINT = "https://oxzuavpyoetchwebdejp.supabase.co/functions/v1/register-school";
     var f = document.getElementById("leadform");
     if (!f) return;
     var btn = f.querySelector('button[type="submit"]');
@@ -241,16 +250,18 @@
       var website = document.getElementById("lf-website").value; // honeypot
       if (!school || !email) return;
       err.style.display = "none";
+      if (website) return; // honeypot: silently drop bots
       btn.disabled = true;
-      btn.textContent = "Sending…";
+      btn.textContent = "Creating…";
       fetch(ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ school_name: school, email: email, phone: phone, website: website })
+        body: JSON.stringify({ school_name: school, email: email, phone: phone })
       })
         .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
         .then(function (d) {
           if (d && d.ok) {
+            if (d.message) { var m = document.getElementById("thxmsg"); if (m) m.textContent = d.message; }
             f.style.display = "none";
             thx.style.display = "block";
           } else {
@@ -259,7 +270,7 @@
         })
         .catch(function () {
           btn.disabled = false;
-          btn.textContent = "Reserve my school's place";
+          btn.textContent = "Create my school";
           err.style.display = "block";
         });
     });
