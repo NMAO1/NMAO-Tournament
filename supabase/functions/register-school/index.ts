@@ -32,6 +32,7 @@ const cors = {
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 const clean = (v: unknown, n = 200) => String(v ?? "").trim().slice(0, n);
 const isEmail = (s: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s);
+const esc = (s: string) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 async function sendSetupLink(schoolId: string) {
   try {
@@ -51,9 +52,9 @@ async function notify(name: string, email: string, phone: string, isNew: boolean
       headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: FROM, to: [NOTIFY],
-        subject: `${isNew ? "New school signed up" : "School re-requested setup"}: ${name}`,
-        html: `<p><strong>${name}</strong> ${isNew ? "signed up" : "re-requested a setup link"} via join.nmao.us.</p>
-               <p>Email: ${email}<br>Phone: ${phone || "—"}</p>`,
+        subject: `${isNew ? "New school signed up" : "School re-requested setup"}: ${clean(name, 120)}`,
+        html: `<p><strong>${esc(name)}</strong> ${isNew ? "signed up" : "re-requested a setup link"} via join.nmao.us.</p>
+               <p>Email: ${esc(email)}<br>Phone: ${esc(phone) || "—"}</p>`,
       }),
     });
   } catch (_e) { /* non-fatal */ }
@@ -71,7 +72,27 @@ Deno.serve(async (req) => {
     if (!name) return json({ ok: false, error: "Please enter your school name." }, 200);
     if (!isEmail(email)) return json({ ok: false, error: "Please enter a valid email address." }, 200);
 
+    // Honeypot: the hidden 'website' field is invisible to real users; if it's
+    // filled, this is a bot — pretend success and do nothing.
+    if (clean((body as any).website)) {
+      return json({ ok: true, message: "You're in! Check your email for a link to set your password and finish setup." });
+    }
+
     const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
+
+    // Rate-limit this public, unauthenticated endpoint (fail-open on infra error)
+    // to stop school-row spam and setup-link bombing of an existing owner's inbox.
+    const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || (req.headers.get("x-real-ip") || "");
+    const rlOk = async (bucket: string, ident: string, limit: number, win: number): Promise<boolean> => {
+      if (!ident) return true;
+      try {
+        const { data, error } = await svc.rpc("rate_limit_hit", { p_bucket: bucket, p_ident: ident, p_limit: limit, p_window_secs: win });
+        return error ? true : data !== false;
+      } catch { return true; }
+    };
+    if (!(await rlOk("register-school:ip", ip, 6, 600)) || !(await rlOk("register-school:email", email, 4, 3600))) {
+      return json({ ok: false, error: "Too many attempts — please wait a few minutes and try again." }, 429);
+    }
 
     // Dedupe by contact email — never create a second school for the same owner.
     const { data: existing } = await svc.from("schools")
@@ -97,6 +118,7 @@ Deno.serve(async (req) => {
     return json({ ok: true, school_id: (created as any).id, join_code: (created as any).join_code ?? null,
       message: "You're in! Check your email for a link to set your password and finish setup." });
   } catch (e) {
-    return json({ ok: false, error: (e as any)?.message || "server_error" }, 500);
+    console.error("register-school:", (e as any)?.message || e);
+    return json({ ok: false, error: "Could not complete signup. Please try again." }, 500);
   }
 });
