@@ -105,8 +105,11 @@ Deno.serve(async (req) => {
     }
 
     // Competitor profile -> age bracket, rank, rating (server-computed).
-    const { data: comp } = await svc.from("competitors").select("dob, declared_rank").eq("id", competitorId).single();
+    const { data: comp } = await svc.from("competitors").select("dob, declared_rank, status").eq("id", competitorId).single();
     if (!comp) return json({ ok: false, error: "Competitor not found." }, 404);
+    // App Store 1.2: an ejected/suspended account cannot post content.
+    if (((comp as any).status ?? "active") !== "active")
+      return json({ ok: false, error: "This account is suspended and cannot submit entries." }, 403);
     const rankRaw = (comp as any).declared_rank as string | null;
     if (!rankRaw) return json({ ok: false, error: "Set your rank on your profile before entering." }, 409);
     const rank = SCHEME_TIERS.includes(rankRaw) ? rankRaw : rankRaw === "black_belt" ? "advanced" : rankRaw;

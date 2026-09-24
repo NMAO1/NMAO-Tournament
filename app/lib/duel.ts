@@ -148,6 +148,21 @@ export async function myBlocked(competitorId: string): Promise<BlockedCompetitor
   return (data as Record<string, unknown>[]).map((r) => ({ competitorId: String(r.competitor_id), name: String(r.name), school: (r.school as string) ?? null }));
 }
 
+// ---- self-takedown: remove my OWN duel video immediately (App Store 1.2 #6) ----
+export type MyLiveDuel = { id: string; type: string; status: string; moderationStatus: string; createdAt: string };
+export async function myLiveDuels(competitorId: string): Promise<MyLiveDuel[]> {
+  const { data, error } = await supabase.rpc("my_live_duels", { p_competitor_id: competitorId });
+  if (error || !data) return [];
+  return (data as Record<string, unknown>[]).map((r) => ({
+    id: String(r.id), type: String(r.type ?? ""), status: String(r.status ?? ""),
+    moderationStatus: String(r.moderation_status ?? "ok"), createdAt: String(r.created_at ?? ""),
+  }));
+}
+export async function withdrawMyDuel(competitorId: string, duelId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("withdraw_my_duel", { p_competitor_id: competitorId, p_duel_id: duelId });
+  return !error && data === true;
+}
+
 export type Card = {
   competitorId: string; name: string; firstName: string; lastName: string;
   school: string | null; rank: string | null; ageBracket: string | null; photo: string | null;

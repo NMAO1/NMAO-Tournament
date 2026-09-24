@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
 export type MyCompetitor = {
-  id: string; first_name: string; last_name: string; declared_rank: string | null; dob: string;
+  id: string; first_name: string; last_name: string; declared_rank: string | null; dob: string; status: string | null;
 };
 
 // The competitors the signed-in user actually IS: their own profile
@@ -13,7 +13,7 @@ export async function myCompetitors(): Promise<MyCompetitor[]> {
   const uid = session?.user?.id;
   if (!uid) return [];
 
-  const cols = "id, first_name, last_name, declared_rank, dob";
+  const cols = "id, first_name, last_name, declared_rank, dob, status";
   const { data: own } = await supabase.from("competitors").select(cols).eq("auth_user_id", uid);
 
   const { data: links } = await supabase

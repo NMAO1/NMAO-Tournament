@@ -45,6 +45,12 @@ function MainTabs() {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [reveal, setReveal] = useState<ActiveReveal | null>(null);
   const active = TABS.find((t) => t.key === tab)!;
+  // App Store 1.2 #7: an ejected/suspended competitor is locked out of posting
+  // and competing. We block the content of every tab but Profile (kept reachable
+  // so they can contact support or delete their account). Guardians of >1 ward
+  // can still switch to an unaffected child via the picker below.
+  const activeComp = comps.find((c) => c.id === activeId);
+  const suspended = !!activeComp && (activeComp.status ?? "active") !== "active";
 
   useEffect(() => {
     // Monthly reveal no longer auto-opens — it launches from the Compete tab's
@@ -94,11 +100,15 @@ function MainTabs() {
       ) : null}
 
       <View style={{ flex: 1 }}>
-        {tab === "compete" ? <Compete unread={unread} onBell={() => setAlertsOpen(true)} onOpenReveal={(r) => setReveal({ kind: "monthly", period: r.period, payload: r.payload })} /> : null}
-        {tab === "duel" ? <Duel /> : null}
-        {tab === "achievements" ? <Achievements /> : null}
-        {tab === "leaderboard" ? <Leaderboard /> : null}
-        {tab === "profile" ? <Profile unread={unread} onBell={() => setAlertsOpen(true)} /> : null}
+        {suspended && tab !== "profile" ? <Suspended /> : (
+          <>
+            {tab === "compete" ? <Compete unread={unread} onBell={() => setAlertsOpen(true)} onOpenReveal={(r) => setReveal({ kind: "monthly", period: r.period, payload: r.payload })} /> : null}
+            {tab === "duel" ? <Duel /> : null}
+            {tab === "achievements" ? <Achievements /> : null}
+            {tab === "leaderboard" ? <Leaderboard /> : null}
+            {tab === "profile" ? <Profile unread={unread} onBell={() => setAlertsOpen(true)} /> : null}
+          </>
+        )}
       </View>
 
       <View style={{ flexDirection: "row", borderTopWidth: 1, borderTopColor: neutrals.border, backgroundColor: "#0b0b0c", paddingTop: 8, paddingBottom: 26 }}>
@@ -113,6 +123,22 @@ function MainTabs() {
         {reveal?.kind === "duel" ? <DuelReveal duelId={reveal.duelId} myId={myId} onClose={() => setReveal(null)} /> : null}
         {reveal?.kind === "monthly" ? <MonthlyReveal period={reveal.period} payload={reveal.payload} viewerId={myId ?? undefined} onClose={() => { markMonthlySeen(reveal.period); setReveal(null); }} /> : null}
       </Modal>
+    </View>
+  );
+}
+
+// Ejected/suspended lock screen (App Store 1.2 #7). Points to Profile for support.
+function Suspended() {
+  return (
+    <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center", padding: 30 }}>
+      <Text style={{ fontSize: 34, marginBottom: 14 }}>🚫</Text>
+      <Text style={{ color: neutrals.text, fontSize: 18, fontWeight: "800", textAlign: "center", marginBottom: 10 }}>Account suspended</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 14, lineHeight: 22, textAlign: "center", maxWidth: 340 }}>
+        This account has been suspended for violating our community standards. Competing, dueling, and posting are disabled.
+      </Text>
+      <Text style={{ color: neutrals.muted2, fontSize: 13, lineHeight: 20, textAlign: "center", marginTop: 14, maxWidth: 340 }}>
+        If you believe this was a mistake, open the Profile tab and tap Safety & Contact to reach us at support@nmao.us.
+      </Text>
     </View>
   );
 }

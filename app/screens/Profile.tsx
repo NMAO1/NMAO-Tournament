@@ -15,9 +15,11 @@ import FrameLab from "./FrameLab";
 import Store from "./Store";
 import SponsorFrames from "./SponsorFrames";
 import MyPrizes from "./MyPrizes";
-import { myBlocked, unblockCompetitor, type BlockedCompetitor } from "../lib/duel";
+import { myBlocked, unblockCompetitor, myLiveDuels, withdrawMyDuel, type BlockedCompetitor, type MyLiveDuel } from "../lib/duel";
 
-type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount" | "blocked";
+type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount" | "blocked" | "safety" | "myvideos";
+
+const SUPPORT_EMAIL = "support@nmao.us";
 const RANK = (r: string | null) => (r ? r.replace("_", " ") : "");
 
 // #11 profile frame: the equipped badge's rarity wins; otherwise fall back to the
@@ -79,6 +81,8 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
   if (sub === "prizes" && me) return <MyPrizes competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "deleteaccount") return <DeleteAccount onBack={() => setSub(null)} />;
   if (sub === "blocked" && me) return <BlockedAccounts competitorId={me} onBack={() => setSub(null)} />;
+  if (sub === "safety") return <SafetyContact onBack={() => setSub(null)} />;
+  if (sub === "myvideos" && me) return <MyVideos competitorId={me} onBack={() => setSub(null)} />;
 
   // Still resolving — a brief spinner is fine.
   if (loading) return <View style={{ flex: 1, backgroundColor: neutrals.bg, alignItems: "center", justifyContent: "center" }}><ActivityIndicator color={neutrals.muted} /></View>;
@@ -145,6 +149,8 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
       <Row icon="🖼️" label="Sponsor frames" onPress={() => setSub("sponsorframe")} />
       <Row icon="🏆" label="My prizes" onPress={() => setSub("prizes")} />
       <Row icon="🚫" label="Blocked accounts" onPress={() => setSub("blocked")} />
+      <Row icon="🎬" label="Remove my videos" onPress={() => setSub("myvideos")} />
+      <Row icon="🛟" label="Safety & Contact" onPress={() => setSub("safety")} />
       <Row icon="📖" label="Rules & Help" onPress={() => setSub("rules")} />
       <Row icon="🔒" label="Privacy Policy" onPress={() => WebBrowser.openBrowserAsync("https://school.nmao.us/privacy.html")} />
       {/* Frame Lab is an internal design-tuning screen (placeholder art + dev copy) —
@@ -194,6 +200,85 @@ function BlockedAccounts({ competitorId, onBack }: { competitorId: string; onBac
   );
 }
 
+// #6 — a competitor removes their OWN duel video from the voting feed instantly.
+function MyVideos({ competitorId, onBack }: { competitorId: string; onBack: () => void }) {
+  const [list, setList] = useState<MyLiveDuel[] | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  useEffect(() => { myLiveDuels(competitorId).then(setList); }, [competitorId]);
+  const remove = (id: string) => {
+    Alert.alert(
+      "Remove this video?",
+      "It's pulled from voting immediately and won't be shown again. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove", style: "destructive", onPress: async () => {
+            setBusy(id);
+            const ok = await withdrawMyDuel(competitorId, id);
+            setBusy(null);
+            if (ok) setList((l) => (l ?? []).filter((d) => d.id !== id));
+            else Alert.alert("Couldn't remove", "That didn't go through — check your connection and try again.");
+          },
+        },
+      ],
+    );
+  };
+  return (
+    <Panel title="Remove my videos" onBack={onBack}>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 20, marginBottom: 16 }}>
+        These are your videos currently live in duels. Remove any one and it's pulled from voting right away.
+      </Text>
+      {list === null ? (
+        <ActivityIndicator color={neutrals.muted} />
+      ) : list.length === 0 ? (
+        <Text style={{ color: neutrals.muted2, fontSize: 14, lineHeight: 20 }}>You have no videos in active duels right now.</Text>
+      ) : (
+        list.map((d) => (
+          <View key={d.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: neutrals.border }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: neutrals.text, fontSize: 15, fontWeight: "700", textTransform: "capitalize" }}>{d.type || "Duel"}</Text>
+              <Text style={{ color: neutrals.muted2, fontSize: 12, textTransform: "capitalize" }}>{d.status}</Text>
+            </View>
+            <TouchableOpacity disabled={busy === d.id} onPress={() => remove(d.id)} style={{ borderWidth: 1, borderColor: "#7a2b2b", borderRadius: 9, paddingVertical: 7, paddingHorizontal: 14 }}>
+              {busy === d.id ? <ActivityIndicator color="#E9A0A0" /> : <Text style={{ color: "#E9A0A0", fontSize: 13, fontWeight: "700" }}>Remove</Text>}
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
+    </Panel>
+  );
+}
+
+// #8 — in-app contact + the community-standards statement Apple asks UGC apps to surface.
+function SafetyContact({ onBack }: { onBack: () => void }) {
+  return (
+    <Panel title="Safety & Contact" onBack={onBack}>
+      <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 10 }}>Our standard</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 21, marginBottom: 4 }}>
+        NMAO has zero tolerance for objectionable content or abusive behavior. Videos and profiles that break this standard are removed, and the person who posted them is ejected from the community.
+      </Text>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 21, marginBottom: 20 }}>
+        Reports are reviewed and acted on within 24 hours.
+      </Text>
+
+      <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 10 }}>Report or block</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 21, marginBottom: 20 }}>
+        In any duel, tap and hold a competitor's video to flag it for review or block that person. Blocking removes them from your matchmaking and hides their content from you.
+      </Text>
+
+      <Text style={{ color: hues.gold.hi, fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 10 }}>Contact us</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 21, marginBottom: 12 }}>
+        Questions, safety concerns, or a report you'd rather send us directly:
+      </Text>
+      <TouchableOpacity onPress={() => WebBrowser.openBrowserAsync(`mailto:${SUPPORT_EMAIL}`)} activeOpacity={0.8}
+        style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 12, backgroundColor: neutrals.surface, padding: 14 }}>
+        <Text style={{ color: neutrals.muted2, fontSize: 11, letterSpacing: 0.4, textTransform: "uppercase" }}>Email support</Text>
+        <Text style={{ color: hues.gold.hi, fontSize: 16, fontWeight: "800", marginTop: 3 }}>{SUPPORT_EMAIL}</Text>
+      </TouchableOpacity>
+    </Panel>
+  );
+}
+
 // Shown when the profile can't be loaded (sparse/new account, or a failed
 // fetch). Guarantees the reviewer — and any real user in the same state — can
 // always sign out and reach Delete account, which used to be trapped behind the
@@ -211,6 +296,7 @@ function ProfileUnavailable({ canRetry, onRetry, onSignOut, onDelete }: { canRet
           </TouchableOpacity>
         ) : null}
       </View>
+      <Row icon="🛟" label="Contact support" onPress={() => WebBrowser.openBrowserAsync(`mailto:${SUPPORT_EMAIL}`)} />
       <Row icon="🔒" label="Privacy Policy" onPress={() => WebBrowser.openBrowserAsync("https://school.nmao.us/privacy.html")} />
       <TouchableOpacity onPress={onSignOut} style={{ marginTop: 18, alignItems: "center" }}>
         <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>

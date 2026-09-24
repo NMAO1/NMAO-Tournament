@@ -81,6 +81,15 @@ Deno.serve(async (req) => {
     if (!duelId) return json({ ok: false, error: "duel_id required." }, 400);
 
     if (action === "uphold") {
+      // Find the offending side (most-reported target) unless staff named one.
+      const { data: d } = await svc.from("duels").select("challenger_id, opponent_id").eq("id", duelId).maybeSingle();
+      const { data: reps } = await svc.from("duel_reports").select("target").eq("duel_id", duelId).eq("status", "pending");
+      const tally: Record<string, number> = {};
+      for (const r of (reps || []) as any[]) tally[r.target] = (tally[r.target] || 0) + 1;
+      const side = Object.entries(tally).sort((a, b) => b[1] - a[1])[0]?.[0];
+      let offender: string | null = body.ban_competitor_id ? String(body.ban_competitor_id) : null;
+      if (!offender && d) offender = side === "opponent" ? (d as any).opponent_id : side === "challenger" ? (d as any).challenger_id : null;
+
       // Disqualify → NO CONTEST (no rating change), video removed.
       await svc.from("duels").update({
         status: "no_contest", result: "no_contest", winner_id: null,
@@ -88,7 +97,14 @@ Deno.serve(async (req) => {
       }).eq("id", duelId);
       await svc.from("duel_reports").update({ status: "upheld", resolved_by: uid, resolved_at: now })
         .eq("duel_id", duelId).eq("status", "pending");
-      return json({ ok: true, result: "no_contest" });
+
+      // Eject the user who provided the offending content (App Store 1.2).
+      let ejected: string | null = null;
+      if (offender) {
+        await svc.from("competitors").update({ status: "banned", banned_at: now, banned_reason: "Objectionable content — upheld report" }).eq("id", offender);
+        ejected = offender;
+      }
+      return json({ ok: true, result: "no_contest", ejected });
     }
 
     if (action === "dismiss") {
