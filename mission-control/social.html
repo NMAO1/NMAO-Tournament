@@ -86,6 +86,11 @@
   .mlink{color:#a9f0c1;font-size:12.5px;text-decoration:none} .mlink:hover{text-decoration:underline}
   .mnone{color:var(--muted2);font-size:12.5px}
   .uprog{color:var(--muted);font-size:12px}
+  .pubst{font-size:12px;border-radius:8px;padding:7px 10px;margin-top:12px;border:1px solid var(--line)}
+  .pubst.err{color:#E9A0A0;background:#1c1414;border-color:#4a2b2b}
+  .pubst.ok{color:#a9f0c1;background:#12291f;border-color:#2b4a3a}
+  .pubst.sch{color:#bcd8ff;background:#12233f;border-color:#244a7a}
+  .pubst.muted{color:var(--muted);background:var(--panel2)}
   .rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
   .rowbtns .spacer{flex:1}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px;z-index:9}
@@ -143,6 +148,16 @@ const { createClient, SUPABASE_URL, ANON } = window.__mc;
 const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = t => { try { return new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } catch(e){ return String(t||''); } };
+function pubStatus(p){
+  if (p.status==='failed') return `<div class="pubst err">Publish failed: ${esc(p.publish_error||'unknown error')} — fix and Send again.</div>`;
+  if (p.status==='posted') return `<div class="pubst ok">Posted${p.posted_at?(' '+esc(fmt(p.posted_at))):''}${p.ayrshare_id?(' &middot; id '+esc(p.ayrshare_id)):''}</div>`;
+  if (p.status==='scheduled'){
+    if (p.ayrshare_id) return `<div class="pubst sch">Handed to the scheduler${p.scheduled_at?(' for '+esc(fmt(p.scheduled_at))):''} — it will post automatically.</div>`;
+    return `<div class="pubst muted">Scheduled${p.scheduled_at?(' for '+esc(fmt(p.scheduled_at))):''} — not sent yet. Hit &ldquo;Send to platform&rdquo; to hand it off.</div>`;
+  }
+  return '';
+}
 function setMsg(id, t, cls){ const el=$(id); el.textContent=t; el.className='msg '+(cls||''); }
 let toastT;
 function toast(t, cls){ let el=document.querySelector('.toast'); if(!el){el=document.createElement('div');document.body.appendChild(el);} el.className='toast '+(cls||''); el.textContent=t; clearTimeout(toastT); toastT=setTimeout(()=>el.remove(), 2600); }
@@ -242,6 +257,7 @@ function card(p){
         <input type="datetime-local" data-f="scheduled_at" value="${schedVal}" />
         <button class="btn sm" data-act="schedule">Set schedule</button>
       </div>
+      ${pubStatus(p)}
       <div class="rowbtns">
         <button class="btn sm" data-act="save">Save edits</button>
         <div class="spacer"></div>
