@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
 import InHouse from "./InHouse";
+import Walkthrough, { type TourStep } from "./Walkthrough";
 
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
 type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null };
@@ -79,12 +80,75 @@ export default function SchoolPortal() {
   const [importText, setImportText] = useState("");
   const [hintsOn, setHintsOn] = useState(true);
   const [drill, setDrill] = useState<null | "roster" | "entered" | "videos" | "income">(null);
+  // First-run guided tour (see Walkthrough.tsx). Completion is remembered
+  // per-owner in localStorage, keyed by school id, and re-triggerable below.
+  const [tourStep, setTourStep] = useState(0);
+  const [tourOpen, setTourOpen] = useState(false);
 
   // Hints preference (per-browser) + a ticking clock for the submission countdown.
   useEffect(() => { setHintsOn(localStorage.getItem("nmao_hints") !== "off"); }, []);
   useEffect(() => { setNowTs(Date.now()); const t = setInterval(() => setNowTs(Date.now()), 30000); return () => clearInterval(t); }, []);
   function toggleHints(v: boolean) { setHintsOn(v); localStorage.setItem("nmao_hints", v ? "on" : "off"); }
   async function toggleAutoApprove(v: boolean) { if (!profile) return; setProfile({ ...profile, auto_approve_join: v }); await supabase.from("schools").update({ auto_approve_join: v }).eq("id", profile.id); }
+
+  // --- First-run guided tour -------------------------------------------------
+  // Walks a new owner through the money-path and the operator steps that are
+  // easy to miss (esp. per-student dueling opt-in). Bump TOUR_VERSION to re-show
+  // the tour to everyone after a material change.
+  const TOUR_VERSION = "v1";
+  const tourDoneKey = (id: string) => `nmao_school_tour_${TOUR_VERSION}_${id}`;
+  const TOUR_STEPS: TourStep[] = [
+    {
+      icon: "👋", title: "Welcome to your School Portal", section: "dashboard",
+      body: <>This quick tour points out the handful of things to set up first. It takes about a minute — you can skip it any time and reopen it later from <b>“Show me around”</b> in the sidebar.</>,
+    },
+    {
+      icon: "💰", title: "1. Set up payouts", section: "payouts",
+      body: <>Start here so entry fees can reach you. Connect your bank through Stripe — you enter bank details on Stripe’s secure page and NMAO never sees or stores them. Your <b>revenue-share tier</b> is shown here too.</>,
+    },
+    {
+      icon: "👥", title: "2. Build your roster", section: "roster",
+      body: <>Add athletes one at a time, or <b>Import list</b> to paste many at once (<code>First, Last, YYYY-MM-DD, rank</code>). Students invited from your NMAO membership and self-signups appear here for you to approve.</>,
+    },
+    {
+      icon: "🔑", title: "3. Share your join code", section: "roster",
+      body: <>{school?.join_code ? <>Your join code is <b style={{ color: hues.gold.hi }}>{school.join_code}</b>. </> : null}Students enter this code in the NMAO app to request to join your school — they’ll show up here for you to approve (or auto-accept, in Settings).</>,
+    },
+    {
+      icon: "⚔️", title: "4. Turn on dueling — per student", section: "controls",
+      body: <><b>Easy to miss:</b> dueling (1-v-1 challenges) is <b>off by default</b> and set <b>per competitor</b>. Pick a student here, then flip the <b>Dueling</b> toggle for each one who should take part. {/* COPPA: when guardian-consent status lands, surface it here — e.g. gate/annotate this toggle by the student's consent state. */}Guardian consent is required before a minor can duel.</>,
+    },
+    {
+      icon: "🏆", title: "5. Run an in-house tournament", section: "inhouse",
+      body: <>Host your own event — set up divisions, print a sign-up QR code, and score entries with the NMAO rubric or your own. Everything runs from the <b>In-house Tournaments</b> tab.</>,
+    },
+    {
+      icon: "✅", title: "You’re set", section: "dashboard",
+      body: <>That’s the tour. The <b>💡</b> hints throughout explain the finer points, and you can replay this any time from <b>“Show me around.”</b></>,
+    },
+  ];
+
+  // Auto-open on a new owner's first visit (per-owner, per-browser).
+  useEffect(() => {
+    if (loading || !school) return;
+    try {
+      if (localStorage.getItem(tourDoneKey(school.id)) !== "done") {
+        setTourStep(0); setSection(TOUR_STEPS[0].section); setTourOpen(true);
+      }
+    } catch { /* localStorage unavailable — just skip the tour */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, school]);
+
+  function startTour() { setTourStep(0); setSection(TOUR_STEPS[0].section); setTourOpen(true); }
+  function tourGoTo(i: number) {
+    const n = Math.min(Math.max(i, 0), TOUR_STEPS.length - 1);
+    setTourStep(n); setSection(TOUR_STEPS[n].section);
+  }
+  function finishTour() {
+    setTourOpen(false);
+    try { if (school) localStorage.setItem(tourDoneKey(school.id), "done"); } catch { /* ignore */ }
+  }
+  function tourNext() { if (tourStep >= TOUR_STEPS.length - 1) finishTour(); else tourGoTo(tourStep + 1); }
 
   const load = useCallback(async () => {
     const { data: sess } = await supabase.auth.getSession();
@@ -320,8 +384,11 @@ export default function SchoolPortal() {
             )}
           </button>
         ))}
+        <button onClick={startTour} title="Replay the getting-started tour"
+          style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "9px 10px", marginTop: 12, borderRadius: 9, border: `1px solid ${neutrals.border}`, background: "none", color: neutrals.muted, cursor: "pointer", fontSize: 13 }}>
+          <span style={{ fontSize: 15 }}>🧭</span>Show me around</button>
         <button onClick={async () => { await supabase.auth.signOut(); router.replace("/school/login"); }}
-          style={{ display: "flex", gap: 10, width: "100%", padding: "9px 10px", marginTop: 12, borderRadius: 9, border: `1px solid ${neutrals.border}`, background: "none", color: neutrals.muted, cursor: "pointer", fontSize: 13 }}>Sign out</button>
+          style={{ display: "flex", gap: 10, width: "100%", padding: "9px 10px", marginTop: 8, borderRadius: 9, border: `1px solid ${neutrals.border}`, background: "none", color: neutrals.muted, cursor: "pointer", fontSize: 13 }}>Sign out</button>
       </aside>
 
       {/* Main */}
@@ -694,6 +761,16 @@ export default function SchoolPortal() {
               </div>
             </div>
           </div>
+        )}
+
+        {tourOpen && school && (
+          <Walkthrough
+            steps={TOUR_STEPS}
+            index={tourStep}
+            onBack={() => tourGoTo(tourStep - 1)}
+            onNext={tourNext}
+            onSkip={finishTour}
+          />
         )}
       </section>
     </main>

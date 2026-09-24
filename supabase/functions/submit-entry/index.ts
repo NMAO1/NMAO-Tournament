@@ -89,14 +89,17 @@ Deno.serve(async (req) => {
     if (!et) return json({ ok: false, error: "Unknown event." }, 400);
 
     // Round: explicit, else the current accepting round.
+    // seq >= 900 is the synthetic test band; the money path refuses it, so entries
+    // (paid or free-video) must never land there either.
     let roundId = body.round_id ? String(body.round_id).trim() : "";
     if (roundId) {
-      const { data: r } = await svc.from("rounds").select("id, state").eq("id", roundId).maybeSingle();
+      const { data: r } = await svc.from("rounds").select("id, state, seq").eq("id", roundId).maybeSingle();
       if (!r) return json({ ok: false, error: "Round not found." }, 404);
+      if (((r as any).seq ?? 0) >= 900) return json({ ok: false, error: "That round is not accepting entries." }, 409);
       if (!ACCEPTING.includes((r as any).state)) return json({ ok: false, error: "That round is not accepting entries." }, 409);
     } else {
-      const { data: open } = await svc.from("rounds").select("id, state")
-        .in("state", ACCEPTING).order("opens_at", { ascending: false }).limit(1).maybeSingle();
+      const { data: open } = await svc.from("rounds").select("id, state, seq")
+        .in("state", ACCEPTING).or("seq.is.null,seq.lt.900").order("opens_at", { ascending: false }).limit(1).maybeSingle();
       if (!open) return json({ ok: false, error: "No round is open for entries right now." }, 409);
       roundId = (open as any).id;
     }
