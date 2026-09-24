@@ -82,6 +82,10 @@
   .media{color:var(--muted);font-size:12.5px;margin-top:8px}
   .sched{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
   .sched input{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:7px 9px;font-size:13px;color-scheme:dark}
+  .mediarow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+  .mlink{color:#a9f0c1;font-size:12.5px;text-decoration:none} .mlink:hover{text-decoration:underline}
+  .mnone{color:var(--muted2);font-size:12.5px}
+  .uprog{color:var(--muted);font-size:12px}
   .rowbtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
   .rowbtns .spacer{flex:1}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px;z-index:9}
@@ -225,7 +229,14 @@ function card(p){
       <div class="lbl">Hashtags</div>
       <input type="text" data-f="hashtags" value="${esc(p.hashtags||'')}" />
       ${shot ? `<details><summary>Shot list &amp; on-screen text</summary><pre>${esc(shot)}</pre></details>`:''}
-      ${p.media_note ? `<div class="media"><b>Media:</b> ${esc(p.media_note)}</div>`:''}
+      ${p.media_note ? `<div class="media"><b>Media idea:</b> ${esc(p.media_note)}</div>`:''}
+      <div class="lbl">Video file</div>
+      <div class="mediarow">
+        ${p.media_url ? `<a class="mlink" href="${esc(p.media_url)}" target="_blank" rel="noopener">Video attached &#10003;</a>` : `<span class="mnone">No video yet</span>`}
+        <input type="file" accept="video/*,image/*" data-f="file" style="display:none" />
+        <button class="btn sm" data-act="pickfile">${p.media_url?'Replace video':'Upload video'}</button>
+        <span class="uprog" data-uprog></span>
+      </div>
       <div class="lbl">Schedule</div>
       <div class="sched">
         <input type="datetime-local" data-f="scheduled_at" value="${schedVal}" />
@@ -235,7 +246,8 @@ function card(p){
         <button class="btn sm" data-act="save">Save edits</button>
         <div class="spacer"></div>
         ${p.status==='posted' ? '' : `<button class="btn sm danger" data-act="skip">Skip</button>`}
-        ${p.status==='approved'||p.status==='scheduled' ? `<button class="btn gold sm" data-act="posted">Mark posted</button>` : ''}
+        ${p.status==='approved'||p.status==='scheduled' ? `<button class="btn sm" data-act="posted">Mark posted</button>` : ''}
+        ${p.status==='approved'||p.status==='scheduled' ? `<button class="btn gold sm" data-act="send">Send to platform</button>` : ''}
         ${p.status==='pending'||p.status==='skipped' ? `<button class="btn gold sm" data-act="approve">Approve</button>` : ''}
       </div>
     </div>
@@ -250,7 +262,23 @@ function wire(p){
   const upd = () => { cc.textContent = cap.value.length; };
   cap.addEventListener('input', upd); upd();
   const fld = f => root.querySelector(`[data-f="${f}"]`);
+  const file = root.querySelector('input[type=file][data-f="file"]');
+  if (file) file.onchange = () => { if (file.files && file.files[0]) doUpload(p.id, file.files[0], root); };
   root.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(p.id, b.dataset.act, root, fld, b));
+}
+
+async function doUpload(id, file, root){
+  const prog = root.querySelector('[data-uprog]');
+  if (file.size > 500*1024*1024){ toast('File is over 500 MB.','err'); return; }
+  prog.textContent = 'Uploading…';
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-60) || 'video';
+  const path = `posts/${id}/${Date.now()}_${safe}`;
+  const { error } = await sb.storage.from('social-media').upload(path, file, { upsert: true, contentType: file.type || undefined });
+  if (error){ prog.textContent=''; toast(error.message,'err'); return; }
+  const url = sb.storage.from('social-media').getPublicUrl(path).data.publicUrl;
+  const saved = await save(id, { media_url: url });
+  prog.textContent='';
+  if (saved){ toast('Video attached.','ok'); render(); }
 }
 
 async function save(id, patch, btn){
@@ -264,9 +292,21 @@ async function save(id, patch, btn){
 }
 
 async function act(id, action, root, fld, btn){
+  if (action==='pickfile'){ root.querySelector('input[type=file][data-f="file"]').click(); return; }
   if (action==='save'){
     const patch = { caption: fld('caption').value, hashtags: fld('hashtags').value };
     if (await save(id, patch, btn)) toast('Saved.','ok');
+    return;
+  }
+  if (action==='send'){
+    if (!confirm('Send this post to the connected accounts? If a future time is set it will be scheduled; otherwise it posts now.')) return;
+    btn.disabled = true;
+    const { data, error } = await sb.functions.invoke('social-publish', { body: { post_id: id } });
+    btn.disabled = false;
+    if (error){ toast(error.message,'err'); return; }
+    if (!data || !data.ok){ toast((data && data.error) || 'Publish failed.','err'); if (data && data.status==='failed') await loadQueue(); return; }
+    toast(data.status==='scheduled' ? 'Scheduled — it will post at its set time.' : 'Posted to the platforms.','ok');
+    await loadQueue();
     return;
   }
   if (action==='schedule'){
