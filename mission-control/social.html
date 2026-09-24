@@ -86,6 +86,12 @@
   .mlink{color:#a9f0c1;font-size:12.5px;text-decoration:none} .mlink:hover{text-decoration:underline}
   .mnone{color:var(--muted2);font-size:12.5px}
   .uprog{color:var(--muted);font-size:12px}
+  .chip.auto{color:#bcd8ff;border-color:#244a7a}
+  .chip.cons-need{color:#E9A0A0;border-color:#4a2b2b;background:#1c1414}
+  .chip.cons-ok{color:#a9f0c1;border-color:#2b4a3a;background:#12291f}
+  .consent{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);margin-top:12px}
+  .consent input{width:16px;height:16px}
+  .libsel{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:12.5px;max-width:220px}
   .pubst{font-size:12px;border-radius:8px;padding:7px 10px;margin-top:12px;border:1px solid var(--line)}
   .pubst.err{color:#E9A0A0;background:#1c1414;border-color:#4a2b2b}
   .pubst.ok{color:#a9f0c1;background:#12291f;border-color:#2b4a3a}
@@ -149,9 +155,14 @@ const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, auto
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt = t => { try { return new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } catch(e){ return String(t||''); } };
+const fmtNum = n => (n>=1000 ? (n/1000).toFixed(n>=10000?0:1)+'k' : String(n));
 function pubStatus(p){
   if (p.status==='failed') return `<div class="pubst err">Publish failed: ${esc(p.publish_error||'unknown error')} — fix and Send again.</div>`;
-  if (p.status==='posted') return `<div class="pubst ok">Posted${p.posted_at?(' '+esc(fmt(p.posted_at))):''}${p.ayrshare_id?(' &middot; id '+esc(p.ayrshare_id)):''}</div>`;
+  if (p.status==='posted'){
+    const m = p.metrics && p.metrics.summary;
+    const met = m ? ' &middot; ' + ['views','likes','comments','shares'].filter(k=>m[k]!=null).map(k=>fmtNum(m[k])+' '+k).join(', ') : '';
+    return `<div class="pubst ok">Posted${p.posted_at?(' '+esc(fmt(p.posted_at))):''}${met}</div>`;
+  }
   if (p.status==='scheduled'){
     if (p.ayrshare_id) return `<div class="pubst sch">Handed to the scheduler${p.scheduled_at?(' for '+esc(fmt(p.scheduled_at))):''} — it will post automatically.</div>`;
     return `<div class="pubst muted">Scheduled${p.scheduled_at?(' for '+esc(fmt(p.scheduled_at))):''} — not sent yet. Hit &ldquo;Send to platform&rdquo; to hand it off.</div>`;
@@ -232,6 +243,8 @@ function card(p){
     <div class="top">
       <span class="chip pillar">${esc(p.pillar||'')}</span>
       <span class="chip">${esc(p.format||'')}</span>
+      ${p.source_event ? `<span class="chip auto">auto</span>` : ''}
+      ${p.needs_consent ? `<span class="chip ${p.consent_confirmed?'cons-ok':'cons-need'}">${p.consent_confirmed?'consent &#10003;':'needs consent'}</span>` : ''}
       <span class="plat">${esc(plats)}</span>
       <span class="badge b-${p.status}">${esc(LABEL[p.status]||p.status)}</span>
     </div>
@@ -243,13 +256,17 @@ function card(p){
       <div class="charc"><span class="cc">0</span> chars</div>
       <div class="lbl">Hashtags</div>
       <input type="text" data-f="hashtags" value="${esc(p.hashtags||'')}" />
+      <div class="lbl">Link (CTA, with UTM)</div>
+      <input type="text" data-f="cta_url" value="${esc(p.cta_url||'')}" placeholder="https://... with utm_source=social" />
       ${shot ? `<details><summary>Shot list &amp; on-screen text</summary><pre>${esc(shot)}</pre></details>`:''}
       ${p.media_note ? `<div class="media"><b>Media idea:</b> ${esc(p.media_note)}</div>`:''}
       <div class="lbl">Video file</div>
       <div class="mediarow">
         ${p.media_url ? `<a class="mlink" href="${esc(p.media_url)}" target="_blank" rel="noopener">Video attached &#10003;</a>` : `<span class="mnone">No video yet</span>`}
         <input type="file" accept="video/*,image/*" data-f="file" style="display:none" />
-        <button class="btn sm" data-act="pickfile">${p.media_url?'Replace video':'Upload video'}</button>
+        <button class="btn sm" data-act="pickfile">${p.media_url?'Replace':'Upload'}</button>
+        <button class="btn sm" data-act="library">From library</button>
+        <select data-lib class="libsel" style="display:none"></select>
         <span class="uprog" data-uprog></span>
       </div>
       <div class="lbl">Schedule</div>
@@ -257,13 +274,14 @@ function card(p){
         <input type="datetime-local" data-f="scheduled_at" value="${schedVal}" />
         <button class="btn sm" data-act="schedule">Set schedule</button>
       </div>
+      ${p.needs_consent ? `<label class="consent"><input type="checkbox" data-consent ${p.consent_confirmed?'checked':''}/> Signed media release is on file for the student(s) shown</label>` : ''}
       ${pubStatus(p)}
       <div class="rowbtns">
         <button class="btn sm" data-act="save">Save edits</button>
         <div class="spacer"></div>
         ${p.status==='posted' ? '' : `<button class="btn sm danger" data-act="skip">Skip</button>`}
         ${p.status==='approved'||p.status==='scheduled' ? `<button class="btn sm" data-act="posted">Mark posted</button>` : ''}
-        ${p.status==='approved'||p.status==='scheduled' ? `<button class="btn gold sm" data-act="send">Send to platform</button>` : ''}
+        ${p.status==='approved'||p.status==='scheduled' ? `<button class="btn gold sm" data-act="send" ${(p.needs_consent && !p.consent_confirmed)?'disabled title="Confirm the media release first"':''}>Send to platform</button>` : ''}
         ${p.status==='pending'||p.status==='skipped' ? `<button class="btn gold sm" data-act="approve">Approve</button>` : ''}
       </div>
     </div>
@@ -280,7 +298,18 @@ function wire(p){
   const fld = f => root.querySelector(`[data-f="${f}"]`);
   const file = root.querySelector('input[type=file][data-f="file"]');
   if (file) file.onchange = () => { if (file.files && file.files[0]) doUpload(p.id, file.files[0], root); };
+  const consent = root.querySelector('input[data-consent]');
+  if (consent) consent.onchange = async () => { if (await save(p.id, { consent_confirmed: consent.checked })){ toast(consent.checked?'Consent confirmed.':'Consent cleared.','ok'); render(); } };
+  const lib = root.querySelector('select[data-lib]');
+  if (lib) lib.onchange = async () => { if (lib.value && await save(p.id, { media_url: lib.value })){ toast('Attached from library.','ok'); render(); } };
   root.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(p.id, b.dataset.act, root, fld, b));
+}
+
+let LIBCACHE = null;
+async function loadLib(sel){
+  if (!LIBCACHE){ const { data } = await sb.rpc('social_brand_media_list'); LIBCACHE = data || []; }
+  sel.innerHTML = '<option value="">Pick brand media…</option>' + LIBCACHE.map(m => `<option value="${esc(m.url)}">${esc(m.label)} (${esc(m.kind)})</option>`).join('');
+  sel.dataset.loaded = '1';
 }
 
 async function doUpload(id, file, root){
@@ -309,8 +338,15 @@ async function save(id, patch, btn){
 
 async function act(id, action, root, fld, btn){
   if (action==='pickfile'){ root.querySelector('input[type=file][data-f="file"]').click(); return; }
+  if (action==='library'){
+    const sel = root.querySelector('select[data-lib]');
+    if (sel.dataset.loaded!=='1') await loadLib(sel);
+    sel.style.display = (sel.style.display==='none' ? '' : 'none');
+    return;
+  }
   if (action==='save'){
     const patch = { caption: fld('caption').value, hashtags: fld('hashtags').value };
+    const cta = fld('cta_url'); if (cta) patch.cta_url = cta.value;
     if (await save(id, patch, btn)) toast('Saved.','ok');
     return;
   }

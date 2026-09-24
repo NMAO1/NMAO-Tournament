@@ -80,6 +80,14 @@ const BANK: Tmpl[] = [
 ];
 
 function fillSign(s: string): string { return s.replace(/\{sign\}/g, pick(SIGNS)); }
+const NEEDS_CONSENT = new Set(["Student Wins", "Transformation", "School Spotlight"]);
+function ctaFor(pillar: string): string {
+  const u = "?utm_source=social&utm_medium=organic&utm_campaign=";
+  if (pillar === "School Spotlight") return "https://directory.nmao.us/" + u + "spotlight";
+  if (pillar === "Tournament") return "https://league.nmao.us/" + u + "tournament";
+  if (pillar === "Brand") return "https://nmao.us/" + u + "brand";
+  return "https://league.nmao.us/" + u + "compete";
+}
 
 function templateBatch(count: number, pillars: string[] | null, avoid: Set<string>): any[] {
   let pool = BANK.filter((t) => !pillars || pillars.length === 0 || pillars.includes(t.pillar));
@@ -173,6 +181,8 @@ Deno.serve(async (req) => {
       media_note: String(p.media_note || "").slice(0, 500),
       on_screen: String(p.on_screen || "").slice(0, 500),
       shot_list: String(p.shot_list || "").slice(0, 1200),
+      needs_consent: NEEDS_CONSENT.has(String(p.pillar || "")),
+      cta_url: ctaFor(String(p.pillar || "")),
       status: "pending",
     }));
     const { data: inserted, error: iErr } = await svc.from("social_posts").insert(rows).select("id, title, pillar, status");

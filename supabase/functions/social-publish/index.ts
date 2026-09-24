@@ -69,6 +69,9 @@ Deno.serve(async (req) => {
     if (!(p as any).media_url) {
       return json({ ok: false, error: "Add a video (upload media) before publishing — Reels/TikTok/Shorts need a video file." }, 409);
     }
+    if ((p as any).needs_consent && !(p as any).consent_confirmed) {
+      return json({ ok: false, code: "consent_required", error: "This post shows a real student — confirm the signed media release is on file before publishing." }, 409);
+    }
 
     const platforms = ((p as any).platforms || [])
       .map((x: string) => NET[String(x).toLowerCase()]).filter(Boolean);
