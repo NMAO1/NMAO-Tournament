@@ -50,6 +50,9 @@
   .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 
   .intro{color:var(--muted);font-size:12.5px;margin:0 0 14px;max-width:720px}
+  .genbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 16px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .genbar select{background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:6px 8px;font-size:13px}
+  .genhint{color:var(--muted2);font-size:12px}
   .tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
   .tab{border:1px solid var(--line);background:var(--panel);color:var(--muted);padding:6px 12px;border-radius:99px;font-size:12.5px;cursor:pointer}
   .tab.on{color:var(--text);border-color:#3a3a40;background:var(--panel2)}
@@ -117,6 +120,12 @@
     </header>
 
     <p class="intro">Approve before it posts. Each item is generated and queued; review the caption, set a date, and approve — nothing goes live without a tap. Clips of real students need signed consent (media release) before they run.</p>
+
+    <div class="genbar">
+      <button class="btn gold" id="genBtn">Generate drafts</button>
+      <select id="genCount"><option value="2">2</option><option value="3" selected>3</option><option value="5">5</option></select>
+      <span class="genhint">Adds fresh on-brand drafts to Pending for you to review, edit, and approve.</span>
+    </div>
 
     <div class="tabs" id="tabs"></div>
     <div id="list"></div>
@@ -272,6 +281,21 @@ async function act(id, action, root, fld, btn){
   if (!status) return;
   if (await save(id, { status }, btn)){ toast(LABEL[status]+'.','ok'); render(); }
 }
+
+// ---------- generate drafts ----------
+$('genBtn').onclick = async () => {
+  const btn = $('genBtn'), orig = btn.textContent, count = Number($('genCount').value) || 3;
+  btn.disabled = true; btn.textContent = 'Generating…';
+  try {
+    const { data, error } = await sb.functions.invoke('social-generate', { body: { count } });
+    if (error) throw error;
+    if (!data || !data.ok) throw new Error((data && data.error) || 'Generation failed.');
+    TAB = 'pending';
+    await loadQueue();
+    toast('Added ' + data.created + ' draft' + (data.created===1?'':'s') + (data.source==='template'?' (template — add ANTHROPIC_API_KEY for AI-written)':'') + ' to Pending.', 'ok');
+  } catch(e){ toast(e.message || 'Generation failed.', 'err'); }
+  finally { btn.disabled = false; btn.textContent = orig; }
+};
 
 // resume session
 (async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
