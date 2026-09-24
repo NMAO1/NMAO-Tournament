@@ -117,6 +117,17 @@ Deno.serve(async (req) => {
     const roundNo = open ? Number((open as any).seq ?? 1) : null;
     if (lane === "alacarte" && !roundId) return json({ ok: false, error: "No round is open for entries right now." }, 409);
 
+    // Guard against buying a second season-long pass: if an ACTIVE full/monthly
+    // entitlement already exists for this competitor+season, refuse (idempotency
+    // key below covers rapid double-taps; this covers deliberate re-purchase).
+    if (lane === "full" || lane === "monthly") {
+      let apQ = svc.from("entry_entitlements").select("id")
+        .eq("competitor_id", competitorId).eq("lane", lane).eq("status", "active");
+      if (seasonId) apQ = apQ.eq("season_id", seasonId);
+      const { data: activePass } = await apQ.limit(1).maybeSingle();
+      if (activePass) return json({ ok: false, error: "You already have an active season pass." }, 409);
+    }
+
     // Entitlement (incomplete until the webhook confirms payment). credits_total is
     // set now; the webhook only flips status to active — and for monthly, each paid
     // invoice adds a credit (see add_subscription_credits in stripe-webhook).
@@ -144,15 +155,18 @@ Deno.serve(async (req) => {
     const lineItem: any = lane === "topup"
       ? { quantity: 1, price_data: { currency: "usd", unit_amount: amount, product_data: { name: "NMAO Entry Credits", description: `${creditsGranted} entry credit${creditsGranted === 1 ? "" : "s"}` } } }
       : { price: priceId as string, quantity: 1 };
+    // Stable idempotency key: identical rapid taps reuse ONE Stripe session (which
+    // pins the first entitlement_id), instead of opening a second charge.
+    const idemKey = `ent-${competitorId}-${lane}-${eventSlots}-${lane === "alacarte" ? (roundId || "noround") : (seasonId || "noseason")}-${topupCredits || 0}`.slice(0, 200);
     const session = lane === "monthly"
       ? await stripe.checkout.sessions.create({
           mode: "subscription", line_items: [{ price: priceId as string, quantity: 1 }],
           subscription_data: { metadata: meta }, customer_email: email, ...common,
-        })
+        }, { idempotencyKey: idemKey })
       : await stripe.checkout.sessions.create({
           mode: "payment", line_items: [lineItem],
           payment_intent_data: { metadata: meta }, customer_email: email, ...common,
-        });
+        }, { idempotencyKey: idemKey });
 
     return json({ ok: true, url: session.url, entitlement_id: entitlementId, amount, lane });
   } catch (e: any) {

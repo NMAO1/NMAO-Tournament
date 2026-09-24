@@ -59,7 +59,41 @@ Deno.serve(async (req) => {
     if ((t as any).visibility !== "public") return json({ ok: false, error: "This tournament isn't open to public registration." }, 403);
     if (!(t as any).registration_open || (t as any).state === "complete") return json({ ok: false, error: "Registration is closed for this tournament." }, 409);
     const fee = Number((t as any).entry_fee_cents || 0);
-    if (fee <= 0) return json({ ok: false, error: "This tournament has no entry fee set." }, 409);
+    const eventName = (t as any).name as string;
+    const division = [ageGroup, skillDivision].filter(Boolean).join(" · ") || null;
+
+    // Reuse an existing entrant for the same (tournament, athlete, payer) so a
+    // double-submit / retry never creates a second entrant or a second charge.
+    let entQ = svc.from("ih_entrants")
+      .select("id, payment_status, checkout_session_id")
+      .eq("tournament_id", (t as any).id)
+      .eq("display_name", athlete);
+    entQ = payerEmail ? entQ.eq("payer_email", payerEmail) : entQ.is("payer_email", null);
+    const { data: existingEnt } = await entQ.maybeSingle();
+    const already = (existingEnt as any) || null;
+
+    // ---- FREE event: no Stripe, register directly ($0 = payment_status 'paid'). ----
+    if (fee <= 0) {
+      if (already) {
+        if ((already as any).payment_status !== "paid") {
+          await svc.from("ih_entrants").update({ payment_status: "paid", paid_at: new Date().toISOString() }).eq("id", (already as any).id);
+        }
+      } else {
+        const { error: ferr } = await svc.from("ih_entrants").insert({
+          tournament_id: (t as any).id, display_name: athlete, event: eventName, division,
+          age_group: ageGroup, skill_division: skillDivision, video_url: videoUrl,
+          payer_email: payerEmail, self_registered: true,
+          payment_status: "paid", paid_at: new Date().toISOString(),
+        });
+        if (ferr) { console.error("free entrant insert:", ferr); return json({ ok: false, error: "Could not register." }, 500); }
+      }
+      return json({ ok: true, free: true, url: `${SITE}/inhouse/${(t as any).public_token}?registered=1` });
+    }
+
+    // ---- PAID event ----
+    if (already && (already as any).payment_status === "paid") {
+      return json({ ok: true, url: `${SITE}/inhouse/${(t as any).public_token}?paid=1` });
+    }
 
     const { data: school } = await svc.from("schools").select("stripe_connect_account_id, name").eq("id", (t as any).school_id).maybeSingle();
     const acct = school ? (school as any).stripe_connect_account_id as string | null : null;
@@ -67,23 +101,25 @@ Deno.serve(async (req) => {
     const acctInfo = await stripe.accounts.retrieve(acct);
     if (!(acctInfo as any).charges_enabled) return json({ ok: false, error: "This school hasn't finished its payment setup yet. Please check back soon." }, 409);
 
-    // The challenge is the tournament itself (no athlete-entered event). Division
-    // is two dropdowns built from the school's configured Age + Rank lists — the
-    // submitted values are already the display labels. Keep `division` combined.
-    const eventName = (t as any).name as string;
-    const division = [ageGroup, skillDivision].filter(Boolean).join(" · ") || null;
-
-    // Create the entrant (unpaid) first so we can tie the checkout to its id.
-    const { data: ent, error: ierr } = await svc.from("ih_entrants").insert({
-      tournament_id: (t as any).id, display_name: athlete, event: eventName, division,
-      age_group: ageGroup, skill_division: skillDivision, video_url: videoUrl,
-      payer_email: payerEmail, self_registered: true, payment_status: "unpaid",
-    }).select("id").single();
-    if (ierr) { console.error("entrant insert:", ierr); return json({ ok: false, error: "Could not register." }, 500); }
-    const entrantId = (ent as any).id;
+    // Reuse the existing unpaid entrant, else create one.
+    let entrantId: string;
+    if (already) {
+      entrantId = (already as any).id;
+    } else {
+      const { data: ent, error: ierr } = await svc.from("ih_entrants").insert({
+        tournament_id: (t as any).id, display_name: athlete, event: eventName, division,
+        age_group: ageGroup, skill_division: skillDivision, video_url: videoUrl,
+        payer_email: payerEmail, self_registered: true, payment_status: "unpaid",
+      }).select("id").single();
+      if (ierr) { console.error("entrant insert:", ierr); return json({ ok: false, error: "Could not register." }, 500); }
+      entrantId = (ent as any).id;
+    }
 
     const appFee = Math.round((fee * Number((t as any).platform_fee_bps || 0)) / 10000);
     const meta = { kind: "inhouse", entrant_id: entrantId, tournament_id: (t as any).id };
+    // Stable idempotency key: identical rapid submits reuse ONE Stripe session
+    // instead of opening a second charge on the school's connected account.
+    const idemKey = `inhouse-${(t as any).id}-${athlete.toLowerCase()}-${(payerEmail || "").toLowerCase()}`.slice(0, 200);
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer_email: payerEmail || undefined,
@@ -99,7 +135,7 @@ Deno.serve(async (req) => {
       metadata: meta,
       success_url: `${SITE}/inhouse/${(t as any).public_token}?paid=1`,
       cancel_url: `${SITE}/inhouse/${(t as any).public_token}?canceled=1`,
-    }, { stripeAccount: acct });
+    }, { stripeAccount: acct, idempotencyKey: idemKey });
 
     await svc.from("ih_entrants").update({ checkout_session_id: session.id }).eq("id", entrantId);
     return json({ ok: true, url: session.url });
