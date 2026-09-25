@@ -55,6 +55,8 @@ Deno.serve(async (req) => {
     if (!u?.user?.id) return json({ ok: false, error: "Invalid session." }, 401);
     const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", u.user.id).maybeSingle();
     if (!staff) return json({ ok: false, error: "Staff only." }, 403);
+    const { data: _cap } = await svc.rpc("staff_can_uid", { p_uid: u.user.id, p_slice: "social", p_level: "oversee" });
+    if (!_cap) return json({ ok: false, error: "Not authorized for social analytics." }, 403);
   }
 
   if (!AYRSHARE_KEY) return json({ ok: false, code: "not_configured", refreshed: 0, error: "Analytics need AYRSHARE_API_KEY." }, 200);

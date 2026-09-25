@@ -32,7 +32,10 @@ async function authorizeStaff(bearer: string, svc: any): Promise<boolean> {
   const uid = u?.user?.id;
   if (!uid) return false;
   const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle();
-  return !!staff;
+  if (!staff) return false;
+  // RBAC: judge management requires the `judges` capability.
+  const { data: can } = await svc.rpc("staff_can_uid", { p_uid: uid, p_slice: "judges", p_level: "full" });
+  return can === true;
 }
 
 Deno.serve(async (req) => {

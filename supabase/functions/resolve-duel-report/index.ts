@@ -36,6 +36,13 @@ Deno.serve(async (req) => {
   if (!uid) return json({ ok: false, error: "Invalid or expired session." }, 401);
   const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle();
   if (!staff) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
+  // RBAC: any moderation grant can view the queue; acting (uphold/dismiss) needs full.
+  const { data: _modView } = await svc.rpc("staff_can_uid", { p_uid: uid, p_slice: "moderation", p_level: "view" });
+  if (!_modView) return json({ ok: false, error: "Not authorized for moderation." }, 403);
+  const canModerate = async () => {
+    const { data } = await svc.rpc("staff_can_uid", { p_uid: uid, p_slice: "moderation", p_level: "full" });
+    return data === true;
+  };
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -81,6 +88,7 @@ Deno.serve(async (req) => {
     if (!duelId) return json({ ok: false, error: "duel_id required." }, 400);
 
     if (action === "uphold") {
+      if (!(await canModerate())) return json({ ok: false, error: "Triage only — resolving reports requires the Tournament role." }, 403);
       // Find the offending side (most-reported target) unless staff named one.
       const { data: d } = await svc.from("duels").select("challenger_id, opponent_id").eq("id", duelId).maybeSingle();
       const { data: reps } = await svc.from("duel_reports").select("target").eq("duel_id", duelId).eq("status", "pending");
@@ -108,6 +116,7 @@ Deno.serve(async (req) => {
     }
 
     if (action === "dismiss") {
+      if (!(await canModerate())) return json({ ok: false, error: "Triage only — resolving reports requires the Tournament role." }, 403);
       await svc.from("duels").update({ moderation_status: "ok", updated_at: now })
         .eq("id", duelId).eq("moderation_status", "under_review");
       await svc.from("duel_reports").update({ status: "dismissed", resolved_by: uid, resolved_at: now })

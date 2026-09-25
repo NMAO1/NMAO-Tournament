@@ -59,6 +59,9 @@ async function authorize(req: Request): Promise<{ ok: true; actorId: string | nu
   const svc = createClient(url, serviceKey!, { auth: { persistSession: false } });
   const { data: staff } = await svc.from('staff').select('id, role').eq('auth_user_id', uid).maybeSingle();
   if (!staff) return { ok: false, status: 403, error: 'Not authorized — NMAO staff only.' };
+  // RBAC: running the round pipeline requires the `rounds` capability.
+  const { data: _cap } = await svc.rpc('staff_can_uid', { p_uid: uid, p_slice: 'rounds', p_level: 'full' });
+  if (!_cap) return { ok: false, status: 403, error: 'Not authorized — the Round Pipeline requires the Tournament role.' };
 
   return { ok: true, actorId: (staff as any).id as string };
 }
