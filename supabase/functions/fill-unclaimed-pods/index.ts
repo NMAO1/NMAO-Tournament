@@ -109,7 +109,10 @@ Deno.serve(async (req) => {
       const { data: u } = await authClient.auth.getUser();
       if (u?.user?.id) {
         const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", u.user.id).maybeSingle();
-        if (staff) authed = true;
+        if (staff) {
+          const { data: can } = await svc.rpc("staff_can_uid", { p_uid: u.user.id, p_slice: "rounds", p_level: "full" });
+          authed = can === true;
+        }
       }
     }
   }

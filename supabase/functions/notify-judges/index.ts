@@ -68,7 +68,10 @@ Deno.serve(async (req) => {
     const { data: u } = await authClient.auth.getUser();
     if (!u?.user?.id) return json({ ok: false, error: "Invalid or expired session." }, 401);
     const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", u.user.id).maybeSingle();
-    ok = !!staff;
+    if (staff) {
+      const { data: can } = await svc.rpc("staff_can_uid", { p_uid: u.user.id, p_slice: "judges", p_level: "full" });
+      ok = can === true;
+    }
   }
   if (!ok) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
 

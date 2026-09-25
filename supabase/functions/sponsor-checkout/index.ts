@@ -37,6 +37,8 @@ Deno.serve(async (req) => {
   if (!u?.user?.id) return json({ ok: false, error: "Invalid session." }, 401);
   const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", u.user.id).maybeSingle();
   if (!staff) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
+  const { data: _cap } = await svc.rpc("staff_can_uid", { p_uid: u.user.id, p_slice: "sponsors", p_level: "full" });
+  if (!_cap) return json({ ok: false, error: "Not authorized for sponsors." }, 403);
 
   try {
     const b = await req.json().catch(() => ({}));

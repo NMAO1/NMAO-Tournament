@@ -35,6 +35,8 @@ Deno.serve(async (req) => {
   if (!uid) return json({ ok: false, error: "Invalid or expired session." }, 401);
   const { data: staff } = await svc.from("staff").select("id").eq("auth_user_id", uid).maybeSingle();
   if (!staff) return json({ ok: false, error: "Not authorized — NMAO staff only." }, 403);
+  const { data: _cap } = await svc.rpc("staff_can_uid", { p_uid: uid, p_slice: "finance", p_level: "view" });
+  if (!_cap) return json({ ok: false, error: "Not authorized for finance." }, 403);
 
   try {
     const body = await req.json().catch(() => ({}));
