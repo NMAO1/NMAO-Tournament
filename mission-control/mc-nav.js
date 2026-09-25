@@ -13,7 +13,6 @@
   var GROUPS = [
     { label: "Console", items: [
       { href: "index.html", icon: "🎛", name: "Round Pipeline" },
-      { href: "live.html",  icon: "📡", name: "Live Board" },
     ]},
     { label: "Review & Safety", items: [
       { href: "schools.html",    icon: "🏫", name: "School Review" },
