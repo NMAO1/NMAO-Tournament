@@ -11,6 +11,10 @@
    ===================================================================== */
 (function () {
   var GROUPS = [
+    { label: "Owner", items: [
+      { href: "overview.html", icon: "📊", name: "Overview", slice: "team" },
+      { href: "team.html",     icon: "👥", name: "Team",     slice: "team" },
+    ]},
     { label: "Console", items: [
       { href: "index.html", icon: "🎛", name: "Round Pipeline", slice: "rounds" },
     ]},

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NMAO — Overview</title>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  const SUPABASE_URL = 'https://oxzuavpyoetchwebdejp.supabase.co';
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94enVhdnB5b2V0Y2h3ZWJkZWpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU5NjgyNjUsImV4cCI6MjEwMTU0NDI2NX0.SEBXeo_FqsyqV8xS5dwaGymXI6mYPy8-9uMAgaX4fhg';
+  window.__mc = { createClient, SUPABASE_URL, ANON };
+</script>
+<style>
+  :root{ --bg:#0b0b0d; --panel:#141416; --panel2:#1a1a1e; --line:#26262b; --text:#F5F0E8; --muted:#9a938a; --muted2:#6b655c;
+    --gold:#E6B93F; --gold-soft:#FFE488; --gold-deep:#9C7A22; --success:#5DCAA5; --danger:#E07070; }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 80% at 50% -10%,#141220 0%,var(--bg) 60%);color:var(--text);
+       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-size:14px;line-height:1.5;padding:22px}
+  .wrap{max-width:980px;margin:0 auto}
+  .serif{font-family:Georgia,'Times New Roman',serif}
+  a{color:inherit;text-decoration:none}
+  .btn{border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:7px 13px;border-radius:9px;font-size:13px;cursor:pointer}
+  .btn.gold{border:none;color:#141210;background:linear-gradient(160deg,var(--gold-soft),var(--gold) 55%,var(--gold-deep));box-shadow:inset 0 1px 0 rgba(255,255,255,.4);font-weight:600}
+  .hide{display:none!important}
+  .login{max-width:360px;margin:12vh auto 0;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+  .login h1{font-size:18px;margin:0 0 4px} .login p{color:var(--muted);font-size:13px;margin:0 0 16px}
+  .login label{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+  .login input{width:100%;padding:11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px}
+  .login .btn{width:100%;margin-top:16px;justify-content:center;text-align:center}
+  .msg{font-size:12.5px;margin-top:10px;min-height:16px} .msg.err{color:var(--danger)} .msg.ok{color:var(--success)}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .yy{width:26px;height:26px;border-radius:50%;background:conic-gradient(#F5F0E8 0 50%,#141210 0 100%);border:1px solid var(--gold)}
+  .brand h1{font-size:16px;margin:0} .brand small{color:var(--muted);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:block}
+  .tile:hover{border-color:#3a3a40}
+  .tile .l{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .tile .v{font-size:30px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
+  .tile .v small{font-size:13px;color:var(--muted);font-weight:400}
+  .tile .s{font-size:12px;color:var(--muted2);margin-top:3px}
+  .tile.alert{border-color:#7a2b2b} .tile.alert .v{color:#E9A0A0}
+  .foot-note{margin-top:16px;color:var(--muted2);font-size:11.5px;text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="login" id="loginCard">
+    <h1 class="serif">Overview</h1>
+    <p>Owner sign-in required.</p>
+    <label>Email</label><input id="email" type="email" autocomplete="username" />
+    <div id="pwWrap"><label>Password</label><input id="password" type="password" autocomplete="current-password" /></div>
+    <div id="codeWrap" class="hide"><label>6-digit code (emailed)</label><input id="code" inputmode="numeric" maxlength="6" /></div>
+    <button class="btn gold" id="loginBtn">Sign in</button>
+    <button class="btn" id="codeToggle" style="width:100%;margin-top:8px">Email me a code instead</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="console" class="hide">
+    <header>
+      <div class="brand"><span class="yy"></span><div><h1 class="serif">Overview</h1><small>Mission Control</small></div></div>
+      <button class="btn" id="refreshBtn">Refresh</button>
+    </header>
+    <div class="grid" id="grid"></div>
+    <div class="foot-note">Owner-only oversight. Each tile links into its area.</div>
+  </div>
+</div>
+
+<script type="module">
+const { createClient, SUPABASE_URL, ANON } = window.__mc;
+const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function setMsg(id,t,cls){ const el=$(id); el.textContent=t; el.className='msg '+(cls||''); }
+
+let codeMode=false;
+$('codeToggle').onclick = async () => {
+  const email=$('email').value.trim();
+  if(codeMode){ codeMode=false; $('pwWrap').classList.remove('hide'); $('codeWrap').classList.add('hide'); $('codeToggle').textContent='Email me a code instead'; $('loginBtn').textContent='Sign in'; return; }
+  if(!email) return setMsg('loginMsg','Enter your email first.','err');
+  const { error } = await sb.auth.signInWithOtp({ email, options:{ shouldCreateUser:false } });
+  if(error) return setMsg('loginMsg',error.message,'err');
+  codeMode=true; $('pwWrap').classList.add('hide'); $('codeWrap').classList.remove('hide'); $('codeToggle').textContent='Use password instead'; $('loginBtn').textContent='Verify code';
+  setMsg('loginMsg','Code sent — check your email.','ok');
+};
+$('loginBtn').onclick = async () => {
+  const email=$('email').value.trim(); $('loginBtn').disabled=true;
+  try{
+    if(codeMode){ const {error}=await sb.auth.verifyOtp({ email, token:$('code').value.trim(), type:'email' }); if(error) throw error; }
+    else { const {error}=await sb.auth.signInWithPassword({ email, password:$('password').value }); if(error) throw error; }
+    await afterLogin();
+  }catch(e){ setMsg('loginMsg', e.message||'Sign-in failed.','err'); }
+  finally{ $('loginBtn').disabled=false; }
+};
+$('refreshBtn').onclick = () => load();
+
+async function afterLogin(){
+  const { data:{ user } } = await sb.auth.getUser();
+  if(!user) return setMsg('loginMsg','Session expired — sign in again.','err');
+  const { data: me } = await sb.rpc('staff_me');
+  if(!me) return setMsg('loginMsg','This account is not NMAO staff.','err');
+  if(!me.is_owner) return setMsg('loginMsg','The overview is owner-only.','err');
+  $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
+  await load();
+}
+
+function tile(href,label,icon,value,sub,alert){
+  return `<a class="tile${alert?' alert':''}" href="${href}"><div class="l">${icon} ${esc(label)}</div><div class="v">${value}</div><div class="s">${esc(sub||'')}</div></a>`;
+}
+async function load(){
+  const { data, error } = await sb.rpc('owner_overview');
+  if(error){ $('grid').innerHTML = `<div class="tile">${esc(error.message||'Could not load.')}</div>`; return; }
+  const o = data || {};
+  const r = o.round || {};
+  const overdue = Number(o.reports_overdue||0);
+  $('grid').innerHTML = [
+    tile('index.html','Current round','🎛', r.seq!=null?('#'+r.seq):'—', r.state?('state: '+r.state):'no active round'),
+    tile('schools.html','Pending school reviews','🏫', Number(o.pending_schools||0), 'awaiting your review'),
+    tile('moderation.html','Open reports','🛡', Number(o.open_reports||0), overdue?`${overdue} over 24h — act now`:'within the 24h window', overdue>0),
+    tile('social.html','Social queue','📣', Number(o.social_pending||0), 'pending approval'),
+    tile('schools.html','New schools (30d)','📈', Number(o.new_schools_30d||0), 'confirmed signups'),
+    tile('team.html','Team','👥', Number(o.staff_count||0), 'members'),
+  ].join('');
+}
+
+(async () => { const { data:{ session } } = await sb.auth.getSession(); if(session) await afterLogin(); })();
+</script>
+<script src="./mc-nav.js" defer></script>
+</body>
+</html>
