@@ -857,5 +857,6 @@ function toast(t, k){ let e=document.querySelector('.toast'); if(!e){ e=document
 // resume an existing session
 (async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
 </script>
+<script src="./mc-nav.js" defer></script>
 </body>
 </html>
