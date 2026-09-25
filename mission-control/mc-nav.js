@@ -53,8 +53,9 @@
   "#mc-nav-toggle{position:fixed;top:14px;left:14px;z-index:82;background:#141416;border:1px solid #26262b;color:#F5F0E8;width:38px;height:38px;border-radius:10px;font-size:16px;cursor:pointer;display:none;line-height:1}" +
   "#mc-scrim{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:79;opacity:0;visibility:hidden;transition:opacity .2s}" +
   "html.mc-nav-open #mc-scrim{opacity:1;visibility:visible}" +
-  /* hide the page's old in-header nav links — the sidebar owns navigation now */
+  /* hide the page's old in-header nav links + sign-out — the sidebar owns them now */
   "html.mc-nav-on header a.btn[href$='.html']{display:none!important}" +
+  "html.mc-nav-on header #signoutBtn{display:none!important}" +
   "@media(min-width:901px){" +
     "html.mc-nav-on #mc-sidebar{transform:none}" +
     "html.mc-nav-on body{padding-left:236px}" +
