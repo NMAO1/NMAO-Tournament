@@ -149,7 +149,7 @@
         <button class="btn" id="fillBtn" title="Backfill any pods still short of judges (deadline safety-net)">Fill unclaimed</button>
         <button class="btn" id="seedBtn" title="Create a fresh synthetic demo round to showcase the full pipeline end-to-end">✨ Seed demo</button>
         <button class="btn" id="resetAppBtn" title="Reset the Compete-app dueling demo (competitor showcase): the monthly reveal replays, the bell alerts return, and every vote-queue duel reappears">🔄 Reset app demo</button>
-        <button class="btn" id="printMedalsBtn" title="Printable per-school packing &amp; shipping list — medal counts by type, the competitor receiving each medal, and the school's shipping address">🖨 Packing list</button>
+        <button class="btn" id="printMedalsBtn" title="Printable Medal Shipping Kit — ① shipment manifest, ② per-box packing lists, ③ shipping labels (one per school, with your saved return address), and ④ cut-out medal labels (place · event · competitor). Print any section on its own.">🖨 Shipping kit</button>
         <button class="btn" id="refreshBtn">Refresh</button>
         <a class="btn" href="./config.html" title="Manage events, age brackets, and pod settings">Config</a>
         <a class="btn" href="./judges.html" title="Review judge applications and onboarding">Judges</a>
@@ -590,7 +590,38 @@ async function printPackingList(){
     </section>`;
   }).join('');
 
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Medal Packing List — Round ${esc(seq)}</title><style>
+  const boxes = groups.length;
+  const ord = n => { const s=['th','st','nd','rd'], v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); };
+  const placeText = it => it.place ? ord(it.place) : 'Participation';
+  const totalOf = g => _PK_ORDER.reduce((x,t)=>x+g.counts[t],0);
+
+  // ① Manifest — the shipper's master checklist (box #, school, count, address, packed/shipped).
+  const mfRows = groups.map((g,i)=>{ const s=g.school;
+    return `<tr><td class="c">${i+1}</td><td>${esc(s.name||'School')}</td><td class="c">${totalOf(g)}</td><td>${esc(_pkAddr(s.address))}</td><td class="c">☐</td><td class="c">☐</td></tr>`;
+  }).join('');
+
+  // ③ Shipping labels — one per school box (return address filled once, mirrored to every label).
+  const shipCards = groups.map((g,i)=>{ const s=g.school;
+    const contact=[s.contact_name,s.contact_email,s.phone].filter(Boolean).join(' · ');
+    return `<div class="ship">
+      <div class="ship-from" data-ret></div>
+      <div class="ship-to"><div class="ship-lbl">SHIP TO</div>
+        <div class="ship-name">${esc(s.name||'School')}</div>
+        <div class="ship-addr">${esc(_pkAddr(s.address))}</div>
+        ${contact?`<div class="ship-contact">${esc(contact)}</div>`:''}</div>
+      <div class="ship-meta"><b>Box ${i+1} of ${boxes}</b> &nbsp;·&nbsp; ${totalOf(g)} medals<div class="ship-tally">${tally(g.counts)}</div></div>
+      <div class="ship-track">Carrier ____________&nbsp;&nbsp; Tracking # ____________________&nbsp;&nbsp; Shipped ☐</div>
+    </div>`;
+  }).join('');
+
+  // ④ Medal labels — one small cut-out per medal (place · event · category · competitor), grouped by school.
+  const labelBlocks = groups.map((g,gi)=>{ const s=g.school;
+    g.items.sort((a,b)=>(a.cat||'').localeCompare(b.cat||'')||(_PK_RANK[a.medal]-_PK_RANK[b.medal])||a.name.localeCompare(b.name));
+    const cells=g.items.map(it=>`<div class="ml"><div class="ml-badge">${_PK_EMOJI[it.medal]||''} ${esc(placeText(it))}</div><div class="ml-name">${esc(it.name)}</div><div class="ml-cat">${esc(it.cat)}</div><div class="ml-school">${esc(s.name||'')}</div></div>`).join('');
+    return `<div class="ml-school-h${gi===0?' first':''}">${esc(s.name||'School')} — ${g.items.length} label${g.items.length===1?'':'s'}</div><div class="ml-grid">${cells}</div>`;
+  }).join('');
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Medal Shipping Kit — Round ${esc(seq)}</title><style>
     *{box-sizing:border-box} body{font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#141210;margin:22px}
     h1{font-size:20px;margin:0} .pk-m{color:#6b6357;font-size:12px;margin:2px 0 14px}
     .pk-sum{background:#f6efdc;border:1px solid #e6d8b4;border-radius:9px;padding:11px 15px;margin-bottom:18px;font-size:14px}
@@ -601,20 +632,78 @@ async function printPackingList(){
     .pk-y{font-size:13px;margin-bottom:9px} .pk-y b{font-variant-numeric:tabular-nums}
     table.pk-tb{width:100%;border-collapse:collapse;font-size:12px} .pk-tb th,.pk-tb td{border:1px solid #e3ddca;padding:4px 9px;text-align:left} .pk-tb th{background:#faf6ea;font-weight:700} .pk-tb .c{text-align:center}
     .pk-k{margin-top:9px;font-size:12px;color:#333}
-    .pk-bar{margin-bottom:14px} .pk-bar button{font:600 13px sans-serif;padding:8px 16px;border-radius:8px;border:1px solid #141210;background:#141210;color:#fff;cursor:pointer}
-    @media print{ body{margin:12mm} .noprint{display:none} }
-  </style></head><body>
-    <div class="pk-bar noprint"><button onclick="window.print()">🖨 Print</button></div>
-    <h1>NMAO Tournament — Medal Packing &amp; Shipping List</h1>
-    <div class="pk-m">Round ${esc(seq)} · ${groups.length} school${groups.length===1?'':'s'} · ${grandTot} medals total · generated ${esc(when)}</div>
-    <div class="pk-sum"><b>Grand total:</b> ${tally(grand)}</div>
-    ${blocks}
+    .pk-bar{margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap} .pk-bar button{font:600 13px sans-serif;padding:8px 14px;border-radius:8px;border:1px solid #141210;background:#141210;color:#fff;cursor:pointer} .pk-bar button.alt{background:#fff;color:#141210}
+    .sec{margin-bottom:22px} .sec + .sec{page-break-before:always}
+    .sec-h{font-size:15px;font-weight:800;margin:0 0 12px;border-bottom:2px solid #141210;padding-bottom:5px}
+    table.mf{width:100%;border-collapse:collapse;font-size:12.5px} .mf th,.mf td{border:1px solid #d9d2bf;padding:6px 9px;text-align:left} .mf th{background:#faf6ea} .mf .c{text-align:center}
+    .ret-note{font-size:12px;color:#6b6357;margin:0 0 6px} .ret-edit{border:1px dashed #999;border-radius:6px;padding:8px 10px;font-size:13px;white-space:pre-line;min-height:3.4em;max-width:340px;margin-bottom:16px}
+    .ship{border:2px solid #141210;border-radius:9px;padding:14px 16px;margin-bottom:14px;page-break-inside:avoid;min-height:3.1in;display:flex;flex-direction:column}
+    .ship-from{font-size:12px;color:#333;white-space:pre-line;border-bottom:1px dashed #bbb;padding-bottom:8px;margin-bottom:12px}
+    .ship-to{flex:1} .ship-lbl{font-size:10px;letter-spacing:.14em;color:#888} .ship-name{font-size:22px;font-weight:800;margin:3px 0} .ship-addr{font-size:16px;white-space:pre-line} .ship-contact{font-size:12px;color:#777;margin-top:4px}
+    .ship-meta{font-size:13px;margin-top:10px} .ship-tally{font-size:12px;color:#555;margin-top:3px} .ship-track{font-size:12px;margin-top:8px;border-top:1px solid #ccc;padding-top:7px}
+    .ml-school-h{font-weight:800;font-size:14px;margin:16px 0 8px} .ml-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .ml{border:1px solid #141210;border-radius:7px;padding:9px 10px;page-break-inside:avoid;min-height:1in} .ml-badge{font-size:14px;font-weight:800} .ml-name{font-size:15px;font-weight:700;margin:3px 0 1px} .ml-cat{font-size:11px;color:#555} .ml-school{font-size:10px;color:#999;margin-top:3px}
+    @media print{ body{margin:12mm} .noprint{display:none}
+      .sec-labels .ml-school-h{page-break-before:always} .sec-labels .ml-school-h.first{page-break-before:avoid}
+      body[data-print="manifest"] .sec:not(.sec-manifest){display:none}
+      body[data-print="packing"] .sec:not(.sec-packing){display:none}
+      body[data-print="ship"] .sec:not(.sec-ship){display:none}
+      body[data-print="labels"] .sec:not(.sec-labels){display:none}
+      body[data-print="manifest"] .sec-manifest,body[data-print="packing"] .sec-packing,body[data-print="ship"] .sec-ship,body[data-print="labels"] .sec-labels{page-break-before:avoid}
+    }
+  </style></head><body data-print="all">
+    <div class="pk-bar noprint">
+      <button onclick="pr('all')">🖨 Print all</button>
+      <button class="alt" onclick="pr('manifest')">Manifest</button>
+      <button class="alt" onclick="pr('packing')">Packing lists</button>
+      <button class="alt" onclick="pr('ship')">Shipping labels</button>
+      <button class="alt" onclick="pr('labels')">Medal labels</button>
+    </div>
+    <h1>NMAO Tournament — Medal Shipping Kit</h1>
+    <div class="pk-m">Round ${esc(seq)} · ${groups.length} school${groups.length===1?'':'s'} · ${boxes} box${boxes===1?'':'es'} · ${grandTot} medals · generated ${esc(when)}</div>
+
+    <section class="sec sec-manifest">
+      <div class="sec-h">① Shipment manifest — check off each box as it's packed &amp; shipped</div>
+      <div class="pk-sum"><b>Grand total:</b> ${tally(grand)}</div>
+      <table class="mf"><thead><tr><th class="c">Box</th><th>School</th><th class="c">Medals</th><th>Address</th><th class="c">Packed</th><th class="c">Shipped</th></tr></thead><tbody>${mfRows}</tbody></table>
+    </section>
+
+    <section class="sec sec-packing">
+      <div class="sec-h">② Packing lists — what goes in each box</div>
+      ${blocks}
+    </section>
+
+    <section class="sec sec-ship">
+      <div class="sec-h">③ Shipping labels — one per box</div>
+      <div class="ret-note noprint">Return address (type it once — saved on this computer and printed on every label):</div>
+      <div class="ret-edit noprint" id="retEdit" contenteditable="true"></div>
+      ${shipCards}
+    </section>
+
+    <section class="sec sec-labels">
+      <div class="sec-h">④ Medal labels — cut out &amp; attach to each medal</div>
+      ${labelBlocks}
+    </section>
+
+    <script>
+      (function(){
+        var KEY='nmao_ship_from';
+        var DEFT=['National Martial Arts Organization','[street address]','[city, ST  ZIP]'].join(String.fromCharCode(10));
+        var val=null; try{ val=localStorage.getItem(KEY); }catch(e){} if(!val) val=DEFT;
+        var edit=document.getElementById('retEdit'), froms=document.querySelectorAll('[data-ret]');
+        function apply(v){ for(var i=0;i<froms.length;i++) froms[i].textContent=v; }
+        if(edit) edit.textContent=val; apply(val);
+        if(edit) edit.addEventListener('input', function(){ var v=edit.innerText; try{localStorage.setItem(KEY,v);}catch(e){} apply(v); });
+      })();
+      function pr(only){ document.body.setAttribute('data-print', only); setTimeout(function(){ window.print(); }, 40); }
+      window.onafterprint=function(){ document.body.setAttribute('data-print','all'); };
+    <\/script>
   </body></html>`;
 
   const w = window.open('', '_blank');
-  if (!w) return toast('Pop-up blocked — allow pop-ups to open the packing list.', 'err');
+  if (!w) return toast('Pop-up blocked — allow pop-ups to open the shipping kit.', 'err');
   w.document.write(html); w.document.close(); w.focus();
-  toast('Packing list opened in a new tab — press Print.', 'ok');
+  toast('Shipping kit opened — manifest, packing lists, shipping labels & medal labels.', 'ok');
 }
 async function autoscoreDemo(){
   toast('Autoscoring judge seats…');
