@@ -12,22 +12,22 @@
 (function () {
   var GROUPS = [
     { label: "Console", items: [
-      { href: "index.html", icon: "🎛", name: "Round Pipeline" },
+      { href: "index.html", icon: "🎛", name: "Round Pipeline", slice: "rounds" },
     ]},
     { label: "Review & Safety", items: [
-      { href: "schools.html",    icon: "🏫", name: "School Review" },
-      { href: "moderation.html", icon: "🛡", name: "Moderation" },
-      { href: "judges.html",     icon: "⚖️", name: "Judges" },
+      { href: "schools.html",    icon: "🏫", name: "School Review", slice: "schools" },
+      { href: "moderation.html", icon: "🛡", name: "Moderation",    slice: "moderation" },
+      { href: "judges.html",     icon: "⚖️", name: "Judges",        slice: "judges" },
     ]},
     { label: "Growth", items: [
-      { href: "sponsors.html",    icon: "◆", name: "Sponsors" },
-      { href: "social.html",      icon: "📣", name: "Social" },
-      { href: "ambassadors.html", icon: "🎟", name: "Ambassadors" },
+      { href: "sponsors.html",    icon: "◆", name: "Sponsors",     slice: "sponsors" },
+      { href: "social.html",      icon: "📣", name: "Social",       slice: "social" },
+      { href: "ambassadors.html", icon: "🎟", name: "Ambassadors",  slice: "ambassadors" },
     ]},
     { label: "Setup", items: [
-      { href: "config.html", icon: "⚙️", name: "Config" },
-      { href: "badges.html", icon: "🏅", name: "Badges" },
-      { href: "test.html",   icon: "🧪", name: "Sandbox" },
+      { href: "config.html", icon: "⚙️", name: "Config",  slice: "config" },
+      { href: "badges.html", icon: "🏅", name: "Badges",  slice: "badges" },
+      { href: "test.html",   icon: "🧪", name: "Sandbox", ownerOnly: true },
     ]},
   ];
 
@@ -48,6 +48,7 @@
   ".mc-link:hover{background:#17171b;color:#F5F0E8}" +
   ".mc-link.on{background:rgba(230,185,63,.14);color:#FFE488;font-weight:600;box-shadow:inset 0 0 0 1px rgba(156,122,34,.5)}" +
   ".mc-ic{width:20px;text-align:center;font-size:14px;flex:none}" +
+  ".mc-off{display:none!important}" +
   ".mc-signout{margin-top:auto;background:none;border:1px solid #26262b;color:#9a938a;border-radius:9px;padding:8px;font-size:12px;cursor:pointer;font-family:inherit}" +
   ".mc-signout:hover{border-color:#3a3a40;color:#F5F0E8}" +
   "#mc-nav-toggle{position:fixed;top:14px;left:14px;z-index:82;background:#141416;border:1px solid #26262b;color:#F5F0E8;width:38px;height:38px;border-radius:10px;font-size:16px;cursor:pointer;display:none;line-height:1}" +
@@ -79,7 +80,8 @@
       h += '<div class="mc-grp"><div class="mc-grp-l">' + g.label + "</div>";
       g.items.forEach(function (it) {
         var on = it.href.toLowerCase() === here ? " on" : "";
-        h += '<a class="mc-link' + on + '" href="' + it.href + '"><span class="mc-ic">' + it.icon + "</span>" + it.name + "</a>";
+        var attr = it.ownerOnly ? ' data-owner="1"' : ' data-slice="' + it.slice + '"';
+        h += '<a class="mc-link' + on + '" href="' + it.href + '"' + attr + '><span class="mc-ic">' + it.icon + "</span>" + it.name + "</a>";
       });
       h += "</div>";
     });
@@ -108,6 +110,54 @@
     };
   }
 
+  // The GROUPS item for the current page (or null if the page isn't in the nav).
+  function curItem() {
+    for (var i = 0; i < GROUPS.length; i++)
+      for (var j = 0; j < GROUPS[i].items.length; j++)
+        if (GROUPS[i].items[j].href.toLowerCase() === here) return GROUPS[i].items[j];
+    return null;
+  }
+  function allowedItem(it, isOwner, caps) {
+    if (isOwner) return true;
+    return it.ownerOnly ? false : !!(it.slice && caps[it.slice]);
+  }
+  function firstAllowed(isOwner, caps) {
+    for (var i = 0; i < GROUPS.length; i++)
+      for (var j = 0; j < GROUPS[i].items.length; j++)
+        if (allowedItem(GROUPS[i].items[j], isOwner, caps)) return GROUPS[i].items[j].href;
+    return null;
+  }
+
+  // Phase 2 — mirror the backend: hide slices the caller can't use, and bounce
+  // them off a page they can't access. Backend already enforces; this is UX.
+  var capsDone = false;
+  function applyCaps() {
+    var mc = window.__mc;
+    if (!mc || !mc.createClient) return false; // page head not ready yet — retry
+    var sb;
+    try { sb = mc.createClient(mc.SUPABASE_URL, mc.ANON, { auth: { persistSession: true, autoRefreshToken: true } }); }
+    catch (e) { return false; }
+    sb.rpc("staff_me").then(function (res) {
+      var me = res && res.data;
+      if (!me) return; // not resolved as staff (e.g. login screen) — leave nav hidden
+      var isOwner = !!me.is_owner, caps = me.caps || {};
+      document.querySelectorAll("#mc-sidebar a.mc-link").forEach(function (a) {
+        var it = { slice: a.getAttribute("data-slice"), ownerOnly: a.getAttribute("data-owner") === "1" };
+        a.classList.toggle("mc-off", !allowedItem(it, isOwner, caps));
+      });
+      document.querySelectorAll("#mc-sidebar .mc-grp").forEach(function (g) {
+        var any = Array.prototype.some.call(g.querySelectorAll("a.mc-link"), function (a) { return !a.classList.contains("mc-off"); });
+        g.classList.toggle("mc-off", !any);
+      });
+      var cur = curItem();
+      if (cur && !allowedItem(cur, isOwner, caps)) {
+        var dest = firstAllowed(isOwner, caps);
+        if (dest && dest.toLowerCase() !== here) location.replace(dest);
+      }
+    }).catch(function () { capsDone = false; }); // let a transient failure retry
+    return true;
+  }
+
   // Reveal the sidebar only when the staff console is visible (post-login).
   // Pages gate differently: a #console shown on login, or a #loginCard/#login
   // hidden on login. Gate-less pages (e.g. the live board) show it immediately.
@@ -119,6 +169,7 @@
     else if (l) authed = l.classList.contains("hide");
     else authed = true;
     document.documentElement.classList.toggle("mc-nav-on", authed);
+    if (authed && !capsDone) capsDone = applyCaps();
   }
 
   function init() {
