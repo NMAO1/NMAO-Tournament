@@ -73,6 +73,18 @@
   .subcard .hd{padding:11px 15px;border-bottom:1px solid var(--line)} .subcard .hd h3{margin:0;font-size:12.5px}
   .thumb{width:52px;height:32px;border-radius:6px;object-fit:cover;background:#000;border:1px solid var(--line);vertical-align:middle}
   .muted{color:var(--muted)} .muted2{color:var(--muted2)}
+
+  /* plain-language help chips — hover or tap the "?" for a manager-friendly explanation */
+  .hint{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+    border:1px solid var(--line,#26262b);background:var(--panel2,#1a1a1e);color:var(--muted,#9a938a);font-size:10px;font-weight:700;
+    cursor:help;position:relative;vertical-align:middle;margin-left:6px;line-height:1;flex:none;user-select:none}
+  .hint:hover,.hint:focus{border-color:var(--gold,#E6B93F);color:var(--gold,#E6B93F);outline:none}
+  .hint::after{content:attr(data-tip);position:absolute;left:0;top:160%;
+    width:max-content;max-width:250px;background:#0e0e12;border:1px solid var(--line,#26262b);border-radius:9px;
+    padding:9px 12px;font-size:12px;font-weight:400;line-height:1.5;color:var(--text,#F5F0E8);text-align:left;white-space:normal;
+    box-shadow:0 8px 28px rgba(0,0,0,.6);opacity:0;visibility:hidden;transition:opacity .12s;z-index:60;pointer-events:none}
+  .hint.r::after{left:auto;right:0}
+  .hint:hover::after,.hint:focus::after{opacity:1;visibility:visible}
 </style>
 </head>
 <body>
@@ -103,7 +115,7 @@
     <!-- ================= LIST VIEW ================= -->
     <div id="listView">
       <div class="card">
-        <div class="hd"><h2><span class="rail"></span>Sponsors</h2>
+        <div class="hd"><h2><span class="rail"></span>Sponsors <span class="hint" tabindex="0" role="note" aria-label="Companies sponsoring the league. Click one to manage what they get, build orders, and review their ads." data-tip="Companies sponsoring the league. Click one to manage what they get, build orders, and review their ads.">?</span></h2>
           <button class="btn gold sm" data-act="addSponsorToggle">+ Add sponsor</button></div>
         <div id="addSponsorForm" class="frm hide"></div>
         <table><thead><tr><th>Company</th><th style="width:104px">Status</th><th style="width:110px">Tier</th>
@@ -112,13 +124,13 @@
       </div>
 
       <div class="card">
-        <div class="hd"><h2><span class="rail"></span>Reveal creative review</h2>
+        <div class="hd"><h2><span class="rail"></span>Reveal creative review <span class="hint" tabindex="0" role="note" aria-label="Sponsor videos and artwork awaiting your approval before they appear in the monthly reveal." data-tip="Sponsor videos and artwork awaiting your approval before they appear in the monthly reveal.">?</span></h2>
           <div class="sub">The monthly-reveal bookends (pre-roll &amp; end-card). Preview exactly what a competitor will see, then approve. Any edit sends it back to pending — and a creative only shows once it's <b>approved</b>, its sponsor is <b>active</b>, and it's enabled.</div></div>
         <div id="reviewBody" style="padding:6px 18px 16px"></div>
       </div>
 
       <div class="card">
-        <div class="hd"><h2><span class="rail"></span>House ads</h2>
+        <div class="hd"><h2><span class="rail"></span>House ads <span class="hint" tabindex="0" role="note" aria-label="Your own promotional spots (not a paid sponsor) that fill ad slots when no sponsor is booked." data-tip="Your own promotional spots (not a paid sponsor) that fill ad slots when no sponsor is booked.">?</span></h2>
           <div class="sub">NMAO's own promos — shown in the Arena when no paid sponsor is live, so the slot is never wasted.</div></div>
         <div id="houseForm" class="frm"></div>
         <table><thead><tr><th>Name</th><th style="width:60px">Clip</th><th style="width:70px">Weight</th><th style="width:70px">Active</th><th style="width:88px">Impr.</th><th style="width:120px"></th></tr></thead>
@@ -126,21 +138,21 @@
       </div>
 
       <div class="card">
-        <div class="hd"><h2><span class="rail"></span>Analytics</h2>
+        <div class="hd"><h2><span class="rail"></span>Analytics <span class="hint" tabindex="0" role="note" aria-label="How sponsor placements are performing — impressions and clicks — so you can show sponsors their value." data-tip="How sponsor placements are performing — impressions and clicks — so you can show sponsors their value.">?</span></h2>
           <div class="sub">Views (times the ad was watched), completion rate, avg watch time, clicks &amp; CTR per sponsor.</div></div>
         <table><thead><tr><th>Company</th><th style="width:88px">Status</th><th style="width:70px">Views</th><th style="width:84px">Completed</th><th style="width:74px">Compl.%</th><th style="width:60px">Avg s</th><th style="width:74px">Ad clicks</th><th style="width:58px">CTR</th><th style="width:92px">Product clicks</th></tr></thead>
           <tbody id="analyticsBody"></tbody></table>
       </div>
 
       <div class="card">
-        <div class="hd"><h2><span class="rail"></span>Tiers &amp; pricing</h2>
+        <div class="hd"><h2><span class="rail"></span>Tiers &amp; pricing <span class="hint" tabindex="0" role="note" aria-label="The sponsorship packages and their prices that you sell to sponsors." data-tip="The sponsorship packages and their prices that you sell to sponsors.">?</span></h2>
           <div class="sub">Just set a monthly price — that's all it takes to make a plan sellable; checkout builds the Stripe price automatically. The Stripe price ID is optional (only if you'd rather point at a fixed price you made in Stripe).</div></div>
         <table><thead><tr><th>Tier</th><th style="width:120px">Monthly $</th><th>Stripe price ID <span class="muted2">(optional)</span></th><th style="width:80px"></th></tr></thead>
           <tbody id="tiersBody"></tbody></table>
       </div>
 
       <div class="card">
-        <div class="hd"><h2><span class="rail"></span>Offerings catalog</h2>
+        <div class="hd"><h2><span class="rail"></span>Offerings catalog <span class="hint" tabindex="0" role="note" aria-label="The full menu a sponsor can buy — frames, ads, prizes, title sponsorship — used to build their order." data-tip="The full menu a sponsor can buy — frames, ads, prizes, title sponsorship — used to build their order.">?</span></h2>
           <button class="btn gold sm" data-act="addOfferingToggle">+ Add offering</button></div>
         <div style="padding:0 18px;color:var(--muted);font-size:12px">Your à-la-carte menu — edit prices &amp; thumbnails here (no code needed). "Live" means the offering's in-app surface is built and it can be sold.</div>
         <div id="addOfferingForm" class="frm hide"></div>

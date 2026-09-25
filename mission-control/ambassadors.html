@@ -76,6 +76,18 @@
   .kit .th{width:100%;aspect-ratio:1;border-radius:8px;background:#0b0c10;display:block}
   .kit .kl{font-size:12px;color:var(--muted);margin:9px 0 8px;font-weight:600}
   .kit .dls{display:flex;gap:6px;justify-content:center}
+
+  /* plain-language help chips — hover or tap the "?" for a manager-friendly explanation */
+  .hint{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+    border:1px solid var(--line,#26262b);background:var(--panel2,#1a1a1e);color:var(--muted,#9a938a);font-size:10px;font-weight:700;
+    cursor:help;position:relative;vertical-align:middle;margin-left:6px;line-height:1;flex:none;user-select:none}
+  .hint:hover,.hint:focus{border-color:var(--gold,#E6B93F);color:var(--gold,#E6B93F);outline:none}
+  .hint::after{content:attr(data-tip);position:absolute;left:0;top:160%;
+    width:max-content;max-width:250px;background:#0e0e12;border:1px solid var(--line,#26262b);border-radius:9px;
+    padding:9px 12px;font-size:12px;font-weight:400;line-height:1.5;color:var(--text,#F5F0E8);text-align:left;white-space:normal;
+    box-shadow:0 8px 28px rgba(0,0,0,.6);opacity:0;visibility:hidden;transition:opacity .12s;z-index:60;pointer-events:none}
+  .hint.r::after{left:auto;right:0}
+  .hint:hover::after,.hint:focus::after{opacity:1;visibility:visible}
 </style>
 </head>
 <body>
@@ -104,7 +116,7 @@
     </header>
 
     <div class="card">
-      <div class="hd"><h2><span class="rail"></span>New ambassador</h2>
+      <div class="hd"><h2><span class="rail"></span>New ambassador <span class="hint" tabindex="0" role="note" aria-label="Add an ambassador — someone who refers schools and earns a share. Creates their referral kit and QR code." data-tip="Add an ambassador — someone who refers schools and earns a share. Creates their referral kit and QR code.">?</span></h2>
         <div class="sub">Creates the ambassador + mints their referral slug and the two signup links (member + tournament).</div></div>
       <div class="form">
         <div class="field"><label>Name</label><input id="cName" placeholder="e.g. Grandmaster Lee" /></div>
@@ -119,7 +131,7 @@
     </div>
 
     <div class="card">
-      <div class="hd"><h2><span class="rail"></span>Attribute a school</h2>
+      <div class="hd"><h2><span class="rail"></span>Attribute a school <span class="hint" tabindex="0" role="note" aria-label="Credit a school signup to an ambassador so they receive their referral payout for it." data-tip="Credit a school signup to an ambassador so they receive their referral payout for it.">?</span></h2>
         <div class="actions"><button class="btn gold sm" data-act="resolveref">Resolve referral links</button></div>
         <div class="sub">Locks a school to an ambassador (first-touch override). <b>Search a school by name or email</b> to auto-fill it (no UUID hunting), or paste a Membership school ID. <b>Resolve referral links</b> auto-attributes any school that signed up under an ambassador's ?p= link.</div></div>
       <div class="form">
@@ -134,7 +146,7 @@
     </div>
 
     <div class="card">
-      <div class="hd"><h2><span class="rail"></span>Ambassadors <span id="count" class="pill tier"></span></h2>
+      <div class="hd"><h2><span class="rail"></span>Ambassadors <span class="hint" tabindex="0" role="note" aria-label="Your active ambassadors, their referral links / QR kits, and payouts." data-tip="Your active ambassadors, their referral links / QR kits, and payouts.">?</span> <span id="count" class="pill tier"></span></h2>
         <div class="actions">
           <button class="btn gold sm" data-act="accrue">Accrue entries</button>
           <button class="btn gold sm" data-act="accrueschool">Accrue 10% (last mo.)</button>

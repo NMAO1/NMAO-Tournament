@@ -28,6 +28,18 @@
   .vids a{font-size:12px;color:#8fc0f2;text-decoration:none;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
   .acts{display:flex;gap:8px} .muted{color:var(--muted)}
   #login{max-width:360px;margin:12vh auto 0}
+
+  /* plain-language help chips — hover or tap the "?" for a manager-friendly explanation */
+  .hint{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+    border:1px solid var(--line,#26262b);background:var(--panel2,#1a1a1e);color:var(--muted,#9a938a);font-size:10px;font-weight:700;
+    cursor:help;position:relative;vertical-align:middle;margin-left:6px;line-height:1;flex:none;user-select:none}
+  .hint:hover,.hint:focus{border-color:var(--gold,#E6B93F);color:var(--gold,#E6B93F);outline:none}
+  .hint::after{content:attr(data-tip);position:absolute;left:0;top:160%;
+    width:max-content;max-width:250px;background:#0e0e12;border:1px solid var(--line,#26262b);border-radius:9px;
+    padding:9px 12px;font-size:12px;font-weight:400;line-height:1.5;color:var(--text,#F5F0E8);text-align:left;white-space:normal;
+    box-shadow:0 8px 28px rgba(0,0,0,.6);opacity:0;visibility:hidden;transition:opacity .12s;z-index:60;pointer-events:none}
+  .hint.r::after{left:auto;right:0}
+  .hint:hover::after,.hint:focus::after{opacity:1;visibility:visible}
 </style></head>
 <body>
 <div id="login" style="display:none">
@@ -40,7 +52,7 @@
 
 <div id="app" class="wrap" style="display:none">
   <div style="display:flex;align-items:center;justify-content:space-between">
-    <div><h1>Duel Moderation</h1><p class="sub">Reported duels awaiting review. Uphold = disqualify (no-contest); Dismiss = back to voting.</p></div>
+    <div><h1>Duel Moderation <span class="hint" tabindex="0" role="note" aria-label="Reported duel videos land here. Uphold removes the video AND suspends the competitor who posted it; Dismiss clears the report and returns the duel to voting." data-tip="Reported duel videos land here. Uphold removes the video AND suspends the competitor who posted it; Dismiss clears the report and returns the duel to voting.">?</span></h1><p class="sub">Reported duels awaiting review. Uphold = disqualify (no-contest); Dismiss = back to voting.</p></div>
     <div class="acts"><button class="btn ghost" id="refreshBtn">Refresh</button><button class="btn ghost" id="signoutBtn">Sign out</button></div>
   </div>
   <div id="list"></div>
