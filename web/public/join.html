@@ -208,16 +208,23 @@
     <h2>Bring your school in.</h2>
     <p>Season I begins January 15, 2027. Text us with any questions and we'll set your school up personally, and walk you through everything.</p>
     <a href="sms:+14304432777" class="btn btn-call">Text us · 1-430-443-2777</a>
-    <p class="or">or sign up now — we'll email your setup link</p>
+    <p class="or">or sign up now — we'll email you to confirm, then set you up</p>
     <form id="leadform" class="form" novalidate>
       <input id="lf-school" name="school_name" type="text" placeholder="Your school's name" autocomplete="organization" required />
+      <input id="lf-contact" name="contact_name" type="text" placeholder="Your name (owner or head instructor)" autocomplete="name" required />
       <input id="lf-email" name="email" type="email" placeholder="Your email" autocomplete="email" required />
-      <input id="lf-phone" name="phone" type="tel" placeholder="Phone (optional)" autocomplete="tel" />
+      <input id="lf-phone" name="phone" type="tel" placeholder="Phone" autocomplete="tel" required />
+      <input id="lf-line1" name="line1" type="text" placeholder="Street address (where medals ship)" autocomplete="address-line1" required />
+      <div style="display:flex;gap:8px;">
+        <input id="lf-city" name="city" type="text" placeholder="City" autocomplete="address-level2" required style="flex:2;min-width:0;" />
+        <input id="lf-state" name="state" type="text" placeholder="ST" maxlength="2" autocomplete="address-level1" required style="flex:0 0 62px;text-transform:uppercase;min-width:0;" />
+        <input id="lf-zip" name="zip" type="text" placeholder="ZIP" inputmode="numeric" autocomplete="postal-code" required style="flex:0 0 86px;min-width:0;" />
+      </div>
       <input id="lf-website" name="website" class="hp" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" />
       <button class="btn" type="submit">Create my school</button>
     </form>
     <div id="thx" class="ok" style="display:none;">
-      <p id="thxmsg" style="margin:0 0 14px;">You're in! Check your email for a link to set your password and finish setup.</p>
+      <p id="thxmsg" style="margin:0 0 14px;">Almost there — check your email to confirm, and we'll send your setup link.</p>
       <div style="text-align:left;background:rgba(232,184,75,0.06);border:1px solid rgba(232,184,75,0.35);border-radius:12px;padding:14px 16px;">
         <div style="font-weight:700;color:#f7e08c;font-size:14px;margin-bottom:5px;">Want to earn even more from entries?</div>
         <p style="margin:0 0 12px;font-size:13.5px;color:#c9cfe0;line-height:1.5;">Every school keeps <b>15%</b> of entry fees. Become <b>NMAO-accredited</b> and run on the <b>NMAO platform</b>, and your school keeps up to <b>35%</b> — every event.</p>
@@ -242,21 +249,24 @@
     var btn = f.querySelector('button[type="submit"]');
     var thx = document.getElementById("thx");
     var err = document.getElementById("err");
+    var val = function (id) { var el = document.getElementById(id); return el ? el.value.trim() : ""; };
+    var fail = function (msg) { err.textContent = msg || "Something went wrong on our end. Please text us at 1-430-443-2777."; err.style.display = "block"; btn.disabled = false; btn.textContent = "Create my school"; };
     f.addEventListener("submit", function (e) {
       e.preventDefault();
-      var school = document.getElementById("lf-school").value.trim();
-      var email = document.getElementById("lf-email").value.trim();
-      var phone = document.getElementById("lf-phone").value.trim();
+      var school = val("lf-school"), contact = val("lf-contact"), email = val("lf-email"), phone = val("lf-phone");
+      var line1 = val("lf-line1"), city = val("lf-city"), state = val("lf-state").toUpperCase(), zip = val("lf-zip");
       var website = document.getElementById("lf-website").value; // honeypot
-      if (!school || !email) return;
       err.style.display = "none";
+      if (!school || !contact || !email || !phone || !line1 || !city || !state || !zip) {
+        return fail("Please fill in every field — including your phone and the address where medals ship.");
+      }
       if (website) return; // honeypot: silently drop bots
       btn.disabled = true;
       btn.textContent = "Creating…";
       fetch(ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ school_name: school, email: email, phone: phone })
+        body: JSON.stringify({ school_name: school, contact_name: contact, email: email, phone: phone, address_line1: line1, city: city, state: state, postal: zip })
       })
         .then(function (r) { return r.json().catch(function () { return { ok: r.ok }; }); })
         .then(function (d) {
@@ -265,7 +275,7 @@
             f.style.display = "none";
             thx.style.display = "block";
           } else {
-            throw new Error((d && d.error) || "failed");
+            fail(d && d.error);
           }
         })
         .catch(function () {
