@@ -106,6 +106,18 @@
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);
          border-radius:10px;padding:11px 16px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:520px}
   .toast.err{border-color:#4a2b2b;color:#E9A0A0} .toast.ok{border-color:#2b4a3a;color:#a9f0c1}
+
+  /* plain-language help chips — hover or tap the "?" for a manager-friendly explanation */
+  .hint{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;
+    border:1px solid var(--line);background:var(--panel2);color:var(--muted);font-size:10px;font-weight:700;
+    cursor:help;position:relative;vertical-align:middle;margin-left:6px;line-height:1;flex:none;user-select:none}
+  .hint:hover,.hint:focus{border-color:var(--gold);color:var(--gold);outline:none}
+  .hint::after{content:attr(data-tip);position:absolute;left:0;top:160%;
+    width:max-content;max-width:250px;background:#0e0e12;border:1px solid var(--line);border-radius:9px;
+    padding:9px 12px;font-size:12px;font-weight:400;line-height:1.5;color:var(--text);text-align:left;white-space:normal;
+    box-shadow:0 8px 28px rgba(0,0,0,.6);opacity:0;visibility:hidden;transition:opacity .12s;z-index:60;pointer-events:none}
+  .hint.r::after{left:auto;right:0}
+  .hint:hover::after,.hint:focus::after{opacity:1;visibility:visible}
 </style>
 </head>
 <body>
@@ -132,6 +144,7 @@
       <div class="selectors">
         <select class="sel" id="roundSel"></select>
         <span class="badge state-badge" id="stateBadge">—</span>
+        <span class="hint" tabindex="0" role="note" aria-label="Pick which monthly round you are managing. The badge shows its state: collecting entries, judging, distributing, or finalized." data-tip="Pick which monthly round you are managing. The badge shows its state: collecting entries, judging, distributing, or finalized.">?</span>
         <button class="btn" id="fillBtn" title="Backfill any pods still short of judges (deadline safety-net)">Fill unclaimed</button>
         <button class="btn" id="seedBtn" title="Create a fresh synthetic demo round to showcase the full pipeline end-to-end">✨ Seed demo</button>
         <button class="btn" id="resetAppBtn" title="Reset the Compete-app dueling demo (competitor showcase): the monthly reveal replays, the bell alerts return, and every vote-queue duel reappears">🔄 Reset app demo</button>
@@ -154,7 +167,7 @@
 
     <div class="grid">
       <div class="card">
-        <div class="hd"><h2 class="serif">Round pipeline</h2><div class="sub" id="pipeSub"></div></div>
+        <div class="hd"><h2 class="serif">Round pipeline <span class="hint" tabindex="0" role="note" aria-label="The step-by-step flow that turns submitted videos into scored results and shipped medals. Run each step in order, top to bottom." data-tip="The step-by-step flow that turns submitted videos into scored results and shipped medals. Run each step in order, top to bottom.">?</span></h2><div class="sub" id="pipeSub"></div></div>
         <div class="pipeline" id="pipeline"></div>
       </div>
       <div class="rail" id="rail"></div>
@@ -168,6 +181,9 @@
 const { createClient, SUPABASE_URL, ANON } = window.__mc;
 const sb = createClient(SUPABASE_URL, ANON, { auth: { persistSession: true, autoRefreshToken: true } });
 const $ = id => document.getElementById(id);
+// Plain-language help chip. H(text) → a "?" that reveals `text` on hover/tap.
+// Pass right=true to right-align the tooltip (for chips near the right edge).
+const H = (t, right) => `<span class="hint${right ? ' r' : ''}" tabindex="0" role="note" aria-label="${t}" data-tip="${t}">?</span>`;
 let ROUND = null;          // current round id
 let STATE = {};            // loaded data for the current round
 let channel = null;
@@ -308,9 +324,14 @@ function render(){
   // KPIs
   const pct = S.jaTotal ? Math.round(S.jaSubmitted / S.jaTotal * 100) : 0;
   $('kpis').innerHTML = [
-    ['Entries', S.validEntries], ['Divisions', S.divisions.length], ['Pods', S.pods.length],
-    ['Judges assigned', S.jaTotal], ['Judged', `${pct}<small>%</small>`], ['Medals', S.medals], ['School boxes', S.boxes],
-  ].map(([l,v]) => `<div class="kpi"><div class="l">${l}</div><div class="v">${v}</div></div>`).join('');
+    ['Entries', S.validEntries, 'Valid competition videos submitted for this round, after removing incomplete or disqualified ones.'],
+    ['Divisions', S.divisions.length, 'Groups competitors are judged within — split by event, age, and rank so people compete against their peers.'],
+    ['Pods', S.pods.length, 'Smaller judging groups inside a division. Each pod is a set of entries a panel of judges scores together.'],
+    ['Judges assigned', S.jaTotal, 'Total judge-to-entry assignments for this round — each entry needs its panel of judges lined up.'],
+    ['Judged', `${pct}<small>%</small>`, 'Share of assigned entries judges have finished scoring. 100% means judging is complete.', true],
+    ['Medals', S.medals, 'Physical awards this round will produce, based on final placements — what gets manufactured and shipped.', true],
+    ['School boxes', S.boxes, 'Number of shipments — one box per school, bundling that school’s medals to mail together.', true],
+  ].map(([l,v,tip,r]) => `<div class="kpi"><div class="l">${l}${tip?H(tip,r):''}</div><div class="v">${v}</div></div>`).join('');
 
   // Pipeline stages — status from round_step_runs; the first not-done step is "next".
   const order = ['closed','divide','assign_judges','judging','resolve','distribute','finalize'];
@@ -336,21 +357,21 @@ function render(){
     else if (opts.action && !done[key] && (opts.force || cls==='next' || cls==='error')) right = `<button class="btn ${opts.gold?'gold':''}" data-run="${opts.runAs||key}">${opts.action}</button>`;
     else if (opts.view && done[key]) right = `<button class="btn" data-view="${key}">${opts.view}</button>`;
     return `<div class="stage"><span class="dot ${cls}"></span>
-      <div><div class="st-title">${title}${opts.muted?` <span class="muted">— ${opts.muted}</span>`:''}</div>
+      <div><div class="st-title">${title}${opts.tip?H(opts.tip):''}${opts.muted?` <span class="muted">— ${opts.muted}</span>`:''}</div>
         <div class="st-sub">${sub}</div></div>
       <div class="st-right">${right}${time?`<span class="time">${time}</span>`:''}</div></div>`;
   };
 
   const collapsed = S.divisions.filter(d => d.is_collapsed).length;
   $('pipeline').innerHTML =
-    stage('closed', 'Entries closed', `<b>${S.validEntries}</b> valid entries`, canClose ? { action:'Close entries', runAs:'close', force:true } : {}) +
-    stage('divide', 'Divide', `<b>${S.divisions.length}</b> divisions · <b>${S.pods.length}</b> pods${collapsed?` · ${collapsed} collapsed`:''}`, { muted:'classify → collapse → form pods', action:'Run divide', view:'View divisions' }) +
-    stage('assign_judges', 'Assign judges', `<b>${S.jaTotal}</b> assignments`, { action:'Run assign', view:'View judges' }) +
+    stage('closed', 'Entries closed', `<b>${S.validEntries}</b> valid entries`, canClose ? { action:'Close entries', runAs:'close', force:true, tip:'Stop accepting new videos for the round so scoring can begin. Do this once the submission window ends.' } : { tip:'Stop accepting new videos for the round so scoring can begin. Do this once the submission window ends.' }) +
+    stage('divide', 'Divide', `<b>${S.divisions.length}</b> divisions · <b>${S.pods.length}</b> pods${collapsed?` · ${collapsed} collapsed`:''}`, { muted:'classify → collapse → form pods', action:'Run divide', view:'View divisions', tip:'Sort every entry into its division (event + age + rank) and form judging pods. Tiny groups may be merged so each is fair.' }) +
+    stage('assign_judges', 'Assign judges', `<b>${S.jaTotal}</b> assignments`, { action:'Run assign', view:'View judges', tip:'Line up the judges who will score each pod, spreading the workload and avoiding conflicts of interest.' }) +
     stage('judging', 'Judging window', `<b>${S.jaSubmitted} / ${S.jaTotal}</b> scored · ${pct}%`,
-      (isDemo && S.jaTotal > 0 && S.jaSubmitted < S.jaTotal) ? { demo:'autoscore', demoLabel:'⚡ Autoscore (demo)' } : {}) +
-    stage('resolve', 'Resolve', `<b>${S.results}</b> results · ratings updated`, { muted:'placements + ratings', action:'Run resolve', view:'View results' }) +
-    stage('distribute', 'Distribute', `<b>${S.medals}</b> medals · <b>${S.boxes}</b> boxes`, { muted:'medals + ship list', action:'Run distribute', view:'View medals' }) +
-    stage('finalize', 'Finalize round', 'Freeze scheme, publish results, archive.', { action:'Finalize ✓', gold:true });
+      (isDemo && S.jaTotal > 0 && S.jaSubmitted < S.jaTotal) ? { demo:'autoscore', demoLabel:'⚡ Autoscore (demo)', tip:'The period while judges watch and score each video on the rubric. Watch the count climb toward 100%.' } : { tip:'The period while judges watch and score each video on the rubric. Watch the count climb toward 100%.' }) +
+    stage('resolve', 'Resolve', `<b>${S.results}</b> results · ratings updated`, { muted:'placements + ratings', action:'Run resolve', view:'View results', tip:'Tally the judges’ scores to set placements and update each competitor’s national rating.' }) +
+    stage('distribute', 'Distribute', `<b>${S.medals}</b> medals · <b>${S.boxes}</b> boxes`, { muted:'medals + ship list', action:'Run distribute', view:'View medals', tip:'Turn placements into the medal list and per-school shipping boxes to be manufactured and mailed.' }) +
+    stage('finalize', 'Finalize round', 'Freeze scheme, publish results, archive.', { action:'Finalize ✓', gold:true, tip:'Lock the results, publish them, and archive the round. Do this last — it freezes everything.' });
 
   // wire run + view + demo buttons
   $('pipeline').querySelectorAll('[data-run]').forEach(b => b.onclick = () => runStep(b.dataset.run));
@@ -371,12 +392,12 @@ function render(){
   ).join('') || '<div class="row muted">No activity yet.</div>';
 
   $('rail').innerHTML = `
-    <div class="card"><div class="hd"><h2>Exceptions &amp; guardrails</h2></div>
+    <div class="card"><div class="hd"><h2>Exceptions &amp; guardrails ${H('Warnings that need your attention, plus the safety rules that stop a step from running too early.', true)}</h2></div>
       ${flagList.length ? flagList.map(f=>`<div class="flag">▲ ${esc(f)}</div>`).join('') : '<div class="allclear">● All clear — no flags.</div>'}
       <ul class="guard"><li>Can't divide with 0 valid entries.</li><li>Can't distribute with a pod unresolved.</li><li>Finalize only from <i>distributed</i>.</li></ul>
     </div>
-    <div class="card"><div class="hd"><h2>Divisions &amp; pods</h2><span class="sub">${S.divisions.length}</span></div><div class="list">${divRows}</div></div>
-    <div class="card"><div class="hd"><h2>Activity log</h2><span class="sub">audit</span></div><div class="list log">${auditRows}</div>
+    <div class="card"><div class="hd"><h2>Divisions &amp; pods ${H('The full list of divisions in this round and how many entries each one holds.', true)}</h2><span class="sub">${S.divisions.length}</span></div><div class="list">${divRows}</div></div>
+    <div class="card"><div class="hd"><h2>Activity log ${H('A timestamped record of every action taken on this round. Use “Roll back to…” below to undo a step if something went wrong.', true)}</h2><span class="sub">audit</span></div><div class="list log">${auditRows}</div>
       <div style="padding:0 14px 14px;display:flex;gap:8px;flex-wrap:wrap">
         <select class="sel" id="rbTo" style="flex:1"${st==='finalized'?' disabled title="Reopen first — a finalized round is locked"':''}><option value="">Roll back to…</option><option value="distribute">distribute</option><option value="resolve">resolve</option><option value="assign_judges">assign judges</option><option value="divide">divide</option></select>
         <button class="btn danger" id="rbBtn"${st==='finalized'?' disabled':''}>Roll back</button>
