@@ -86,3 +86,14 @@ Postiz **v2.12.0+ requires a separate Temporal service** (Java, heavy) that does
 release, which runs comfortably here. To move to `:latest` later, add a Temporal service
 and size up to ≥4 GB RAM. If you ever change the pin, reset the empty DB volume
 (`docker volume rm postiz_postiz-pg`) before first boot so migrations match the version.
+
+## Updated to current Postiz (v2.24) on a 4GB box — Temporal + Elasticsearch
+The v2.11.3 pin could not do Meta's *current* Instagram API (Meta retired the old
+`instagram_basic`/`instagram_content_publish` scopes). Current Postiz (v2.12+) needs
+**Temporal**, and Temporal needs **Elasticsearch** for advanced visibility (Postiz
+registers >3 Text search attributes; Postgres-only visibility caps at 3 and the backend
+crashes with "cannot have more than 3 search attributes of type Text"). So the box was
+rescaled to **CPX22 (4GB)** and the stack is: postiz v2.24.0 + postiz-postgres + redis +
+temporal (auto-setup 1.28.1) + temporal-postgresql + temporal-elasticsearch (256MB heap)
++ caddy. `dynamicconfig/development-sql.yaml` is mounted into Temporal. Verified live:
+backend healthy, memory ~2.7GB used of 4GB.

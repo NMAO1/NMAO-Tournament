@@ -1,48 +1,44 @@
-# Postiz self-host for NMAO social posting.
-# Runs the Postiz app + Postgres + Redis + Caddy (automatic HTTPS) on one small VPS.
-# See README.md in this folder for the full step-by-step.
+# Postiz self-host for NMAO — CURRENT version (v2.12+ requires Temporal).
+# Temporal needs Elasticsearch for advanced visibility (Postiz registers >3 Text
+# search attributes, which Temporal's Postgres-only visibility cannot do). ES is
+# capped at a 256MB heap so the whole stack fits a ~4GB VPS. The optional
+# temporal-ui / admin-tools / spotlight are dropped. Caddy = automatic HTTPS.
 services:
   postiz:
-    # Pinned to the last version BEFORE Temporal (v2.12.0 added a required Temporal
-    # service that is too heavy for a 2GB VPS). v2.11.3 is Redis-queue based and fits.
-    # To move to :latest later, add a Temporal service + a bigger box (see README).
-    image: ghcr.io/gitroomhq/postiz-app:v2.11.3
+    image: ghcr.io/gitroomhq/postiz-app:v2.24.0
     container_name: postiz
     restart: always
     env_file: .env
     environment:
-      # Public URLs (must match your DNS + Caddy host below)
       MAIN_URL: "${POSTIZ_MAIN_URL}"
       FRONTEND_URL: "${POSTIZ_MAIN_URL}"
       NEXT_PUBLIC_BACKEND_URL: "${POSTIZ_MAIN_URL}/api"
       BACKEND_INTERNAL_URL: "http://localhost:3000"
-      # Security
       JWT_SECRET: "${POSTIZ_JWT_SECRET}"
-      # Data stores (internal to this compose network)
       DATABASE_URL: "postgresql://postiz:${POSTIZ_DB_PASSWORD}@postiz-postgres:5432/postiz"
       REDIS_URL: "redis://postiz-redis:6379"
-      # Local file storage for uploaded media
+      TEMPORAL_ADDRESS: "temporal:7233"
+      IS_GENERAL: "true"
+      RUN_CRON: "true"
+      DISABLE_REGISTRATION: "${POSTIZ_DISABLE_REGISTRATION:-false}"
       STORAGE_PROVIDER: "local"
       UPLOAD_DIRECTORY: "/uploads"
       NEXT_PUBLIC_UPLOAD_DIRECTORY: "/uploads"
-      IS_GENERAL: "true"
-      # After you create your first (owner) login, set this to "true" and re-up
-      # so no one else can self-register:
-      DISABLE_REGISTRATION: "${POSTIZ_DISABLE_REGISTRATION:-false}"
-      # --- Social provider keys (add as you create each developer app) ---
-      # FACEBOOK_ID / FACEBOOK_SECRET  (also used for Instagram)
-      # X_API_KEY / X_API_SECRET
-      # LINKEDIN_CLIENT_ID / LINKEDIN_CLIENT_SECRET
-      # YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET
-      # TIKTOK_CLIENT_ID / TIKTOK_CLIENT_SECRET
+      # Meta (Facebook + Instagram) creds come from .env: FACEBOOK_APP_ID / FACEBOOK_APP_SECRET
     volumes:
       - postiz-config:/config/
       - postiz-uploads:/uploads/
+    networks: [postiz-network, temporal-network]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
     depends_on:
-      postiz-postgres:
-        condition: service_healthy
-      postiz-redis:
-        condition: service_healthy
+      postiz-postgres: {condition: service_healthy}
+      postiz-redis: {condition: service_healthy}
+      temporal: {condition: service_healthy}
 
   postiz-postgres:
     image: postgres:17-alpine
@@ -54,6 +50,7 @@ services:
       POSTGRES_DB: postiz
     volumes:
       - postiz-pg:/var/lib/postgresql/data
+    networks: [postiz-network]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postiz -d postiz"]
       interval: 10s
@@ -66,11 +63,81 @@ services:
     restart: always
     volumes:
       - postiz-redis:/data
+    networks: [postiz-network]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # --- Temporal stack (required by Postiz v2.12+) ---
+  temporal-elasticsearch:
+    image: elasticsearch:7.17.27
+    container_name: temporal-elasticsearch
+    restart: always
+    environment:
+      - cluster.routing.allocation.disk.threshold_enabled=true
+      - cluster.routing.allocation.disk.watermark.low=512mb
+      - cluster.routing.allocation.disk.watermark.high=256mb
+      - cluster.routing.allocation.disk.watermark.flood_stage=128mb
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m
+      - xpack.security.enabled=false
+    networks: [temporal-network]
+    expose:
+      - 9200
+    volumes:
+      - temporal-es:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
+
+  temporal-postgresql:
+    image: postgres:16-alpine
+    container_name: temporal-postgresql
+    restart: always
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    volumes:
+      - temporal-pg:/var/lib/postgresql/data
+    networks: [temporal-network]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    container_name: temporal
+    restart: always
+    depends_on:
+      temporal-postgresql: {condition: service_healthy}
+      temporal-elasticsearch: {condition: service_healthy}
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+      - ENABLE_ES=true
+      - ES_SEEDS=temporal-elasticsearch
+      - ES_VERSION=v7
+      - TEMPORAL_NAMESPACE=default
+    networks: [temporal-network]
+    volumes:
+      - ./dynamicconfig:/etc/temporal/config/dynamicconfig
+    healthcheck:
+      test: ["CMD", "temporal", "operator", "cluster", "health", "--address", "temporal:7233"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
 
   caddy:
     image: caddy:2-alpine
@@ -85,6 +152,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+    networks: [postiz-network]
     depends_on:
       - postiz
 
@@ -93,5 +161,11 @@ volumes:
   postiz-uploads:
   postiz-pg:
   postiz-redis:
+  temporal-pg:
+  temporal-es:
   caddy-data:
   caddy-config:
+
+networks:
+  postiz-network:
+  temporal-network:
