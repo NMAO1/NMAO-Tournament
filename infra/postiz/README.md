@@ -79,3 +79,10 @@ function is written to be easy to tweak; see its header comment).
 (media) → `POST {POSTIZ_URL}/public/v1/posts` (per mapped integration) → Postiz posts to
 Instagram/TikTok/YouTube. Until `POSTIZ_URL` + `POSTIZ_API_KEY` are set, `social-publish`
 returns `not_configured` and changes nothing.
+
+## Version note — pinned to v2.11.3 (pre-Temporal)
+Postiz **v2.12.0+ requires a separate Temporal service** (Java, heavy) that does not fit a
+2 GB VPS. The compose is therefore pinned to **`v2.11.3`** — the last Redis-queue-based
+release, which runs comfortably here. To move to `:latest` later, add a Temporal service
+and size up to ≥4 GB RAM. If you ever change the pin, reset the empty DB volume
+(`docker volume rm postiz_postiz-pg`) before first boot so migrations match the version.

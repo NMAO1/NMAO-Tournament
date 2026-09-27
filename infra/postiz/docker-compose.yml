@@ -3,7 +3,10 @@
 # See README.md in this folder for the full step-by-step.
 services:
   postiz:
-    image: ghcr.io/gitroomhq/postiz-app:latest
+    # Pinned to the last version BEFORE Temporal (v2.12.0 added a required Temporal
+    # service that is too heavy for a 2GB VPS). v2.11.3 is Redis-queue based and fits.
+    # To move to :latest later, add a Temporal service + a bigger box (see README).
+    image: ghcr.io/gitroomhq/postiz-app:v2.11.3
     container_name: postiz
     restart: always
     env_file: .env
