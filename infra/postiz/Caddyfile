@@ -1,0 +1,4 @@
+# Automatic HTTPS for Postiz. {$POSTIZ_HOST} comes from .env (e.g. postiz.nmao.us).
+{$POSTIZ_HOST} {
+	reverse_proxy postiz:5000
+}
