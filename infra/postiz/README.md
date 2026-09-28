@@ -75,8 +75,8 @@ function is written to be easy to tweak; see its header comment).
 ---
 
 ### How publishing flows
-`mc.nmao.us/social.html` (approve) → `social-publish` EF → `POST {POSTIZ_URL}/public/v1/upload`
-(media) → `POST {POSTIZ_URL}/public/v1/posts` (per mapped integration) → Postiz posts to
+`mc.nmao.us/social.html` (approve) → `social-publish` EF → `POST {POSTIZ_URL}/api/public/v1/upload`
+(media) → `POST {POSTIZ_URL}/api/public/v1/posts` (per mapped integration) → Postiz posts to
 Instagram/TikTok/YouTube. Until `POSTIZ_URL` + `POSTIZ_API_KEY` are set, `social-publish`
 returns `not_configured` and changes nothing.
 
@@ -97,3 +97,12 @@ rescaled to **CPX22 (4GB)** and the stack is: postiz v2.24.0 + postiz-postgres +
 temporal (auto-setup 1.28.1) + temporal-postgresql + temporal-elasticsearch (256MB heap)
 + caddy. `dynamicconfig/development-sql.yaml` is mounted into Temporal. Verified live:
 backend healthy, memory ~2.7GB used of 4GB.
+
+## VERIFIED LIVE 2026-09-28 — Bluesky end-to-end
+Pipeline proven: `social-publish` payload → Postiz → a real post on @nationalmartialart.
+Key facts learned (self-hosted differs from the cloud docs):
+- Public API base is **`/api/public/v1/...`** (NOT `/public/v1/...` — that hits the frontend and 307s to /auth).
+- Auth = **raw** API key in `Authorization` (Bearer returns "Invalid API key"). Key lives in `Organization.apiKey` in the DB.
+- `POST /api/public/v1/posts` **requires a `date`** (ISO 8601) even for `type:"now"`.
+- Secrets set on Tournament project: `POSTIZ_URL=https://postiz.nmao.us`, `POSTIZ_API_KEY`, `POSTIZ_INTEGRATIONS={"bluesky":"<id>"}`.
+- social-publish updated: correct path, always-send date, and text platforms (bluesky/mastodon/etc.) no longer require a video.

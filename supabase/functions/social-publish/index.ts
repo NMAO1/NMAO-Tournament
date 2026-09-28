@@ -10,13 +10,13 @@
 //
 // Optional POSTIZ_INTEGRATIONS secret: a JSON map of our platform labels to the
 // Postiz integration ids, e.g. {"instagram":"<id>","youtube":"<id>","tiktok":"<id>"}.
-// If a platform isn't in the map we fall back to GET /public/v1/integrations and
+// If a platform isn't in the map we fall back to GET /api/public/v1/integrations and
 // match by provider name. Get ids via:
-//   curl -s $POSTIZ_URL/public/v1/integrations -H "Authorization: $POSTIZ_API_KEY"
+//   curl -s $POSTIZ_URL/api/public/v1/integrations -H "Authorization: $POSTIZ_API_KEY"
 //
 // Postiz public API (docs.postiz.com/public-api): auth = raw key in Authorization
-// (no "Bearer"); POST /public/v1/upload (multipart file) -> {id,path};
-// POST /public/v1/posts { type, date?, shortLink, tags, posts:[{integration:{id},
+// (no "Bearer"); POST /api/public/v1/upload (multipart file) -> {id,path};
+// POST /api/public/v1/posts { type, date?, shortLink, tags, posts:[{integration:{id},
 // value:[{content,image:[...]}], settings:{__type} }] }.
 // ⚠ Exact media/settings shape can vary by Postiz version — do ONE live test post
 // and tweak buildPosts()/uploadMedia() if needed (see infra/postiz/README.md).
@@ -47,7 +47,12 @@ const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: 
 const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
 
 // our platform labels -> Postiz provider identifiers (used for settings.__type + matching)
-const NET: Record<string, string> = { instagram: "instagram", tiktok: "tiktok", youtube: "youtube" };
+const NET: Record<string, string> = {
+  instagram: "instagram", tiktok: "tiktok", youtube: "youtube",
+  bluesky: "bluesky", mastodon: "mastodon", threads: "threads",
+  facebook: "facebook", linkedin: "linkedin", telegram: "telegram",
+  x: "x", pinterest: "pinterest",
+};
 const pfetch = (path: string, init: RequestInit = {}) =>
   fetch(POSTIZ_URL + path, { ...init, headers: { "Authorization": POSTIZ_KEY, ...(init.headers || {}) } });
 
@@ -60,7 +65,7 @@ async function resolveIntegrations(platforms: string[]): Promise<{ platform: str
   for (const pf of platforms) { if (map[pf]) pairs.push({ platform: pf, id: map[pf] }); else missing.push(pf); }
   if (missing.length) {
     try {
-      const r = await pfetch("/public/v1/integrations");
+      const r = await pfetch("/api/public/v1/integrations");
       const listRaw = await r.json().catch(() => []);
       const arr: any[] = Array.isArray(listRaw) ? listRaw : (listRaw?.integrations || listRaw?.data || []);
       for (const pf of missing) {
@@ -81,7 +86,7 @@ async function uploadMedia(mediaUrl: string): Promise<any | null> {
     const name = (mediaUrl.split("?")[0].split("/").pop()) || "media.mp4";
     const fd = new FormData();
     fd.append("file", blob, name);
-    const up = await pfetch("/public/v1/upload", { method: "POST", body: fd });
+    const up = await pfetch("/api/public/v1/upload", { method: "POST", body: fd });
     if (!up.ok) return null;
     const j = await up.json().catch(() => ({}));
     return (j && (j.id || j.path)) ? j : null;
@@ -121,9 +126,6 @@ Deno.serve(async (req) => {
     if (!["approved", "scheduled"].includes((p as any).status)) {
       return json({ ok: false, error: "Approve the post before sending it to the platforms." }, 409);
     }
-    if (!(p as any).media_url) {
-      return json({ ok: false, error: "Add a video (upload media) before publishing — Reels/TikTok/Shorts need a video file." }, 409);
-    }
     if ((p as any).needs_consent && !(p as any).consent_confirmed) {
       return json({ ok: false, code: "consent_required", error: "This post shows a real student — confirm the signed media release is on file before publishing." }, 409);
     }
@@ -131,6 +133,12 @@ Deno.serve(async (req) => {
     const platforms = ((p as any).platforms || [])
       .map((x: string) => NET[String(x).toLowerCase()]).filter(Boolean);
     if (platforms.length === 0) return json({ ok: false, error: "No supported platforms on this post." }, 409);
+
+    // Video platforms need a video file; text platforms (Bluesky, Mastodon, etc.) can post without one.
+    const VIDEO = new Set(["instagram", "tiktok", "youtube"]);
+    if (platforms.some((x) => VIDEO.has(x)) && !(p as any).media_url) {
+      return json({ ok: false, error: "Add a video (upload media) before publishing — Reels/TikTok/Shorts need a video file." }, 409);
+    }
 
     const pairs = await resolveIntegrations(platforms);
     if (!pairs.length) {
@@ -141,18 +149,22 @@ Deno.serve(async (req) => {
     const when = (p as any).scheduled_at ? new Date((p as any).scheduled_at) : null;
     const future = !!(when && when.getTime() > Date.now() + 60000);
 
-    const media = await uploadMedia((p as any).media_url);
-    const imageArr = media ? [media] : [{ path: (p as any).media_url }];
+    let imageArr: any[] = [];
+    if ((p as any).media_url) {
+      const media = await uploadMedia((p as any).media_url);
+      imageArr = media ? [media] : [{ path: (p as any).media_url }];
+    }
 
     const posts = pairs.map(({ platform, id }) => {
       const settings: any = { __type: platform };
       if (platform === "youtube") { settings.title = String((p as any).title || "NMAO").slice(0, 95); }
       return { integration: { id }, value: [{ content: text, image: imageArr }], settings };
     });
+    // Postiz requires a date even for immediate posts.
     const payload: any = { type: future ? "schedule" : "now", shortLink: false, tags: [], posts };
-    if (future) payload.date = when!.toISOString();
+    payload.date = future ? when!.toISOString() : new Date(Date.now() + 60000).toISOString();
 
-    const res = await pfetch("/public/v1/posts", {
+    const res = await pfetch("/api/public/v1/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
