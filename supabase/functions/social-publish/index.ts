@@ -168,6 +168,8 @@ Deno.serve(async (req) => {
     const posts = pairs.map(({ platform, id, type }) => {
       const settings: any = { __type: type || NET[platform] || platform };
       if (platform === "youtube") { settings.title = String((p as any).title || "NMAO").slice(0, 95); }
+      // Instagram (standalone) requires post_type: "post" (feed/Reel) or "story".
+      if (platform === "instagram") { settings.post_type = "post"; }
       return { integration: { id }, value: [{ content: text, image: imageArr }], settings };
     });
     // Postiz requires a date even for immediate posts.
