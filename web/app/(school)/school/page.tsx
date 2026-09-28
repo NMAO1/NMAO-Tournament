@@ -29,10 +29,12 @@ const NAV = [
   { key: "controls", label: "Tournament Controls", icon: "🎛️" },
   { key: "entries", label: "Entries & Payments", icon: "🧾" },
   { key: "inhouse", label: "In-house Tournaments", icon: "🏆" },
+  { key: "promotion", label: "Promotion", icon: "📣" },
   { key: "payouts", label: "Payouts", icon: "💰" },
   { key: "settings", label: "Settings", icon: "⚙️" },
 ] as const;
 type SectionKey = (typeof NAV)[number]["key"];
+type PromoConsent = { accepted: boolean; allow_paid: boolean; accepted_at: string | null; accepted_by_name: string | null; agreement_version: string | null };
 const cap = (r: string) => r.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const ageOf = (dob: string) => { const d = new Date(dob + "T00:00:00Z"); const n = new Date(); let a = n.getUTCFullYear() - d.getUTCFullYear(); const m = n.getUTCMonth() - d.getUTCMonth(); if (m < 0 || (m === 0 && n.getUTCDate() < d.getUTCDate())) a--; return a; };
 const DEADLINE_KEYS = ["submission_deadline", "closes_at", "close_at", "collect_ends_at", "collect_until", "ends_at", "deadline"];
@@ -80,6 +82,12 @@ export default function SchoolPortal() {
   const [importText, setImportText] = useState("");
   const [hintsOn, setHintsOn] = useState(true);
   const [drill, setDrill] = useState<null | "roster" | "entered" | "videos" | "income">(null);
+  const [promo, setPromo] = useState<PromoConsent | null>(null);
+  const [promoTags, setPromoTags] = useState<{ tag: string; kind: string }[]>([]);
+  const [promoName, setPromoName] = useState("");
+  const [promoAllowPaid, setPromoAllowPaid] = useState(false);
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoMsg, setPromoMsg] = useState("");
   // First-run guided tour (see Walkthrough.tsx). Completion is remembered
   // per-owner in localStorage, keyed by school id, and re-triggerable below.
   const [tourStep, setTourStep] = useState(0);
@@ -90,6 +98,34 @@ export default function SchoolPortal() {
   useEffect(() => { setNowTs(Date.now()); const t = setInterval(() => setNowTs(Date.now()), 30000); return () => clearInterval(t); }, []);
   function toggleHints(v: boolean) { setHintsOn(v); localStorage.setItem("nmao_hints", v ? "on" : "off"); }
   async function toggleAutoApprove(v: boolean) { if (!profile) return; setProfile({ ...profile, auto_approve_join: v }); await supabase.from("schools").update({ auto_approve_join: v }).eq("id", profile.id); }
+
+  useEffect(() => {
+    if (section !== "promotion" || !school) return;
+    let cancelled = false;
+    (async () => {
+      const [{ data: tags }, { data: pc }] = await Promise.all([
+        supabase.from("approved_promo_tags").select("tag, kind").eq("active", true).order("kind"),
+        supabase.from("social_promotion_consent").select("accepted, allow_paid, accepted_at, accepted_by_name, agreement_version").eq("school_id", school.id).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      setPromoTags((tags as { tag: string; kind: string }[]) ?? []);
+      const c = pc as PromoConsent | null;
+      setPromo(c);
+      setPromoAllowPaid(!!c?.allow_paid);
+      setPromoName(c?.accepted_by_name ?? profile?.contact_name ?? school.contact_name ?? "");
+    })();
+    return () => { cancelled = true; };
+  }, [section, school, supabase, profile]);
+
+  async function acceptPromo() {
+    if (!school || !promoName.trim()) { setPromoMsg("Enter your name to accept."); return; }
+    setPromoBusy(true); setPromoMsg("");
+    const { data, error } = await supabase.rpc("social_promotion_accept", { p_school_id: school.id, p_accept: true, p_allow_paid: promoAllowPaid, p_name: promoName.trim() });
+    setPromoBusy(false);
+    if (error) { setPromoMsg(error.message); return; }
+    setPromo(data as PromoConsent);
+    setPromoMsg("Saved — thank you.");
+  }
 
   // --- First-run guided tour -------------------------------------------------
   // Walks a new owner through the money-path and the operator steps that are
@@ -744,6 +780,53 @@ export default function SchoolPortal() {
 
             {section === "inhouse" && school && (
               <InHouse schoolId={school.id} roster={roster.map((a) => ({ id: a.id, first_name: a.first_name, last_name: a.last_name }))} />
+            )}
+
+            {section === "promotion" && school && (
+              <div style={{ ...card, padding: 18, maxWidth: 640 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 99, padding: "3px 10px", color: "#141210", background: promo?.accepted ? status.success : hues.gold.hi }}>
+                    {promo?.accepted ? "Active ✓" : "Action needed"}
+                  </span>
+                  {promo?.accepted && promo.accepted_at && (
+                    <span style={{ color: neutrals.muted2, fontSize: 12 }}>Accepted {new Date(promo.accepted_at).toLocaleDateString()}{promo.accepted_by_name ? ` by ${promo.accepted_by_name}` : ""}</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>NMAO Promotion — you stay in control</div>
+                <p style={{ color: neutrals.muted2, fontSize: 13.5, lineHeight: 1.6, marginTop: 6 }}>
+                  NMAO can feature your school on our channels to drive new students to you — but only content <b style={{ color: neutrals.text }}>you choose to tag</b>. Tag one of your own posts with an Approved Tag and you&apos;re telling us &ldquo;you may feature this one.&rdquo; Don&apos;t tag it, and it&apos;s off-limits. We add NMAO branding and a caption that points people to your school.
+                </p>
+
+                <div style={{ fontSize: 12, color: neutrals.muted2, letterSpacing: 1.2, textTransform: "uppercase", margin: "14px 0 8px" }}>Approved Tags</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {promoTags.length === 0 ? <span style={{ color: neutrals.muted2, fontSize: 13 }}>Loading…</span> :
+                    promoTags.map((t) => (
+                      <span key={t.tag} style={{ fontSize: 13, fontWeight: 600, borderRadius: 99, padding: "5px 12px", border: `1px solid ${hues.gold.shadow}`, color: hues.gold.hi, background: "rgba(201,168,76,0.10)" }}>{t.tag}</span>
+                    ))}
+                </div>
+
+                <ul style={{ color: neutrals.muted2, fontSize: 13, lineHeight: 1.7, marginTop: 14, paddingLeft: 18 }}>
+                  <li>We only repost content you tag with an Approved Tag.</li>
+                  <li>You confirm you hold the rights and consents — including a parent/guardian media release for any minor shown.</li>
+                  <li>You can pull permission anytime by removing the tag or asking us to take it down.</li>
+                </ul>
+
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${neutrals.border}` }}>
+                  <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                    <input type="checkbox" checked={promoAllowPaid} onChange={(e) => setPromoAllowPaid(e.target.checked)} style={{ marginTop: 3 }} />
+                    <span style={{ fontSize: 13.5 }}><b>Boost Opt-In (optional).</b> <span style={{ color: neutrals.muted2 }}>NMAO may also use my tagged content in <b>paid</b> promotions for my school. Can be changed anytime.</span></span>
+                  </label>
+                  <div style={{ marginTop: 14, maxWidth: 320 }}>
+                    <Field label="Your name (for the record)"><input style={inpF} value={promoName} onChange={(e) => setPromoName(e.target.value)} placeholder="Full name" /></Field>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+                    <button onClick={acceptPromo} disabled={promoBusy || !promoName.trim()} style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 20px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: promoBusy || !promoName.trim() ? 0.6 : 1 }}>
+                      {promoBusy ? "Saving…" : promo?.accepted ? "Update" : "I agree — enable promotion"}
+                    </button>
+                    {promoMsg && <span style={{ color: promoMsg.startsWith("Saved") ? status.success : status.danger, fontSize: 13 }}>{promoMsg}</span>}
+                  </div>
+                </div>
+              </div>
             )}
           </>
         )}
