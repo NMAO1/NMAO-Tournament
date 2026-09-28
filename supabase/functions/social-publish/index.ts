@@ -56,23 +56,33 @@ const NET: Record<string, string> = {
 const pfetch = (path: string, init: RequestInit = {}) =>
   fetch(POSTIZ_URL + path, { ...init, headers: { "Authorization": POSTIZ_KEY, ...(init.headers || {}) } });
 
-// Resolve [{platform,id}] pairs for the given platform labels.
-async function resolveIntegrations(platforms: string[]): Promise<{ platform: string; id: string }[]> {
+// Resolve [{platform,id,type}] triples for the given platform labels.
+// `type` is Postiz's real providerIdentifier for that connected channel (e.g.
+// "instagram-standalone", "bluesky", "youtube") — used as settings.__type, which
+// Postiz validates against the integration. We always pull the live integrations
+// list so map-configured ids still carry the correct provider type.
+async function resolveIntegrations(platforms: string[]): Promise<{ platform: string; id: string; type: string }[]> {
   let map: Record<string, string> = {};
   try { map = JSON.parse(POSTIZ_INTEGRATIONS || "{}"); } catch { /* ignore */ }
-  const pairs: { platform: string; id: string }[] = [];
-  const missing: string[] = [];
-  for (const pf of platforms) { if (map[pf]) pairs.push({ platform: pf, id: map[pf] }); else missing.push(pf); }
-  if (missing.length) {
-    try {
-      const r = await pfetch("/api/public/v1/integrations");
-      const listRaw = await r.json().catch(() => []);
-      const arr: any[] = Array.isArray(listRaw) ? listRaw : (listRaw?.integrations || listRaw?.data || []);
-      for (const pf of missing) {
-        const hit = arr.find((x) => String(x.providerIdentifier || x.identifier || x.provider || x.platform || x.name || "").toLowerCase().includes(pf));
-        if (hit?.id) pairs.push({ platform: pf, id: String(hit.id) });
-      }
-    } catch { /* best-effort */ }
+  let arr: any[] = [];
+  try {
+    const r = await pfetch("/api/public/v1/integrations");
+    const listRaw = await r.json().catch(() => []);
+    arr = Array.isArray(listRaw) ? listRaw : (listRaw?.integrations || listRaw?.data || []);
+  } catch { /* best-effort */ }
+  const idType = new Map<string, string>();
+  for (const x of arr) {
+    if (x?.id) idType.set(String(x.id), String(x.providerIdentifier || x.identifier || x.provider || ""));
+  }
+  const pairs: { platform: string; id: string; type: string }[] = [];
+  for (const pf of platforms) {
+    if (map[pf]) {
+      const id = String(map[pf]);
+      pairs.push({ platform: pf, id, type: idType.get(id) || NET[pf] || pf });
+    } else {
+      const hit = arr.find((x) => String(x.providerIdentifier || x.identifier || x.provider || x.platform || x.name || "").toLowerCase().includes(pf));
+      if (hit?.id) pairs.push({ platform: pf, id: String(hit.id), type: String(hit.providerIdentifier || hit.identifier || hit.provider || NET[pf] || pf) });
+    }
   }
   return pairs;
 }
@@ -155,8 +165,8 @@ Deno.serve(async (req) => {
       imageArr = media ? [media] : [{ path: (p as any).media_url }];
     }
 
-    const posts = pairs.map(({ platform, id }) => {
-      const settings: any = { __type: platform };
+    const posts = pairs.map(({ platform, id, type }) => {
+      const settings: any = { __type: type || NET[platform] || platform };
       if (platform === "youtube") { settings.title = String((p as any).title || "NMAO").slice(0, 95); }
       return { integration: { id }, value: [{ content: text, image: imageArr }], settings };
     });
