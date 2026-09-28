@@ -73,6 +73,9 @@
   .title{font-size:16px;margin:0 0 4px}
   .hook{font-weight:600;color:var(--gold-soft);margin:0 0 10px;font-size:13.5px}
   .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted2);margin:12px 0 4px}
+  .platpick{display:flex;flex-wrap:wrap;gap:6px}
+  .platchip{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer}
+  .platchip.on{border-color:var(--gold,#C9A84C);color:var(--gold,#C9A84C);background:rgba(201,168,76,.12);font-weight:600}
   textarea,.body input[type=text]{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font-size:13.5px;line-height:1.55;resize:vertical}
   textarea.cap{min-height:74px}
   .charc{font-size:11px;color:var(--muted2);text-align:right;margin-top:3px}
@@ -271,6 +274,8 @@ function card(p){
       <input type="text" data-f="hashtags" value="${esc(p.hashtags||'')}" />
       <div class="lbl">Link (CTA, with UTM)</div>
       <input type="text" data-f="cta_url" value="${esc(p.cta_url||'')}" placeholder="https://... with utm_source=social" />
+      <div class="lbl">Post to</div>
+      <div class="platpick">${['Bluesky','Instagram','TikTok','YouTube'].map(pl=>{const on=(p.platforms||[]).some(x=>String(x).toLowerCase()===pl.toLowerCase());return `<button type="button" class="platchip${on?' on':''}" data-plat="${pl}">${pl}</button>`;}).join('')}</div>
       ${shot ? `<details><summary>Shot list &amp; on-screen text</summary><pre>${esc(shot)}</pre></details>`:''}
       ${p.media_note ? `<div class="media"><b>Media idea:</b> ${esc(p.media_note)}</div>`:''}
       <div class="lbl">Video file</div>
@@ -315,6 +320,13 @@ function wire(p){
   if (consent) consent.onchange = async () => { if (await save(p.id, { consent_confirmed: consent.checked })){ toast(consent.checked?'Consent confirmed.':'Consent cleared.','ok'); render(); } };
   const lib = root.querySelector('select[data-lib]');
   if (lib) lib.onchange = async () => { if (lib.value && await save(p.id, { media_url: lib.value })){ toast('Attached from library.','ok'); render(); } };
+  root.querySelectorAll('.platchip').forEach(ch => ch.onclick = async () => {
+    const pl = ch.dataset.plat;
+    let cur = (p.platforms||[]).slice();
+    const has = cur.some(x => String(x).toLowerCase()===pl.toLowerCase());
+    cur = has ? cur.filter(x => String(x).toLowerCase()!==pl.toLowerCase()) : cur.concat(pl);
+    if (await save(p.id, { platforms: cur })){ toast('Platforms updated.','ok'); render(); }
+  });
   root.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(p.id, b.dataset.act, root, fld, b));
 }
 
