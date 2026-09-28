@@ -76,6 +76,7 @@
   .platpick{display:flex;flex-wrap:wrap;gap:6px}
   .platchip{font-size:12px;padding:4px 11px;border-radius:99px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer}
   .platchip.on{border-color:var(--gold,#C9A84C);color:var(--gold,#C9A84C);background:rgba(201,168,76,.12);font-weight:600}
+  .mprev{margin:8px 0 2px} .mprev video,.mprev img{max-width:240px;max-height:340px;border-radius:8px;border:1px solid var(--line);display:block;background:#000}
   textarea,.body input[type=text]{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 11px;font-size:13.5px;line-height:1.55;resize:vertical}
   textarea.cap{min-height:74px}
   .charc{font-size:11px;color:var(--muted2);text-align:right;margin-top:3px}
@@ -287,6 +288,7 @@ function card(p){
         <select data-lib class="libsel" style="display:none"></select>
         <span class="uprog" data-uprog></span>
       </div>
+      ${p.media_url ? `<div class="mprev">${/\.(png|jpe?g|gif|webp)(\?|$)/i.test(p.media_url) ? `<img src="${esc(p.media_url)}" alt="preview" />` : `<video src="${esc(p.media_url)}" controls preload="metadata" playsinline></video>`}</div>` : ''}
       <div class="lbl">Schedule</div>
       <div class="sched">
         <input type="datetime-local" data-f="scheduled_at" value="${schedVal}" />
