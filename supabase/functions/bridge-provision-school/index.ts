@@ -102,16 +102,20 @@ Deno.serve(async (req) => {
   }
 
   // ---- create/link school ----
+  // Public trial URL (for social CTAs / closed-loop attribution) derived from the member slug.
+  const trialUrl = school.slug ? ("https://app.nmao.us/book.html?slug=" + String(school.slug)) : null;
   let tournamentSchoolId: string, created = false, ownerLinked = false;
   const { data: existSchool } = await svc.from("schools").select("id, auth_user_id").eq("external_member_school_id", extSchool).maybeSingle();
   if (existSchool) {
     tournamentSchoolId = (existSchool as any).id;
     const upd: any = { name: school.name };
+    if (trialUrl) upd.trial_url = trialUrl;
     if (ownerAuthId && !(existSchool as any).auth_user_id) { upd.auth_user_id = ownerAuthId; ownerLinked = true; }
     else if ((existSchool as any).auth_user_id) ownerLinked = true;
     await svc.from("schools").update(upd).eq("id", tournamentSchoolId);
   } else {
     const ins: any = { name: school.name, external_member_school_id: extSchool };
+    if (trialUrl) ins.trial_url = trialUrl;
     if (ownerAuthId) { ins.auth_user_id = ownerAuthId; ownerLinked = true; }
     const { data: newSchool, error: sErr } = await svc.from("schools").insert(ins).select("id").single();
     if (sErr || !newSchool) return json({ ok: false, error: "Could not create school" }, 500);
