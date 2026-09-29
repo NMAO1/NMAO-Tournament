@@ -159,6 +159,15 @@
       <span class="genhint">Adds fresh on-brand drafts to Pending for you to review, edit, and approve.</span>
     </div>
 
+    <div class="genbar" style="flex-wrap:wrap;gap:8px">
+      <strong style="font-size:13px">Harvest a tagged post</strong>
+      <input id="hvUrl" placeholder="Link to the school's tagged post" style="flex:1;min-width:200px;background:var(--panel2);border:1px solid var(--line);color:inherit;border-radius:8px;padding:8px 10px;font:inherit" />
+      <input id="hvSchool" placeholder="School name" style="min-width:150px;background:var(--panel2);border:1px solid var(--line);color:inherit;border-radius:8px;padding:8px 10px;font:inherit" />
+      <input id="hvMedia" placeholder="Media URL (optional)" style="min-width:150px;background:var(--panel2);border:1px solid var(--line);color:inherit;border-radius:8px;padding:8px 10px;font:inherit" />
+      <button class="btn gold" id="hvBtn">Add to queue</button>
+      <span class="genhint">Pulls a school's tagged post in as a branded draft. License-gated: only schools that accepted the NMAO Promotion license.</span>
+    </div>
+
     <div class="tabs" id="tabs"></div>
     <div id="list"></div>
 
@@ -413,6 +422,25 @@ $('genBtn').onclick = async () => {
     await loadQueue();
     toast('Added ' + data.created + ' draft' + (data.created===1?'':'s') + (data.source==='template'?' (template — add ANTHROPIC_API_KEY for AI-written)':'') + ' to Pending.', 'ok');
   } catch(e){ toast(e.message || 'Generation failed.', 'err'); }
+  finally { btn.disabled = false; btn.textContent = orig; }
+};
+
+// ---------- harvest a tagged post ----------
+$('hvBtn').onclick = async () => {
+  const btn = $('hvBtn'), orig = btn.textContent;
+  const p_source_url = $('hvUrl').value.trim();
+  const p_school = $('hvSchool').value.trim();
+  const p_media_url = $('hvMedia').value.trim();
+  if (!p_source_url || !p_school){ toast('Add the post link and the school name.', 'err'); return; }
+  btn.disabled = true; btn.textContent = 'Adding…';
+  try {
+    const { data, error } = await sb.rpc('social_harvest_add', { p_source_url, p_school, p_media_url: p_media_url || null, p_caption: null });
+    if (error) throw error;
+    $('hvUrl').value = ''; $('hvMedia').value = '';
+    TAB = 'pending';
+    await loadQueue();
+    toast('Harvested into Pending — review, confirm the media release, then send.', 'ok');
+  } catch(e){ toast(e.message || 'Could not harvest that post.', 'err'); }
   finally { btn.disabled = false; btn.textContent = orig; }
 };
 
