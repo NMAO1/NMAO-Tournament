@@ -147,6 +147,7 @@
         <a class="btn" href="./index.html">← Live console</a>
         <a class="btn" href="./config.html">Config</a>
         <a class="btn" href="./moderation.html">Moderation</a>
+        <button class="btn" id="attrBtn">📈 Attribution</button>
         <button class="btn" id="signoutBtn">Sign out</button>
       </div>
     </header>
@@ -166,6 +167,18 @@
       <input id="hvMedia" placeholder="Media URL (optional)" style="min-width:150px;background:var(--panel2);border:1px solid var(--line);color:inherit;border-radius:8px;padding:8px 10px;font:inherit" />
       <button class="btn gold" id="hvBtn">Add to queue</button>
       <span class="genhint">Pulls a school's tagged post in as a branded draft. License-gated: only schools that accepted the NMAO Promotion license.</span>
+    </div>
+
+    <div id="attrPanel" hidden style="border:1px solid var(--line);border-radius:12px;padding:14px;margin:8px 0;background:var(--panel2)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <strong style="font-size:14px">Closed-loop attribution</strong>
+        <select id="attrDays" style="background:var(--panel2);border:1px solid var(--line);color:inherit;border-radius:8px;padding:6px 8px;font:inherit">
+          <option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="365" selected>Last 12 months</option>
+        </select>
+        <button class="btn sm" id="attrRefresh">Refresh</button>
+        <span class="genhint" id="attrMeta"></span>
+      </div>
+      <div id="attrBody" style="margin-top:10px">Loading…</div>
     </div>
 
     <div class="tabs" id="tabs"></div>
@@ -443,6 +456,39 @@ $('hvBtn').onclick = async () => {
   } catch(e){ toast(e.message || 'Could not harvest that post.', 'err'); }
   finally { btn.disabled = false; btn.textContent = orig; }
 };
+
+// ---------- closed-loop attribution ----------
+async function loadAttribution(){
+  const days = Number($('attrDays').value) || 365;
+  const body = $('attrBody'); body.innerHTML = 'Loading…'; $('attrMeta').textContent = '';
+  try {
+    const { data, error } = await sb.functions.invoke('marketing-attribution', { body: { days } });
+    if (error) throw error;
+    if (!data || !data.ok) throw new Error((data && data.error) || 'Failed to load attribution.');
+    renderAttribution(data.rollup || {});
+  } catch(e){ body.innerHTML = '<span style="color:#e6796b">' + (e.message || 'Failed to load attribution.') + '</span>'; }
+}
+function renderAttribution(r){
+  const t = r.totals || {};
+  const money = v => '$' + Number(v || 0).toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const kpi = (l,v) => `<div style="flex:1;min-width:110px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;padding:10px 12px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">${l}</div><div style="font-size:22px;font-weight:700">${v}</div></div>`;
+  const esc = s => String(s==null?'—':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  const rowsOf = (arr, keys) => (arr && arr.length)
+    ? arr.map(x => `<tr>${keys.map(k => `<td style="padding:6px 8px;border-top:1px solid var(--line)">${esc(x[k])}</td>`).join('')}</tr>`).join('')
+    : `<tr><td colspan="${keys.length}" style="padding:10px;color:var(--muted)">No attributed conversions yet — social links carry utm_source=social; rows appear as clicks turn into trials and enrollments.</td></tr>`;
+  const table = (heads, arr, keys) => `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px"><thead><tr>${heads.map(h=>`<th style="text-align:left;padding:6px 8px;color:var(--muted);font-weight:600">${h}</th>`).join('')}</tr></thead><tbody>${rowsOf(arr,keys)}</tbody></table>`;
+  $('attrMeta').textContent = r.generated_at ? ('as of ' + new Date(r.generated_at).toLocaleString()) : '';
+  $('attrBody').innerHTML =
+    `<div style="display:flex;gap:8px;flex-wrap:wrap">${kpi('Leads',t.leads||0)}${kpi('Trials',t.trials||0)}${kpi('Enrollments',t.enrollments||0)}${kpi('Attributed value',money(t.attributed_value))}</div>
+     <div style="margin-top:12px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">By campaign</div>
+     ${table(['Campaign','Source','Leads','Trials','Enroll.'], r.by_campaign, ['utm_campaign','utm_source','leads','trials','enrollments'])}
+     <div style="margin-top:12px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">By school</div>
+     ${table(['School','Leads','Trials','Enroll.'], r.by_school, ['school','leads','trials','enrollments'])}
+     <div style="margin-top:8px;font-size:11px;color:var(--muted)">Funnel from the Membership trial funnel, matched by UTM. “Attributed value” = active-membership value of converted leads (estimate).</div>`;
+}
+$('attrBtn').onclick = () => { const p = $('attrPanel'); p.hidden = !p.hidden; if (!p.hidden) loadAttribution(); };
+$('attrRefresh').onclick = loadAttribution;
+$('attrDays').onchange = loadAttribution;
 
 // resume session
 (async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
