@@ -169,6 +169,14 @@
       <span class="genhint">Pulls a school's tagged post in as a branded draft. License-gated: only schools that accepted the NMAO Promotion license.</span>
     </div>
 
+    <div class="genbar" style="flex-wrap:wrap;gap:8px">
+      <strong style="font-size:13px">Content Drop</strong>
+      <input id="dropSchool" placeholder="School name" style="min-width:150px;background:var(--panel2);border:1px solid var(--line);color:inherit;border-radius:8px;padding:8px 10px;font:inherit" />
+      <input id="dropFiles" type="file" accept="image/*,video/*" multiple style="font:inherit;color:var(--muted);max-width:230px" />
+      <button class="btn gold" id="dropBtn">Ingest</button>
+      <span class="genhint">Drops photos/clips → AI vision writes the caption &amp; auto-flags consent → Pending drafts.</span>
+    </div>
+
     <div id="attrPanel" hidden style="border:1px solid var(--line);border-radius:12px;padding:14px;margin:8px 0;background:var(--panel2)">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <strong style="font-size:14px">Closed-loop attribution</strong>
@@ -467,6 +475,49 @@ $('hvBtn').onclick = async () => {
     toast('Harvested into Pending — review, confirm the media release, then send.', 'ok');
   } catch(e){ toast(e.message || 'Could not harvest that post.', 'err'); }
   finally { btn.disabled = false; btn.textContent = orig; }
+};
+
+// ---------- content drop (AI vision captioner) ----------
+async function grabFrame(file){
+  const maxDim = 1024;
+  const draw = (src, w, h) => { const s = Math.min(1, maxDim/Math.max(w,h)); const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(w*s)); c.height=Math.max(1,Math.round(h*s)); c.getContext('2d').drawImage(src,0,0,c.width,c.height); return c.toDataURL('image/jpeg',0.85); };
+  if (file.type.startsWith('image/')){
+    const url = URL.createObjectURL(file);
+    try { const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; }); return { b64: draw(img,img.naturalWidth,img.naturalHeight).split(',')[1], mime:'image/jpeg' }; }
+    catch(e){ return null; } finally { URL.revokeObjectURL(url); }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const v = document.createElement('video'); v.muted=true; v.playsInline=true; v.preload='auto'; v.src=url;
+    await new Promise((res,rej)=>{ v.onloadedmetadata=()=>res(); v.onerror=()=>rej(new Error('meta')); });
+    await new Promise((res,rej)=>{ v.onseeked=()=>res(); v.onerror=()=>rej(new Error('seek')); v.currentTime = Math.min(1, (v.duration||2)/2); });
+    return { b64: draw(v, v.videoWidth||720, v.videoHeight||1280).split(',')[1], mime:'image/jpeg' };
+  } catch(e){ return null; } finally { URL.revokeObjectURL(url); }
+}
+$('dropBtn').onclick = async () => {
+  const btn=$('dropBtn'), orig=btn.textContent;
+  const school = $('dropSchool').value.trim();
+  const files = Array.from($('dropFiles').files||[]);
+  if (!school){ toast('Enter the school name.','err'); return; }
+  if (!files.length){ toast('Choose one or more photos or clips.','err'); return; }
+  btn.disabled=true; let ok=0, fail=0;
+  for (let i=0;i<files.length;i++){
+    const file=files[i]; btn.textContent = `Ingesting ${i+1}/${files.length}…`;
+    try {
+      if (file.size > 500*1024*1024){ fail++; continue; }
+      const isImage = file.type.startsWith('image/');
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-60) || (isImage?'image':'clip');
+      const path = `drops/${Date.now()}_${i}_${safe}`;
+      const up = await sb.storage.from('social-media').upload(path, file, { upsert:true, contentType:file.type||undefined });
+      if (up.error){ fail++; continue; }
+      const frame = await grabFrame(file);
+      const { data, error } = await sb.functions.invoke('content-ingest', { body: { school, path, media_type: isImage?'image':'video', frame_b64: frame&&frame.b64, frame_mime: frame&&frame.mime } });
+      if (error || !data || !data.ok){ fail++; } else { ok++; }
+    } catch(e){ fail++; }
+  }
+  btn.disabled=false; btn.textContent=orig; $('dropFiles').value='';
+  TAB='pending'; await loadQueue();
+  toast(`Ingested ${ok} item${ok===1?'':'s'}${fail?`, ${fail} failed`:''} → Pending.`, (fail&&!ok)?'err':'ok');
 };
 
 // ---------- closed-loop attribution ----------
