@@ -156,6 +156,17 @@ services:
     depends_on:
       - postiz
 
+  # NMAO video overlay worker — burns the NMAO border + lower-third onto a clip.
+  # Reached by the brand-video edge function at postiz.nmao.us/nmao-overlay/*.
+  # Needs OVERLAY_SECRET, SUPA_URL, SUPA_SERVICE_KEY, OVERLAY_BUCKET in .env.
+  overlay:
+    build: ./overlay
+    container_name: overlay
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - postiz-network
+
 volumes:
   postiz-config:
   postiz-uploads:

@@ -307,6 +307,7 @@ function card(p){
         <input type="file" accept="video/*,image/*" data-f="file" style="display:none" />
         <button class="btn sm" data-act="pickfile">${p.media_url?'Replace':'Upload'}</button>
         <button class="btn sm" data-act="library">From library</button>
+        ${p.media_url ? `<button class="btn sm" data-act="brand" title="Burn the NMAO border + name · place · school lower-third onto this clip">🎬 Brand</button>` : ''}
         <select data-lib class="libsel" style="display:none"></select>
         <span class="uprog" data-uprog></span>
       </div>
@@ -397,6 +398,17 @@ async function act(id, action, root, fld, btn){
     const patch = { caption: fld('caption').value, hashtags: fld('hashtags').value };
     const cta = fld('cta_url'); if (cta) patch.cta_url = cta.value;
     if (await save(id, patch, btn)) toast('Saved.','ok');
+    return;
+  }
+  if (action==='brand'){
+    if (!confirm('Add the NMAO border + lower-third (name · place · school) to this video? The branded clip replaces the current media.')) return;
+    const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Branding…';
+    const { data, error } = await sb.functions.invoke('brand-video', { body: { post_id: id } });
+    btn.disabled = false; btn.textContent = orig;
+    if (error){ toast(error.message,'err'); return; }
+    if (!data || !data.ok){ toast((data && data.error) || 'Branding failed.','err'); return; }
+    toast('Branded — NMAO border + lower-third applied.','ok');
+    await loadQueue();
     return;
   }
   if (action==='send'){

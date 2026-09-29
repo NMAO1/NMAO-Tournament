@@ -1,4 +1,11 @@
 # Automatic HTTPS for Postiz. {$POSTIZ_HOST} comes from .env (e.g. postiz.nmao.us).
+# /nmao-overlay/* is routed to the NMAO video overlay worker (prefix stripped);
+# everything else goes to Postiz.
 {$POSTIZ_HOST} {
-	reverse_proxy postiz:5000
+	handle_path /nmao-overlay/* {
+		reverse_proxy overlay:8080
+	}
+	handle {
+		reverse_proxy postiz:5000
+	}
 }
