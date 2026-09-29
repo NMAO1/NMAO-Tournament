@@ -177,6 +177,13 @@
       <span class="genhint">Drops photos/clips → AI vision writes the caption &amp; auto-flags consent → Pending drafts.</span>
     </div>
 
+    <div class="genbar" style="flex-wrap:wrap;gap:8px">
+      <strong style="font-size:13px">Auto-schedule</strong>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" id="cadOn" /> On</label>
+      <button class="btn sm" id="cadFill">Fill schedule now</button>
+      <span class="genhint">Approved posts (consent cleared) drip out Mon/Wed/Fri automatically via Postiz.</span>
+    </div>
+
     <div id="attrPanel" hidden style="border:1px solid var(--line);border-radius:12px;padding:14px;margin:8px 0;background:var(--panel2)">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <strong style="font-size:14px">Closed-loop attribution</strong>
@@ -251,6 +258,7 @@ async function afterLogin(){
   if (!staff) return setMsg('loginMsg','This account is not NMAO staff.','err');
   $('loginCard').classList.add('hide'); $('console').classList.remove('hide');
   await loadQueue();
+  loadCadence();
 }
 
 // ---------- queue ----------
@@ -475,6 +483,24 @@ $('hvBtn').onclick = async () => {
     toast('Harvested into Pending — review, confirm the media release, then send.', 'ok');
   } catch(e){ toast(e.message || 'Could not harvest that post.', 'err'); }
   finally { btn.disabled = false; btn.textContent = orig; }
+};
+
+// ---------- auto-cadence ----------
+async function loadCadence(){
+  try { const { data } = await sb.rpc('social_settings_get'); if (data && $('cadOn')) $('cadOn').checked = !!data.auto_schedule; } catch(e){}
+}
+$('cadOn').onchange = async () => {
+  try { const { error } = await sb.rpc('social_settings_set', { p_auto: $('cadOn').checked, p_slots: null }); if (error) throw error;
+    toast($('cadOn').checked ? 'Auto-schedule on — approved posts will drip out.' : 'Auto-schedule off.','ok'); }
+  catch(e){ $('cadOn').checked = !$('cadOn').checked; toast(e.message || 'Could not save.','err'); }
+};
+$('cadFill').onclick = async () => {
+  const b=$('cadFill'), o=b.textContent; b.disabled=true; b.textContent='Filling…';
+  try { const { data, error } = await sb.functions.invoke('social-cadence', { body: { force: true } }); if (error) throw error;
+    if (!data || !data.ok) throw new Error((data && data.error) || 'Fill failed.');
+    toast(`Scheduled ${data.scheduled||0} post${data.scheduled===1?'':'s'} onto the cadence.`, 'ok'); await loadQueue();
+  } catch(e){ toast(e.message || 'Fill failed.','err'); }
+  finally { b.disabled=false; b.textContent=o; }
 };
 
 // ---------- content drop (AI vision captioner) ----------
