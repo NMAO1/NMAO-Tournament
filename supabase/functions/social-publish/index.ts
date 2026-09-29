@@ -103,6 +103,18 @@ async function uploadMedia(mediaUrl: string): Promise<any | null> {
   } catch { return null; }
 }
 
+// Resolve a stored media reference to a URL Postiz can fetch. Full http(s) URLs
+// (brand library, uploaded clips) pass through; a bare storage path — the Student
+// Spotlight trigger attaches a private entry-videos path — is signed with a short
+// TTL so the private competitor video is fetchable during this publish.
+async function resolveMedia(val: string): Promise<string | null> {
+  if (/^https?:\/\//i.test(val)) return val;
+  const path = val.replace(/^\/+/, "").replace(/^entry-videos\//, "");
+  const { data, error } = await svc.storage.from("entry-videos").createSignedUrl(path, 3600);
+  if (error) { console.error("resolveMedia sign error:", (error as any)?.message || error, val); return null; }
+  return data?.signedUrl ?? null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
@@ -161,8 +173,12 @@ Deno.serve(async (req) => {
 
     let imageArr: any[] = [];
     if ((p as any).media_url) {
-      const media = await uploadMedia((p as any).media_url);
-      imageArr = media ? [media] : [{ path: (p as any).media_url }];
+      const fetchable = await resolveMedia(String((p as any).media_url));
+      if (!fetchable) {
+        return json({ ok: false, error: "Couldn't access the attached video (private storage). Re-upload it or pick a public clip, then send again." }, 409);
+      }
+      const media = await uploadMedia(fetchable);
+      imageArr = media ? [media] : [{ path: fetchable }];
     }
 
     const posts = pairs.map(({ platform, id, type }) => {
