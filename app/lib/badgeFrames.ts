@@ -439,10 +439,27 @@ export const ELEMENT_GLYPH: Record<string, string> = {
   clutch: "⚡", flawless: "💯", slayer: "🗡️", deadlock: "🔒", broom: "🧹",
 };
 
-// Real element art from the public badge-frames bucket (?v busts the image cache
-// when a file is re-uploaded); null → renderer uses the glyph.
+// Real element art from the public badge-frames bucket. Per-key cache-busting is
+// driven by a manifest (badge-frames/_manifest.json = { "<key>": <version> }) that
+// the `publish-border-asset` Edge Function bumps on every upload — so a re-published
+// border goes live with NO app deploy. Until the manifest loads (or if it's absent)
+// we fall back to a base version, so this is safe even before any manifest exists.
+const FRAME_BASE_V = 16;
+let FRAME_MANIFEST: Record<string, number> = {};
+
+// Fetch the manifest once at app start (call from App bootstrap). Best-effort:
+// on any failure the base version is used and art still renders.
+export async function loadFrameManifest(): Promise<void> {
+  if (!SUPABASE_URL) return;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/public/badge-frames/_manifest.json?ts=${Date.now()}`);
+    if (r.ok) FRAME_MANIFEST = await r.json();
+  } catch { /* keep base version */ }
+}
+
 export function frameElementUrl(img: string): string | null {
   const base = SUPABASE_URL;
   if (!base) return null;
-  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=16`;
+  const v = FRAME_MANIFEST[img] ?? FRAME_BASE_V;
+  return `${base}/storage/v1/object/public/badge-frames/${img}.png?v=${v}`;
 }

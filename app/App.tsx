@@ -20,6 +20,7 @@ import Achievements from "./screens/Achievements";
 import Leaderboard from "./screens/Leaderboard";
 import Profile from "./screens/Profile";
 import DuelReveal from "./screens/DuelReveal";
+import { loadFrameManifest } from "./lib/badgeFrames";
 import { Header } from "./components/Header";
 import { AlertsSheet } from "./components/AlertsSheet";
 
@@ -174,6 +175,7 @@ export default function App() {
   useEffect(() => { SecureStore.getItemAsync("nmao_seen_intro_v1").then((v) => setSeenIntro(v === "1")).catch(() => setSeenIntro(true)); }, []);
 
   useEffect(() => {
+    loadFrameManifest(); // pull per-key border-art versions so re-published art shows without an app update
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { setSession(s); if (!s) setAuthView("login"); });
     return () => sub.subscription.unsubscribe();
