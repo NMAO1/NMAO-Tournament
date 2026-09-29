@@ -1,15 +1,18 @@
 // =====================================================================
 // EDGE FUNCTION: marketing-attribution
-// Closed-loop attribution for Mission Control: reads the Membership funnel
-// (leads -> trials -> enrollments + attributed active-membership value) by
-// campaign and by school, so social/paid effort can be tied to real enrollments.
+// Closed-loop attribution for Mission Control: reads the Membership project's
+// leads funnel (UTM-attributed leads -> trials -> enrollments -> est. value) via
+// the marketing_attribution_rollup RPC, grouped by campaign and school.
 //
-// Tournament-staff-gated (Social role). Reads the Membership project via the
-// existing cross-project secrets (MEMBERSHIP_SUPABASE_URL / _SERVICE_ROLE_KEY),
-// calling that project's marketing_attribution_rollup() RPC. Read-only.
+// MC is Tournament-hosted; this data lives in the Membership project. So this
+// Tournament EF is gated to Tournament staff (Social role) and reads the
+// Membership DB with the service key already configured for the bridge EFs.
 //
+// Env: SUPABASE_URL/_SERVICE_ROLE_KEY/_ANON_KEY (auto), MEMBERSHIP_SUPABASE_URL,
+//      MEMBERSHIP_SERVICE_ROLE_KEY.
+// Auth: signed-in Tournament staff with the Social role.
+// POST { days? } -> the rollup JSON (or { ok:false, error })
 // DEPLOY: name = marketing-attribution, Verify JWT OFF (does its own auth).
-// POST { days? } -> { ok, rollup } | { ok:false, error }
 // =====================================================================
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -32,7 +35,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ ok: false, error: "POST only" }, 405);
 
-  // gate: signed-in Tournament staff with the Social role
   const bearer = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!bearer) return json({ ok: false, error: "Sign in required." }, 401);
   const auth = createClient(URL_, ANON, { global: { headers: { Authorization: "Bearer " + bearer } }, auth: { persistSession: false } });
@@ -43,20 +45,17 @@ Deno.serve(async (req) => {
   const { data: cap } = await svc.rpc("staff_can_uid", { p_uid: u.user.id, p_slice: "social", p_level: "full" });
   if (!cap) return json({ ok: false, error: "Not authorized — requires the Social role." }, 403);
 
-  if (!MEM_URL || !MEM_SERVICE) {
-    return json({ ok: false, code: "not_configured", error: "Membership link isn't configured (MEMBERSHIP_SUPABASE_URL / _SERVICE_ROLE_KEY)." }, 200);
-  }
+  if (!MEM_URL || !MEM_SERVICE) return json({ ok: false, code: "not_configured", error: "Membership connection isn't configured." }, 200);
 
   try {
     const body = await req.json().catch(() => ({}));
-    const days = Math.min(3650, Math.max(1, Number(body.days) || 365));
-    const since = new Date(Date.now() - days * 86400000).toISOString();
+    const days = Math.min(Math.max(parseInt(String(body.days ?? "90"), 10) || 90, 1), 365);
     const mem = createClient(MEM_URL, MEM_SERVICE, { auth: { persistSession: false } });
-    const { data, error } = await mem.rpc("marketing_attribution_rollup", { p_since: since });
-    if (error) return json({ ok: false, error: error.message }, 200);
+    const { data, error } = await mem.rpc("marketing_attribution_rollup", { p_days: days });
+    if (error) { console.error("rollup", error.message); return json({ ok: false, error: "Couldn't load attribution." }, 200); }
     return json({ ok: true, rollup: data });
   } catch (e: any) {
     console.error("marketing-attribution:", e?.message || e);
-    return json({ ok: false, error: "Attribution read failed. Please try again." }, 500);
+    return json({ ok: false, error: "Attribution query failed." }, 500);
   }
 });
