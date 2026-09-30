@@ -132,6 +132,7 @@ Deno.serve(async (req) => {
         agreement_version: "2026-09-28",
         accepted: true,
         allow_paid: promo.allow_paid === true,
+        boost_tier: promo.boost_tier ? String(promo.boost_tier).slice(0, 40) : null,
         accepted_at: new Date().toISOString(),
         accepted_by_name: promo.name ? String(promo.name).slice(0, 120) : null,
         tags_snapshot: snap,
