@@ -6,7 +6,7 @@ import { neutrals, spectrum, hues, status } from "@nmao/design-tokens";
 
 type RoundPw = { submission_password: string | null };
 type Entry = { event: string; age_bracket: string; declared_rank: string; video_url: string | null; video_url_2: string | null; rounds: RoundPw | RoundPw[] | null };
-type Assignment = { id: string; entry_id: string; state: string; score: number | null; entry: Entry | null };
+type Assignment = { id: string; entry_id: string; pod_id: string | null; state: string; score: number | null; entry: Entry | null };
 type Criterion = { code: string; name: string; description: string; sort_order: number; weight_pct: number };
 type Style = "traditional" | "open";
 
@@ -42,6 +42,8 @@ export default function ScoreCarousel() {
   const [criteriaByStyle, setCriteriaByStyle] = useState<Record<Style, Criterion[]>>({ traditional: [], open: [] });
   const [scores, setScores] = useState<Record<string, Record<string, number>>>({}); // entry_id -> code -> value
   const [idx, setIdx] = useState(0);
+  const idxRef = useRef(0);
+  useEffect(() => { idxRef.current = idx; }, [idx]);
   const [dir, setDir] = useState<"next" | "prev">("next");
   const [saving, setSaving] = useState(false);
   const [flash, setFlash] = useState<string>(""); // entry_id just submitted (for the ✓ pulse)
@@ -60,8 +62,8 @@ export default function ScoreCarousel() {
 
     const [{ data: asn, error: aerr }, { data: crit }, { data: wTrad }, { data: wOpen }, { data: priors }] = await Promise.all([
       supabase.from("judge_assignments")
-        .select("id, entry_id, state, score, entries(event, age_bracket, declared_rank, video_url, video_url_2, rounds(submission_password))")
-        .eq("judge_id", judgeId).order("state", { ascending: true }),
+        .select("id, entry_id, pod_id, state, score, entries(event, age_bracket, declared_rank, video_url, video_url_2, rounds(submission_password))")
+        .eq("judge_id", judgeId).order("entry_id", { ascending: true }),
       supabase.from("criteria").select("code, name, description, sort_order"),
       supabase.from("rubric_weights").select("criterion_code, weight_pct").eq("style", "traditional"),
       supabase.from("rubric_weights").select("criterion_code, weight_pct").eq("style", "open"),
@@ -69,8 +71,13 @@ export default function ScoreCarousel() {
     ]);
     if (aerr) { setErr(aerr.message); setLoading(false); return; }
 
-    const rows: Assignment[] = ((asn ?? []) as unknown as { id: string; entry_id: string; state: string; score: number | null; entries: Entry | Entry[] | null }[])
-      .map((r) => ({ id: r.id, entry_id: r.entry_id, state: r.state, score: r.score, entry: entryOf({ entry: r.entries }) }));
+    const allRows: Assignment[] = ((asn ?? []) as unknown as { id: string; entry_id: string; pod_id: string | null; state: string; score: number | null; entries: Entry | Entry[] | null }[])
+      .map((r) => ({ id: r.id, entry_id: r.entry_id, pod_id: r.pod_id, state: r.state, score: r.score, entry: entryOf({ entry: r.entries }) }));
+    // Scope the carousel to the POD the judge opened: score that pod start-to-finish,
+    // then return to the queue to claim the next. (Legacy rows with no pod_id fall back
+    // to just the opened entry so they're never stranded.)
+    const curPod = allRows.find((r) => r.id === id)?.pod_id ?? null;
+    const rows: Assignment[] = curPod ? allRows.filter((r) => r.pod_id === curPod) : allRows.filter((r) => r.id === id);
 
     const critRows = (crit ?? []) as { code: string; name: string; description: string; sort_order: number }[];
     const build = (weights: { criterion_code: string; weight_pct: number }[] | null): Criterion[] => {
@@ -102,15 +109,15 @@ export default function ScoreCarousel() {
   const preview = useMemo(() => weighted(vals, criteria), [vals, criteria]);
   const submittedCount = assignments.filter((a) => a.state === "submitted").length;
 
+  // Navigate the carousel from an event handler (never inside a state updater, so
+  // no setState/history side effects run during render).
   const go = useCallback((delta: number) => {
-    setIdx((i) => {
-      const n = Math.max(0, Math.min(assignments.length - 1, i + delta));
-      if (n !== i) {
-        setDir(delta > 0 ? "next" : "prev");
-        if (typeof window !== "undefined") window.history.replaceState(null, "", `/judge/score/${assignments[n].id}`);
-      }
-      return n;
-    });
+    const i = idxRef.current;
+    const n = Math.max(0, Math.min(assignments.length - 1, i + delta));
+    if (n === i) return;
+    setDir(delta > 0 ? "next" : "prev");
+    setIdx(n);
+    if (typeof window !== "undefined") window.history.replaceState(null, "", `/judge/score/${assignments[n].id}`);
   }, [assignments]);
 
   // keyboard: ←/→ navigate when not typing in a field
@@ -178,11 +185,12 @@ export default function ScoreCarousel() {
       // auto-advance to the next competitor (judge can swipe back if needed)
       setTimeout(() => {
         setFlash((f) => (f === entryId ? "" : f));
-        setIdx((i) => {
-          const n = i + 1;
-          if (n < assignments.length) { setDir("next"); window.history.replaceState(null, "", `/judge/score/${assignments[n].id}`); return n; }
-          return i;
-        });
+        const n = idxRef.current + 1;
+        if (n < assignments.length) {
+          setDir("next");
+          setIdx(n);
+          window.history.replaceState(null, "", `/judge/score/${assignments[n].id}`);
+        }
       }, 750);
     } catch {
       setErr("Network error — please retry.");
