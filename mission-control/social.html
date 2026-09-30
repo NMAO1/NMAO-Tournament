@@ -148,6 +148,7 @@
         <a class="btn" href="./config.html">Config</a>
         <a class="btn" href="./moderation.html">Moderation</a>
         <button class="btn" id="attrBtn">📈 Attribution</button>
+        <button class="btn" id="tiersBtn">💲 Boost tiers</button>
         <button class="btn" id="signoutBtn">Sign out</button>
       </div>
     </header>
@@ -194,6 +195,14 @@
         <span class="genhint" id="attrMeta"></span>
       </div>
       <div id="attrBody" style="margin-top:10px">Loading…</div>
+    </div>
+
+    <div id="tiersPanel" hidden style="border:1px solid var(--line);border-radius:12px;padding:14px;margin:8px 0;background:var(--panel2)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <strong style="font-size:14px">Local boost tiers</strong>
+        <span class="genhint">Prices schools see in the Growth Engine (member dashboard). Edits apply immediately.</span>
+      </div>
+      <div id="tiersBody" style="margin-top:10px">Loading…</div>
     </div>
 
     <div class="tabs" id="tabs"></div>
@@ -578,6 +587,42 @@ function renderAttribution(r){
 $('attrBtn').onclick = () => { const p = $('attrPanel'); p.hidden = !p.hidden; if (!p.hidden) loadAttribution(); };
 $('attrRefresh').onclick = loadAttribution;
 $('attrDays').onchange = loadAttribution;
+
+// ---------- local boost tiers editor (Growth Engine homebase) ----------
+function tierRow(t, sortVal){
+  const id = t.id || '';
+  return `<div class="tierrow" data-sort="${sortVal}" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
+    <input data-f="id" value="${esc(id)}" placeholder="id (e.g. local_pro)" ${id?'readonly':''} style="width:130px;background:var(--bg);border:1px solid var(--line);color:${id?'var(--muted)':'var(--text)'};border-radius:7px;padding:6px 8px;font:inherit;font-size:12.5px" />
+    <input data-f="name" value="${esc(t.name||'')}" placeholder="Name" style="width:150px;background:var(--bg);border:1px solid var(--line);color:inherit;border-radius:7px;padding:6px 8px;font:inherit" />
+    <span style="color:var(--muted)">$</span><input data-f="usd" type="number" min="0" value="${t.monthly_price_cents!=null?Math.round(t.monthly_price_cents/100):''}" placeholder="0" style="width:85px;background:var(--bg);border:1px solid var(--line);color:inherit;border-radius:7px;padding:6px 8px;font:inherit" /><span style="color:var(--muted);font-size:12px">/mo</span>
+    <input data-f="blurb" value="${esc(t.blurb||'')}" placeholder="Short blurb schools see" style="flex:1;min-width:180px;background:var(--bg);border:1px solid var(--line);color:inherit;border-radius:7px;padding:6px 8px;font:inherit" />
+    <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)"><input type="checkbox" data-f="active" ${t.active!==false?'checked':''} /> Active</label>
+    <button class="btn sm" data-act="savetier">Save</button>
+  </div>`;
+}
+async function loadTiers(){
+  const body = $('tiersBody'); body.innerHTML = 'Loading…';
+  try{
+    const { data, error } = await sb.from('growth_boost_tiers').select('*').order('sort');
+    if (error) throw error;
+    const rows = data || [];
+    const maxSort = rows.reduce((m,r)=>Math.max(m, r.sort||0), 0);
+    body.innerHTML = rows.map(t=>tierRow(t, t.sort||0)).join('') + tierRow({}, maxSort+1)
+      + '<div style="font-size:11px;color:var(--muted);margin-top:8px">The blank row adds a new tier — give it an id, name and price, then Save.</div>';
+    body.querySelectorAll('[data-act="savetier"]').forEach(b => b.onclick = () => saveTier(b.closest('.tierrow')));
+  }catch(e){ body.innerHTML = '<span style="color:var(--danger)">'+esc(e.message||'Failed to load tiers.')+'</span>'; }
+}
+async function saveTier(row){
+  const g = f => { const el = row.querySelector('[data-f="'+f+'"]'); return el ? (el.type==='checkbox'?el.checked:el.value.trim()) : ''; };
+  const id = g('id'), name = g('name');
+  if (!id || !name){ toast('id and name are required.','err'); return; }
+  try{
+    const { error } = await sb.rpc('growth_boost_tiers_set', { p_id:id, p_name:name, p_price_cents: Math.round(Number(g('usd')||0)*100), p_blurb: g('blurb')||null, p_active: g('active'), p_sort: Number(row.dataset.sort||0) });
+    if (error) throw error;
+    toast('Tier saved.','ok'); loadTiers();
+  }catch(e){ toast(e.message||'Save failed.','err'); }
+}
+$('tiersBtn').onclick = () => { const p=$('tiersPanel'); p.hidden=!p.hidden; if(!p.hidden) loadTiers(); };
 
 // resume session
 (async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
