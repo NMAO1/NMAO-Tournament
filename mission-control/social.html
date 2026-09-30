@@ -149,6 +149,7 @@
         <a class="btn" href="./moderation.html">Moderation</a>
         <button class="btn" id="attrBtn">📈 Attribution</button>
         <button class="btn" id="tiersBtn">💲 Boost tiers</button>
+        <button class="btn" id="boostBtn">🚀 Boost requests</button>
         <button class="btn" id="signoutBtn">Sign out</button>
       </div>
     </header>
@@ -203,6 +204,15 @@
         <span class="genhint">Prices schools see in the Growth Engine (member dashboard). Edits apply immediately.</span>
       </div>
       <div id="tiersBody" style="margin-top:10px">Loading…</div>
+    </div>
+
+    <div id="boostPanel" hidden style="border:1px solid var(--line);border-radius:12px;padding:14px;margin:8px 0;background:var(--panel2)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <strong style="font-size:14px">Local boost requests</strong>
+        <button class="btn sm" id="boostRefresh">Refresh</button>
+        <span class="genhint">Schools requesting paid local boosts. Activate once billing is arranged; pause/decline as needed.</span>
+      </div>
+      <div id="boostBody" style="margin-top:10px">Loading…</div>
     </div>
 
     <div class="tabs" id="tabs"></div>
@@ -623,6 +633,43 @@ async function saveTier(row){
   }catch(e){ toast(e.message||'Save failed.','err'); }
 }
 $('tiersBtn').onclick = () => { const p=$('tiersPanel'); p.hidden=!p.hidden; if(!p.hidden) loadTiers(); };
+
+// ---------- local boost requests queue ----------
+async function loadBoostQueue(){
+  const body=$('boostBody'); body.innerHTML='Loading…';
+  try{
+    const { data, error } = await sb.functions.invoke('growth-boost-admin', { body: { action:'list' } });
+    if (error) throw error;
+    if (!data || !data.ok) throw new Error((data&&data.error)||'Failed to load.');
+    renderBoostQueue(data.queue||[]);
+  }catch(e){ body.innerHTML='<span style="color:var(--danger)">'+esc(e.message||'Failed to load boost queue.')+'</span>'; }
+}
+function renderBoostQueue(rows){
+  if(!rows.length){ $('boostBody').innerHTML='<div style="color:var(--muted);font-size:13px">No boost requests right now.</div>'; return; }
+  const money = c => c==null?'—':('$'+Math.round(c/100).toLocaleString()+'/mo');
+  const col = st => ({requested:'var(--gold)',active:'var(--success)',paused:'var(--muted)'}[st]||'var(--muted)');
+  $('boostBody').innerHTML = rows.map(r => `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:9px 0;border-top:1px solid var(--line)">
+      <div style="flex:1;min-width:180px"><div style="font-weight:600">${esc(r.school)}</div><div style="font-size:12px;color:var(--muted)">${esc(r.tier_name)} · ${money(r.monthly_price_cents)}${r.requested_at?(' · '+esc(fmt(r.requested_at))):''}</div>${r.note?`<div style="font-size:12px;color:var(--muted);margin-top:2px">&ldquo;${esc(r.note)}&rdquo;</div>`:''}</div>
+      <span style="font-size:12px;color:${col(r.status)};font-weight:600">${esc(r.status)}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${r.status!=='active'?`<button class="btn sm" data-set="active" data-id="${esc(r.member_school_id)}">Activate</button>`:''}
+        ${r.status==='active'?`<button class="btn sm" data-set="paused" data-id="${esc(r.member_school_id)}">Pause</button>`:''}
+        <button class="btn sm" data-set="declined" data-id="${esc(r.member_school_id)}">Decline</button>
+      </div>
+    </div>`).join('');
+  $('boostBody').querySelectorAll('[data-set]').forEach(b => b.onclick = () => setBoost(b.dataset.id, b.dataset.set));
+}
+async function setBoost(id, status){
+  try{
+    const { data, error } = await sb.functions.invoke('growth-boost-admin', { body: { action:'set', member_school_id:id, status } });
+    if (error) throw error;
+    if (!data || !data.ok) throw new Error((data&&data.error)||'Update failed.');
+    toast('Updated.','ok'); loadBoostQueue();
+  }catch(e){ toast(e.message||'Update failed.','err'); }
+}
+$('boostBtn').onclick = () => { const p=$('boostPanel'); p.hidden=!p.hidden; if(!p.hidden) loadBoostQueue(); };
+$('boostRefresh').onclick = loadBoostQueue;
 
 // resume session
 (async () => { const { data:{ session } } = await sb.auth.getSession(); if (session) await afterLogin(); })();
