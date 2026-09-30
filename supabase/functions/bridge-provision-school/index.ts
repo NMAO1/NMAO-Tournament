@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => null) as any;
   if (!body || typeof body !== "object") return json({ ok: false, error: "Bad body" }, 400);
-  const { token, school, roster } = body;
+  const { token, school, roster, promo } = body;
   if (!token || !school || !Array.isArray(roster)) return json({ ok: false, error: "Missing token/school/roster" }, 400);
 
   // ---- verify the bridge token ----
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
   if (!payload.exp || payload.exp < now) return json({ ok: false, error: "Token expired" }, 401);
   if (!payload.jti) return json({ ok: false, error: "Token missing jti" }, 401);
   if (!payload.body_sha256) return json({ ok: false, error: "Token missing body_sha256" }, 401);
-  const computed = await sha256hex(canon({ school, roster }));
+  const computed = await sha256hex(canon({ school, roster, promo: promo ?? null }));
   if (computed !== payload.body_sha256) return json({ ok: false, error: "Body integrity check failed" }, 401);
 
   const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
@@ -120,6 +120,24 @@ Deno.serve(async (req) => {
     const { data: newSchool, error: sErr } = await svc.from("schools").insert(ins).select("id").single();
     if (sErr || !newSchool) return json({ ok: false, error: "Could not create school" }, 500);
     tournamentSchoolId = (newSchool as any).id; created = true;
+  }
+
+  // ---- Growth Engine: record the promotion-license consent when the enroll carries it ----
+  if (promo && promo.accept) {
+    try {
+      const { data: tagRows } = await svc.from("approved_promo_tags").select("tag").eq("active", true);
+      const snap = ((tagRows || []) as any[]).map((t) => t.tag).sort();
+      await svc.from("social_promotion_consent").upsert({
+        school_id: tournamentSchoolId,
+        agreement_version: "2026-09-28",
+        accepted: true,
+        allow_paid: promo.allow_paid === true,
+        accepted_at: new Date().toISOString(),
+        accepted_by_name: promo.name ? String(promo.name).slice(0, 120) : null,
+        tags_snapshot: snap,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "school_id" });
+    } catch (_e) { /* non-fatal — enrollment mirror still set on the member side */ }
   }
 
   // ---- stamp owner contact + auto-email a scanner-safe setup/sign-in link ----
