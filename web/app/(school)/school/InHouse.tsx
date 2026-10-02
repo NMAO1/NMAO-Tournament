@@ -5,7 +5,7 @@ import { neutrals, hues, status } from "@nmao/design-tokens";
 import RunTournament from "./RunTournament";
 import QrDownloads from "./QrDownloads";
 
-type Tournament = { id: string; name: string; event_date: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean; prize: string | null; division_ages: string[] | null; division_ranks: string[] | null };
+type Tournament = { id: string; name: string; event_date: string | null; upload_deadline: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean; prize: string | null; division_ages: string[] | null; division_ranks: string[] | null };
 type Entrant = { id: string; competitor_id: string | null; display_name: string | null; event: string | null; division: string | null; score: number | null; placement: number | null; prize: string | null; payment_status: string; self_registered: boolean; video_url: string | null; scores: Record<string, number> | null };
 type RosterLite = { id: string; first_name: string; last_name: string };
 
@@ -51,7 +51,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
 
   const loadTournaments = useCallback(async () => {
     const { data, error } = await supabase.from("in_house_tournaments")
-      .select("id, name, event_date, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid, prize, division_ages, division_ranks")
+      .select("id, name, event_date, upload_deadline, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid, prize, division_ages, division_ranks")
       .eq("school_id", schoolId).order("created_at", { ascending: false });
     if (error) { setErr(`Couldn't load tournaments: ${error.message}. You may be missing a database migration.`); return; }
     setTournaments((data ?? []) as Tournament[]);
@@ -80,6 +80,15 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
     patchLocal(tid, patch);
     const { error } = await supabase.from("in_house_tournaments").update(patch).eq("id", tid);
     if (error) setErr(error.message);
+  }
+  async function deleteTournament(t: Tournament) {
+    if (!window.confirm(`Delete “${t.name}” and all of its entrants? This cannot be undone.`)) return;
+    setErr("");
+    await supabase.from("ih_entrants").delete().eq("tournament_id", t.id);
+    const { error } = await supabase.from("in_house_tournaments").delete().eq("id", t.id);
+    if (error) { setErr(error.message); return; }
+    if (selected === t.id) { setSelected(null); setEntrants([]); }
+    await loadTournaments();
   }
   function changeState(t: Tournament, next: string) {
     if (next === t.state) return;
@@ -239,6 +248,24 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                   <button onClick={() => changeState(cur, "complete")} style={{ ...ghost, padding: "7px 14px" }}>Mark complete</button>
                 </>
               )}
+              <button onClick={() => deleteTournament(cur)} title="Delete this tournament" style={{ ...ghost, padding: "7px 12px", color: status.danger, borderColor: "rgba(200,60,60,0.45)" }}>Delete</button>
+            </div>
+          </div>
+
+          {/* schedule — editable anytime: event date + the submit-by deadline that closes entries */}
+          <div style={{ background: "#0e0e11", border: `1px solid ${neutrals.border}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
+            <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2, marginBottom: 10 }}>Schedule</div>
+            <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
+              <label style={{ fontSize: 13, color: neutrals.muted }}>
+                Event date
+                <input type="date" style={{ ...inp, display: "block", marginTop: 5 }} defaultValue={cur.event_date ?? ""}
+                  onChange={(e) => updateTournament(cur.id, { event_date: e.target.value || null })} />
+              </label>
+              <label style={{ fontSize: 13, color: neutrals.muted }}>
+                Submit videos by <span style={{ color: neutrals.muted2 }}>(entries close)</span>
+                <input type="date" style={{ ...inp, display: "block", marginTop: 5 }} defaultValue={cur.upload_deadline ? cur.upload_deadline.slice(0, 10) : ""}
+                  onChange={(e) => updateTournament(cur.id, { upload_deadline: e.target.value ? `${e.target.value}T23:59:00` : null })} />
+              </label>
             </div>
           </div>
 
