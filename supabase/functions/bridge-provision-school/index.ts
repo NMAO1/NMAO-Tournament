@@ -20,6 +20,7 @@ const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const SECRET = Deno.env.get("TOURNAMENT_BRIDGE_SECRET")!;
 const INVITE_BASE = "https://compete.nmao.us/invite";
 const INVITE_TTL_DAYS = 30;
+const SCHOOL = (Deno.env.get("SCHOOL_URL") || "https://school.nmao.us").replace(/\/$/, "");
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -185,8 +186,14 @@ Deno.serve(async (req) => {
 
   // Surface the school's join code so the Membership welcome message can include
   // it — a safety net for invited families whose deep link drops the token.
+  // Also surface a prefilled Flyer Kit URL so the Membership-side welcome can
+  // point the new school straight at their recruitment flyers.
   const { data: schRow } = await svc.from("schools").select("join_code").eq("id", tournamentSchoolId).maybeSingle();
-  const response = { ok: true, school: { tournament_school_id: tournamentSchoolId, join_code: (schRow as any)?.join_code ?? null, created, owner_linked: ownerLinked }, athletes: { seeded, already, invites } };
+  const joinCode = (schRow as any)?.join_code ?? null;
+  const flyerKitUrl = joinCode
+    ? `${SCHOOL}/flyer-kit.html?code=${encodeURIComponent(String(joinCode))}&school=${encodeURIComponent(String(school.name || ""))}${school.owner_name ? `&contact=${encodeURIComponent(String(school.owner_name))}` : ""}`
+    : null;
+  const response = { ok: true, school: { tournament_school_id: tournamentSchoolId, join_code: joinCode, flyer_kit_url: flyerKitUrl, created, owner_linked: ownerLinked }, athletes: { seeded, already, invites } };
   await svc.from("bridge_provisions").insert({ jti: payload.jti, external_member_school_id: extSchool, response });
   return json(response);
 });
