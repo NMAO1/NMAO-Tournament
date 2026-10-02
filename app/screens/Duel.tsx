@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator,
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import * as Haptics from "expo-haptics";
+import * as SecureStore from "expo-secure-store";
 import { neutrals, hues, spectrumStops } from "@nmao/design-tokens";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { uploadDuelVideo } from "../lib/upload";
@@ -16,6 +17,7 @@ import { useSeasonLabel } from "../lib/season";
 import { formatCountdown } from "../lib/compete";
 
 const EXPORT_PRESET = ImagePicker.VideoExportPreset.H264_1920x1080;
+const EXPLAINER_KEY = "duel_explainer_seen_v1";
 const prettyErr = (e?: string) => (e ? e.replace(/^.*?:\s*/, "") : "Please try again.");
 
 // The Duel hub — two sections: COMPETE (challenge + your active duels) and the
@@ -38,6 +40,18 @@ export default function Duel() {
   const [events, setEvents] = useState<DuelEvent[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [duelPw, setDuelPw] = useState<string | null>(null);
+  const [showExplainer, setShowExplainer] = useState(false);
+
+  // First-run dueling explainer — opens automatically once, reopenable any time.
+  useEffect(() => {
+    SecureStore.getItemAsync(EXPLAINER_KEY)
+      .then((v) => { if (!v) setShowExplainer(true); })
+      .catch(() => { /* ignore */ });
+  }, []);
+  function dismissExplainer() {
+    setShowExplainer(false);
+    SecureStore.setItemAsync(EXPLAINER_KEY, "1").catch(() => { /* ignore */ });
+  }
 
   const load = useCallback(async (id: string) => {
     const [w, a, q, st, res] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, ""), myDuelStanding(id), myDuelResults(id)]);
@@ -160,6 +174,9 @@ export default function Duel() {
       ) : null}
 
       <SectionLabel left="Your duels" right={season} />
+      <TouchableOpacity onPress={() => setShowExplainer(true)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} style={{ alignSelf: "flex-start", marginBottom: 8 }}>
+        <Text style={{ color: neutrals.muted2, fontSize: 11, fontWeight: "600" }}>ⓘ What's a duel?</Text>
+      </TouchableOpacity>
       <TouchableOpacity onPress={openChallenge} activeOpacity={0.85} disabled={week?.remaining === 0}>
         <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ borderRadius: 12, paddingVertical: 14, alignItems: "center", opacity: week?.remaining === 0 ? 0.5 : 1, marginBottom: 4 }}>
           <Text style={{ color: "#fff", fontWeight: "800", letterSpacing: 0.5 }}>⚔  Challenge</Text>
@@ -220,6 +237,34 @@ export default function Duel() {
 
     <Modal visible={!!openResult} animationType="fade" onRequestClose={() => setOpenResult(null)}>
       {openResult && me ? <DuelReveal duelId={openResult} myId={me} onClose={() => setOpenResult(null)} /> : null}
+    </Modal>
+
+    <Modal visible={showExplainer} transparent animationType="fade" onRequestClose={dismissExplainer}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 }}>
+        <View style={{ backgroundColor: neutrals.surface, borderRadius: 20, borderWidth: 1, borderColor: neutrals.border, overflow: "hidden" }}>
+          <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 20, alignItems: "center" }}>
+            <Text style={{ fontSize: 34 }}>⚔️</Text>
+            <Text style={{ color: "#fff", fontWeight: "900", fontSize: 22, marginTop: 6, letterSpacing: 0.3 }}>What's a duel?</Text>
+          </LinearGradient>
+          <View style={{ padding: 22 }}>
+            <Text style={{ color: neutrals.text, fontSize: 15, lineHeight: 23 }}>
+              You're matched with a <Text style={{ color: hues.gold.hi, fontWeight: "800" }}>mystery opponent</Text> at your own level. You both perform — and the NMAO community <Text style={{ color: hues.gold.hi, fontWeight: "800" }}>votes on who wins</Text>.
+            </Text>
+            <Text style={{ color: neutrals.text, fontSize: 15, lineHeight: 23, marginTop: 12 }}>
+              No brackets, no waiting. Every win climbs your rank and forges your <Text style={{ color: hues.gold.hi, fontWeight: "800" }}>Arena border</Text>.
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 16, backgroundColor: "rgba(230,185,63,0.08)", borderWidth: 1, borderColor: hues.gold.shadow, borderRadius: 12, padding: 12 }}>
+              <Text style={{ fontSize: 16 }}>🎉</Text>
+              <Text style={{ color: hues.gold.hi, fontSize: 13, fontWeight: "700", flex: 1 }}>Dueling is free all pre-season. Challenge away.</Text>
+            </View>
+            <TouchableOpacity onPress={dismissExplainer} activeOpacity={0.85} style={{ marginTop: 18 }}>
+              <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ borderRadius: 12, paddingVertical: 14, alignItems: "center" }}>
+                <Text style={{ color: "#fff", fontWeight: "800" }}>Enter the Arena</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
     </Modal>
     </>
   );

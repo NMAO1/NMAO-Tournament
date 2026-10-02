@@ -8,6 +8,7 @@ import { emblemUrl } from "../lib/badges";
 import { supabase } from "../lib/supabase";
 import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { loadProfile, loadNotifPrefs, setNotifPref, type ProfileInfo } from "../lib/profile";
+import { shareInvite } from "../lib/invite";
 import Journal from "./Journal";
 import Home from "./Home";
 import BuyEntry from "./BuyEntry";
@@ -158,6 +159,7 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
           The `sub === "framelab"` branch + import are kept so it's one line to restore. */}
       {/* <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} /> */}
       <Row icon="🏆" label="In-house tournaments" onPress={() => setSub("home")} />
+      <Row icon="📣" label="Invite a friend" onPress={() => shareInvite({ schoolName: info.school?.name, joinCode: info.school?.joinCode })} />
 
       <TouchableOpacity onPress={() => supabase.auth.signOut()} style={{ marginTop: 18, alignItems: "center" }}>
         <Text style={{ color: neutrals.muted, fontSize: 13 }}>Sign out</Text>
