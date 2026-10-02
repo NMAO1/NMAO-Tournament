@@ -1,0 +1,314 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NMAO Flyer Kit</title>
+<style>
+@page{size:8.5in 11in;margin:0}
+:root{
+  --red:#FF2E3B;--violet:#A32BF7;--blue:#3F6BFF;--gold:#E9C15A;--goldbr:#F5D462;
+  --ink:#F1ECE2;--muted:#B7B1C6;--muted2:#8b84a2;--bg0:#070510;--line:rgba(160,140,255,0.18);
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:"Helvetica Neue",Arial,sans-serif;
+  --spectrum:linear-gradient(90deg,#FF2E3B,#C22DE0,#A32BF7,#3F6BFF);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#15121f;color:var(--ink);font-family:var(--sans);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* ---------- Brand panel (screen only) ---------- */
+.panel{position:sticky;top:0;z-index:50;background:#0e0b18;border-bottom:1px solid var(--line);
+  padding:16px 20px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.panel .pin{max-width:1040px;margin:0 auto}
+.panel h2{font-family:var(--serif);font-size:20px;color:#fff;letter-spacing:.3px}
+.panel .hint{color:var(--muted2);font-size:12.5px;margin:3px 0 13px}
+.panel .hint b{color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px 14px;align-items:end}
+.fld label{display:block;font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted2);font-weight:700;margin-bottom:5px}
+.fld input{width:100%;background:#1a1626;border:1px solid var(--line);border-radius:9px;color:#fff;
+  font-family:var(--sans);font-size:14px;padding:9px 11px}
+.fld input:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(63,107,255,.25)}
+.fld.logo{display:flex;gap:10px;align-items:center}
+.logobox{flex:none;width:52px;height:52px;border-radius:11px;border:1px dashed var(--line);
+  background:#1a1626 center/contain no-repeat;display:flex;align-items:center;justify-content:center;color:var(--muted2);font-size:9px;text-align:center}
+.btns{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px;max-width:1040px;margin-left:auto;margin-right:auto}
+.btn{cursor:pointer;border:none;border-radius:10px;font-family:var(--sans);font-weight:800;font-size:13px;letter-spacing:.3px;
+  padding:11px 18px;color:#150d02;background:linear-gradient(180deg,var(--goldbr),#C89B3C)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+.btn.print{background:var(--spectrum);color:#fff}
+.note{max-width:1040px;margin:10px auto 0;color:var(--muted2);font-size:11.5px;line-height:1.5}
+
+/* ---------- Shared sheet ---------- */
+.stage{padding:26px 0 60px}
+.sheet{width:8.5in;min-height:11in;margin:0 auto 26px;position:relative;overflow:hidden;
+  padding:.6in .6in .5in;display:flex;flex-direction:column;
+  background:radial-gradient(120% 50% at 85% -8%,rgba(163,43,247,.22),transparent 58%),
+             radial-gradient(90% 46% at -10% 108%,rgba(63,107,255,.18),transparent 60%),var(--bg0);
+  box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.topbar{position:absolute;top:0;left:0;right:0;height:6px;background:var(--spectrum)}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:16px}
+.wordmark{font-family:var(--serif);font-size:30px;letter-spacing:2px;background:var(--spectrum);
+  -webkit-background-clip:text;background-clip:text;color:transparent;font-weight:700}
+.cobrand{display:flex;align-items:center;gap:11px;text-align:right}
+.cobrand .meta{line-height:1.35}
+.cobrand .pres{font-size:9px;letter-spacing:2.4px;color:var(--muted2);text-transform:uppercase}
+.cobrand .sch{font-family:var(--serif);font-size:16px;color:#fff;font-weight:700}
+.cobrand .logo{width:46px;height:46px;border-radius:10px;background:center/contain no-repeat;flex:none}
+.cobrand .logo:empty,.cobrand .logo[style=""]{display:none}
+.eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:var(--gold);margin:16px 0 7px}
+h1{font-family:var(--serif);font-size:44px;line-height:1.02;letter-spacing:-.5px;color:#fff;text-wrap:balance;margin-bottom:10px}
+.sub{color:var(--muted);font-size:14.5px;line-height:1.5;max-width:5.9in}
+
+.mid{display:grid;grid-template-columns:1fr 2.3in;gap:24px;align-items:start;margin:22px 0 16px}
+.steps{display:flex;flex-direction:column;gap:13px}
+.step{display:flex;gap:13px;align-items:flex-start}
+.k{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;
+  font-family:var(--serif);font-weight:700;font-size:17px;color:#fff;background:rgba(63,107,255,.16)}
+.step h3{font-size:16.5px;color:#fff;font-weight:700;margin-bottom:2px}
+.step p{font-size:13px;color:var(--muted);line-height:1.45}
+.code{display:inline-block;font-family:var(--serif);font-weight:700;font-size:18px;letter-spacing:2px;color:#150d02;
+  background:linear-gradient(180deg,var(--goldbr),#C89B3C);padding:2px 12px;border-radius:7px;margin-top:3px}
+.qrcard{background:#fff;border-radius:18px;padding:15px 15px 11px;text-align:center;box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.qrcard img{width:100%;display:block;border-radius:7px}
+.qrcard .cap{color:#0b0a12;font-weight:800;font-size:12.5px;letter-spacing:1.5px;text-transform:uppercase;margin-top:9px}
+.qrcard .sc{color:#5a5570;font-size:10.5px;margin-top:2px}
+
+.callout{border:1px solid rgba(255,46,59,.4);background:linear-gradient(180deg,rgba(255,46,59,.10),rgba(163,43,247,.06));
+  border-radius:16px;padding:15px 18px;margin:4px 0 16px}
+.callout h3{font-family:var(--serif);font-size:19px;color:#fff;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.callout p{color:var(--muted);font-size:13.5px;line-height:1.55}
+.callout b{color:var(--gold)}
+
+.facts{display:flex;gap:10px;margin:auto 0 12px}
+.fact{flex:1;background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.015));border:1px solid var(--line);
+  border-radius:14px;padding:12px 14px;text-align:center}
+.fact .l{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted2);font-weight:700;margin-bottom:5px}
+.fact .v{font-size:18px;font-weight:800;color:#fff}
+.fact.hot .v{color:var(--gold)}
+
+/* hooks grid (flyer 3) */
+.hooks{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0 16px}
+.hook{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012))}
+.hook .ic{font-size:22px;margin-bottom:6px}
+.hook h3{font-size:15px;color:#fff;font-weight:700;margin-bottom:3px}
+.hook p{font-size:12.5px;color:var(--muted);line-height:1.42}
+.join{display:grid;grid-template-columns:1fr 2.3in;gap:24px;align-items:center;margin-top:auto}
+.join .big{font-family:var(--serif);font-size:23px;color:#fff;line-height:1.2}
+.join .big b{color:var(--gold)}
+.join p{color:var(--muted);font-size:13px;margin-top:6px;line-height:1.45}
+
+.foot{border-top:1px solid var(--line);padding-top:12px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;color:var(--muted2);font-size:12px;gap:12px}
+.foot b{color:var(--ink)}
+.foot .r{text-align:right}
+
+/* ---------- light theme (ink-saver for school printers) ---------- */
+body.theme-light{background:#e9e7ef}
+.theme-light .sheet{
+  background:#ffffff;
+  box-shadow:0 10px 30px rgba(0,0,0,.14);
+}
+.theme-light .sub,.theme-light .step p,.theme-light .callout p,.theme-light .hook p{color:#4a4656}
+.theme-light h1,.theme-light .step h3,.theme-light .callout h3,.theme-light .fact .v,
+.theme-light .hook h3,.theme-light .cobrand .sch,.theme-light .join .big{color:#1b1726}
+.theme-light .eyebrow,.theme-light .callout b,.theme-light .join .big b,.theme-light .fact.hot .v{color:#9a7a14}
+.theme-light .cobrand .pres,.theme-light .fact .l{color:#7a7686}
+.theme-light .facts .fact,.theme-light .hook{background:#f5f4f8;border-color:rgba(20,16,32,.12)}
+.theme-light .callout{background:linear-gradient(180deg,rgba(255,46,59,.055),rgba(163,43,247,.035));border-color:rgba(255,46,59,.32)}
+.theme-light .qrcard{border:1px solid rgba(20,16,32,.12)}
+.theme-light .k{border-color:#3F6BFF;background:rgba(63,107,255,.10);color:#2452d6}
+.theme-light .foot{border-color:rgba(20,16,32,.14);color:#7a7686}
+.theme-light .foot b{color:#1b1726}
+
+/* theme toggle (screen only) */
+.themerow{display:flex;align-items:center;gap:8px;max-width:1040px;margin:14px auto 0;color:var(--muted2);font-size:12px;letter-spacing:.3px}
+.seg{cursor:pointer;border:1px solid var(--line);background:#1a1626;color:var(--muted);border-radius:8px;font-family:var(--sans);font-size:12px;font-weight:700;padding:7px 13px}
+.seg.on{background:var(--spectrum);color:#fff;border-color:transparent}
+
+/* ---------- print ---------- */
+@media print{
+  html,body{background:#fff}
+  .panel,.stage>.kit-hint{display:none !important}
+  .stage{padding:0}
+  .sheet{margin:0;box-shadow:none;page-break-after:always;break-after:page}
+  .sheet:last-child{page-break-after:auto}
+  body[data-only="1"] .sheet:not(#f1){display:none}
+  body[data-only="2"] .sheet:not(#f2){display:none}
+  body[data-only="3"] .sheet:not(#f3){display:none}
+}
+.kit-hint{max-width:8.5in;margin:0 auto 18px;color:var(--muted2);font-size:12px;text-align:center;line-height:1.5}
+</style></head>
+<body>
+
+<div class="panel"><div class="pin">
+  <h2>Brand your NMAO Flyer Kit</h2>
+  <div class="hint">Fill this in once — it prints on <b>all three flyers</b>. Then click Print. Your info saves in this browser.</div>
+  <div class="grid">
+    <div class="fld logo">
+      <div class="logobox" id="logobox">LOGO</div>
+      <div style="flex:1"><label>School logo (PNG/JPG)</label><input type="file" id="in-logo" accept="image/*"></div>
+    </div>
+    <div class="fld"><label>School name</label><input id="in-school" placeholder="The Art of Self Defense"></div>
+    <div class="fld"><label>Join code</label><input id="in-code" placeholder="TAOSD-B4H"></div>
+    <div class="fld"><label>Instructor / contact</label><input id="in-contact" placeholder="Ask Sensei Brad"></div>
+  </div>
+  <div class="themerow">Background:
+    <button class="seg" id="seg-dark" onclick="setTheme('dark')">Dark (bold)</button>
+    <button class="seg" id="seg-light" onclick="setTheme('light')">Light (ink-saver)</button>
+  </div>
+  <div class="btns">
+    <button class="btn print" onclick="printOnly('')">🖨 Print all 3</button>
+    <button class="btn ghost" onclick="printOnly('1')">Print Tournament</button>
+    <button class="btn ghost" onclick="printOnly('2')">Print Dueling</button>
+    <button class="btn ghost" onclick="printOnly('3')">Print Info &amp; Hooks</button>
+    <button class="btn ghost" onclick="resetKit()">Reset</button>
+  </div>
+  <div class="note">Tip: in the print dialog choose <b>“Save as PDF”</b> and set margins to <b>None</b> / scale 100% for edge-to-edge color. Leave a field blank to use the default shown.</div>
+</div></div>
+
+<div class="stage">
+<div class="kit-hint">Preview below — scroll through all three flyers. Printing hides this panel automatically.</div>
+
+<!-- ============ FLYER 1 — TOURNAMENT FLOW ============ -->
+<div class="sheet" id="f1"><div class="topbar"></div>
+  <div class="head">
+    <div class="wordmark">NMAO</div>
+    <div class="cobrand"><div class="logo schoolLogo"></div><div class="meta"><div class="pres">Presented by</div><div class="sch" data-bind="school">Your School</div></div></div>
+  </div>
+  <div class="eyebrow">Judged Tournaments · All Belts &amp; Ages</div>
+  <h1>Compete in NMAO Tournaments</h1>
+  <div class="sub">Film your best form, get scored by certified judges, earn medals, and climb the national leaderboard — all from your phone. No travel, no brackets to wait on.</div>
+  <div class="mid">
+    <div class="steps">
+      <div class="step"><div class="k">1</div><div><h3>Download the app</h3><p>Scan the code to get <b>NMAO Compete</b> — free on the App Store.</p></div></div>
+      <div class="step"><div class="k">2</div><div><h3>Join <span data-bind="school">your school</span></h3><p>In the app, enter school code <span class="code" data-bind="code">YOUR-CODE</span></p></div></div>
+      <div class="step"><div class="k">3</div><div><h3>Submit your form</h3><p>Record right in the app and pick your event — forms, weapons, and more.</p></div></div>
+      <div class="step"><div class="k">4</div><div><h3>Get judged &amp; ranked</h3><p>Real judges score your performance. Reveal your placement, earn medals, and watch your rating climb.</p></div></div>
+    </div>
+    <div class="qrcard"><img src="data:image/png;base64,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" alt="App Store QR"><div class="cap">Scan to Download</div><div class="sc">NMAO Compete · App Store</div></div>
+  </div>
+  <div class="facts">
+    <div class="fact"><div class="l">Open to</div><div class="v">All Belts</div></div>
+    <div class="fact"><div class="l">Judged by</div><div class="v">Real Judges</div></div>
+    <div class="fact hot"><div class="l">Compete</div><div class="v">From Anywhere</div></div>
+  </div>
+  <div class="foot"><div>Questions? <b data-bind="contact">Ask your instructor</b></div><div class="r"><b data-bind="school">Your School</b> · nmao.us</div></div>
+</div>
+
+<!-- ============ FLYER 2 — DUELING FLOW ============ -->
+<div class="sheet" id="f2"><div class="topbar"></div>
+  <div class="head">
+    <div class="wordmark">NMAO</div>
+    <div class="cobrand"><div class="logo schoolLogo"></div><div class="meta"><div class="pres">Presented by</div><div class="sch" data-bind="school">Your School</div></div></div>
+  </div>
+  <div class="eyebrow">Head-to-Head · Free to Duel</div>
+  <h1>Enter the Arena. Duel Anyone.</h1>
+  <div class="sub">Challenge a mystery opponent at your own level. You both perform — and the NMAO community decides the winner. Every win climbs your rank and forges your living Arena border.</div>
+  <div class="callout"><h3>⚔️ What’s a duel?</h3><p>You’re matched with a <b>mystery opponent</b> at your rank, age, and rating. You both film the same event — then the <b>NMAO community votes</b> on who wins. No brackets, no waiting. Each win builds your <b>win streak</b> and your Arena border. <b>Dueling is free, all season.</b></p></div>
+  <div class="mid">
+    <div class="steps">
+      <div class="step"><div class="k">1</div><div><h3>Download &amp; join</h3><p>Get <b>NMAO Compete</b> free, then enter school code <span class="code" data-bind="code">YOUR-CODE</span></p></div></div>
+      <div class="step"><div class="k">2</div><div><h3>Challenge</h3><p>Tap <b>Challenge</b> — we match you with a mystery opponent at your level.</p></div></div>
+      <div class="step"><div class="k">3</div><div><h3>Perform</h3><p>Film your form in one take with the week’s duel password. Unedited, fair, fun.</p></div></div>
+      <div class="step"><div class="k">4</div><div><h3>The community votes</h3><p>Watch the reveal, climb your dueling rating, and stack your win streak 🔥</p></div></div>
+    </div>
+    <div class="qrcard"><img src="data:image/png;base64,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" alt="App Store QR"><div class="cap">Scan to Download</div><div class="sc">NMAO Compete · App Store</div></div>
+  </div>
+  <div class="facts">
+    <div class="fact hot"><div class="l">Cost to duel</div><div class="v">FREE</div></div>
+    <div class="fact"><div class="l">New matches</div><div class="v">Weekly</div></div>
+    <div class="fact hot"><div class="l">Build your</div><div class="v">Win Streak</div></div>
+  </div>
+  <div class="foot"><div>Questions? <b data-bind="contact">Ask your instructor</b></div><div class="r"><b data-bind="school">Your School</b> · nmao.us</div></div>
+</div>
+
+<!-- ============ FLYER 3 — INFO & HOOKS ============ -->
+<div class="sheet" id="f3"><div class="topbar"></div>
+  <div class="head">
+    <div class="wordmark">NMAO</div>
+    <div class="cobrand"><div class="logo schoolLogo"></div><div class="meta"><div class="pres">Presented by</div><div class="sch" data-bind="school">Your School</div></div></div>
+  </div>
+  <div class="eyebrow">Why Compete With NMAO</div>
+  <h1>More Than a Tournament</h1>
+  <div class="sub">NMAO turns martial arts practice into a season-long journey — one you build from your phone, with your dojo behind you.</div>
+  <div class="hooks">
+    <div class="hook"><div class="ic">🏅</div><h3>Seasons &amp; Standings</h3><p>Nine tournaments a year — your best five count toward your season standing.</p></div>
+    <div class="hook"><div class="ic">🏆</div><h3>Medals &amp; the Medallion</h3><p>Place well and earn collectible medallion pieces that assemble across a season.</p></div>
+    <div class="hook"><div class="ic">⚔️</div><h3>Living Arena Borders</h3><p>Your equipped badge transforms the border around your competitor frame.</p></div>
+    <div class="hook"><div class="ic">✦</div><h3>Badges to Collect</h3><p>100+ badges for milestones, streaks, and mastery — visible on your profile.</p></div>
+    <div class="hook"><div class="ic">📈</div><h3>National Leaderboards</h3><p>See where you rank beyond your dojo, by event, belt, and season.</p></div>
+    <div class="hook"><div class="ic">🛡️</div><h3>Safe &amp; Moderated</h3><p>Ages 13+, report &amp; block built in, every entry reviewed. Judged by real martial artists.</p></div>
+  </div>
+  <div class="join">
+    <div>
+      <div class="big">Join <b data-bind="school">your school</b> on NMAO.</div>
+      <p>Download <b>NMAO Compete</b> free on the App Store and enter code <span class="code" data-bind="code">YOUR-CODE</span> — you’ll be on the roster, ready to compete and duel.</p>
+    </div>
+    <div class="qrcard"><img src="data:image/png;base64,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" alt="App Store QR"><div class="cap">Scan to Download</div><div class="sc">NMAO Compete · App Store</div></div>
+  </div>
+  <div class="foot"><div>Every belt. Every age. <b>Compete from anywhere.</b></div><div class="r"><b data-bind="contact">Ask your instructor</b> · nmao.us</div></div>
+</div>
+
+</div>
+
+<script>
+var KEY="nmao_flyer_kit_v1";
+var fields={school:"in-school",code:"in-code",contact:"in-contact"};
+var defaults={school:"Your School",code:"YOUR-CODE",contact:"Ask your instructor"};
+var logoData="";
+var theme="dark";
+
+function setTheme(t){
+  theme=(t==="light")?"light":"dark";
+  document.body.classList.toggle("theme-light",theme==="light");
+  var d=document.getElementById("seg-dark"),l=document.getElementById("seg-light");
+  if(d)d.classList.toggle("on",theme==="dark");
+  if(l)l.classList.toggle("on",theme==="light");
+  save();
+}
+
+function applyField(name,val){
+  var v=(val&&val.trim())?val.trim():defaults[name];
+  document.querySelectorAll('[data-bind="'+name+'"]').forEach(function(el){el.textContent=v;});
+}
+function applyLogo(){
+  document.querySelectorAll('.schoolLogo').forEach(function(el){
+    el.style.backgroundImage=logoData?('url('+logoData+')'):'';
+  });
+  var box=document.getElementById('logobox');
+  box.style.backgroundImage=logoData?('url('+logoData+')'):'';
+  box.textContent=logoData?'':'LOGO';
+}
+function save(){
+  var o={logo:logoData,theme:theme};
+  for(var k in fields){o[k]=document.getElementById(fields[k]).value;}
+  try{localStorage.setItem(KEY,JSON.stringify(o));}catch(e){}
+}
+function load(){
+  var o={};try{o=JSON.parse(localStorage.getItem(KEY)||"{}");}catch(e){}
+  for(var k in fields){var el=document.getElementById(fields[k]);el.value=o[k]||"";applyField(k,el.value);}
+  logoData=o.logo||"";applyLogo();
+  setTheme(o.theme||"dark");
+  // Prefill from a dashboard / welcome-email link (?code=&school=&contact=&logo=).
+  // Values populate the fields but stay fully editable; we persist them so a
+  // later visit without params keeps the school's branding.
+  try{
+    var p=new URLSearchParams(location.search),touched=false;
+    ['school','code','contact'].forEach(function(k){
+      var v=p.get(k);
+      if(v){var el=document.getElementById(fields[k]);el.value=v;applyField(k,v);touched=true;}
+    });
+    var lg=p.get('logo');
+    if(lg){logoData=lg;applyLogo();touched=true;}
+    if(touched)save();
+  }catch(e){}
+}
+for(var k in fields){(function(name){
+  document.getElementById(fields[name]).addEventListener('input',function(e){applyField(name,e.target.value);save();});
+})(k);}
+document.getElementById('in-logo').addEventListener('change',function(e){
+  var f=e.target.files&&e.target.files[0];if(!f)return;
+  var r=new FileReader();r.onload=function(){logoData=r.result;applyLogo();save();};r.readAsDataURL(f);
+});
+function printOnly(which){document.body.setAttribute('data-only',which||'');setTimeout(function(){window.print();},60);}
+function resetKit(){try{localStorage.removeItem(KEY);}catch(e){}logoData="";for(var k in fields){document.getElementById(fields[k]).value="";applyField(k,"");}applyLogo();}
+window.addEventListener('afterprint',function(){document.body.setAttribute('data-only','');});
+load();
+</script>
+</body></html>

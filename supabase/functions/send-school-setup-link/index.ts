@@ -35,7 +35,7 @@ const cors = {
 const json = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, "Content-Type": "application/json" } });
 const esc = (s: unknown) => String(s ?? "").replace(/[<>&]/g, "");
 
-async function emailLink(to: string, name: string, link: string): Promise<boolean> {
+async function emailLink(to: string, name: string, link: string, kitUrl?: string | null): Promise<boolean> {
   if (!RESEND || !link) return false;
   try {
     const html =
@@ -45,7 +45,13 @@ async function emailLink(to: string, name: string, link: string): Promise<boolea
       `<p>Set your password to manage your roster, ranks, and payouts:</p>` +
       `<p><a href="${link}" style="display:inline-block;background:#C89B3C;color:#141210;font-weight:bold;text-decoration:none;padding:12px 24px;border-radius:10px">Set your password</a></p>` +
       `<p style="color:#888;font-size:12px">Or paste this into your browser:<br>${link}</p>` +
-      `<p style="color:#888;font-size:12px">Single-use and expires soon. Request a fresh one from the sign-in page if it lapses.</p></div>`;
+      `<p style="color:#888;font-size:12px">Single-use and expires soon. Request a fresh one from the sign-in page if it lapses.</p>` +
+      (kitUrl
+        ? `<hr style="border:none;border-top:1px solid #eee;margin:22px 0">` +
+          `<p style="font-size:13px">Ready to recruit students? Your <b>Flyer Kit</b> comes pre-filled with your join code — three print-ready flyers. Add your logo and print or save as PDF:</p>` +
+          `<p><a href="${kitUrl}" style="display:inline-block;background:#141210;color:#fff;font-weight:bold;text-decoration:none;padding:10px 20px;border-radius:10px">Open your Flyer Kit →</a></p>`
+        : ``) +
+      `</div>`;
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND}`, "Content-Type": "application/json" },
@@ -71,7 +77,10 @@ async function buildAndSend(svc: any, school: any): Promise<{ ok: boolean; setup
   const link = hashed
     ? `${SCHOOL}/school/set-password?token_hash=${encodeURIComponent(hashed)}&type=recovery`
     : ((linkData as any)?.properties?.action_link ?? null);
-  const emailed = link ? await emailLink(email, school.contact_name || school.name, link) : false;
+  const kitUrl = school.join_code
+    ? `${SCHOOL}/flyer-kit.html?code=${encodeURIComponent(String(school.join_code))}&school=${encodeURIComponent(String(school.name || ""))}${school.contact_name ? `&contact=${encodeURIComponent(String(school.contact_name))}` : ""}`
+    : null;
+  const emailed = link ? await emailLink(email, school.contact_name || school.name, link, kitUrl) : false;
   return { ok: true, setup_link: link, emailed };
 }
 
@@ -82,7 +91,7 @@ Deno.serve(async (req) => {
   if (!body) return json({ ok: false, error: "Bad body" }, 400);
 
   const svc = createClient(URL_, SERVICE, { auth: { persistSession: false } });
-  const cols = "id, name, contact_email, contact_name, auth_user_id";
+  const cols = "id, name, contact_email, contact_name, auth_user_id, join_code";
 
   // Internal/staff mode: by school_id, gated by the service-role key. Returns the link.
   if (body.school_id) {

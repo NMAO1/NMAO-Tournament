@@ -873,6 +873,19 @@ export default function SchoolPortal() {
             )}
 
             {section === "promotion" && school && (
+              <>
+              <div style={{ ...card, padding: 18, maxWidth: 640, marginBottom: 18, borderColor: hues.gold.base }}>
+                <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.gold.hi, marginBottom: 4 }}>📣 Flyer Kit</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>Recruit new students</div>
+                <p style={{ color: neutrals.muted2, fontSize: 13.5, lineHeight: 1.6, marginTop: 6 }}>
+                  Three print-ready flyers — <b style={{ color: neutrals.text }}>Tournaments</b>, <b style={{ color: neutrals.text }}>Dueling</b>, and <b style={{ color: neutrals.text }}>Why NMAO</b> — already filled in with your school name and join code. Add your logo, choose a light or dark background, then print or save as PDF. Everything stays editable.
+                </p>
+                <a
+                  href={`/flyer-kit.html?code=${encodeURIComponent(school.join_code || "")}&school=${encodeURIComponent(school.name || "")}${school.contact_name ? `&contact=${encodeURIComponent(school.contact_name)}` : ""}${school.logo_url ? `&logo=${encodeURIComponent(school.logo_url)}` : ""}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display: "inline-block", marginTop: 12, cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 20px", textDecoration: "none", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})` }}
+                >Open your Flyer Kit →</a>
+              </div>
               <div style={{ ...card, padding: 18, maxWidth: 640 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 800, borderRadius: 99, padding: "3px 10px", color: "#141210", background: promo?.accepted ? status.success : hues.gold.hi }}>
@@ -917,6 +930,7 @@ export default function SchoolPortal() {
                   </div>
                 </div>
               </div>
+              </>
             )}
           </>
         )}
