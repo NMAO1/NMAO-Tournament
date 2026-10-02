@@ -26,6 +26,16 @@ const eventName = (c: string | null) => c || "—";
 const dollars = (c: number | null | undefined) => (c == null ? "" : (c / 100).toFixed(2));
 // School's take-home after our platform cut and Stripe's ~2.9% + 30¢ (direct charge → school pays Stripe fees).
 const netPerEntry = (fee: number, bps: number) => Math.max(0, fee - Math.round((fee * bps) / 10000) - Math.round(fee * 0.029) - 30);
+// A date-only picker drives upload_deadline (a timestamptz). Store the END of the
+// picked day in the editor's LOCAL timezone, and render the stored instant back as the
+// local day it falls on — so "Oct 15" means 11:59 PM on Oct 15 where the school is.
+const toLocalDate = (ts: string | null) => {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const endOfDayISO = (date: string) => (date ? new Date(`${date}T23:59:59`).toISOString() : null);
 
 export default function InHouse({ schoolId, roster }: { schoolId: string; roster: RosterLite[] }) {
   const supabase = createClient();
@@ -263,8 +273,8 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
               </label>
               <label style={{ fontSize: 13, color: neutrals.muted }}>
                 Submit videos by <span style={{ color: neutrals.muted2 }}>(entries close)</span>
-                <input type="date" style={{ ...inp, display: "block", marginTop: 5 }} defaultValue={cur.upload_deadline ? cur.upload_deadline.slice(0, 10) : ""}
-                  onChange={(e) => updateTournament(cur.id, { upload_deadline: e.target.value ? `${e.target.value}T23:59:00` : null })} />
+                <input type="date" style={{ ...inp, display: "block", marginTop: 5 }} defaultValue={toLocalDate(cur.upload_deadline)}
+                  onChange={(e) => updateTournament(cur.id, { upload_deadline: endOfDayISO(e.target.value) })} />
               </label>
             </div>
           </div>
