@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
           `<p>Hi ${first}, your judge application has been <b>approved</b>.</p>` +
           `<p>Set your password to activate your account and start scoring:</p>` +
           `<p><a href="${link}" style="display:inline-block;background:#C89B3C;color:#141210;font-weight:bold;text-decoration:none;padding:12px 24px;border-radius:10px">Set your password</a></p>` +
-          `<p style="color:#888;font-size:12px">Or paste this into your browser:<br>${link}</p>` +
+          `<p style="color:#888;font-size:12px;word-break:break-all;overflow-wrap:anywhere">Or paste this into your browser:<br>${link}</p>` +
           `<p style="color:#888;font-size:12px">This link is single-use and expires soon. If it lapses, ask NMAO to resend it.</p></div>`;
         const r = await fetch("https://api.resend.com/emails", {
           method: "POST",

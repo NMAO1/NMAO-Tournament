@@ -44,7 +44,7 @@ async function emailLink(to: string, name: string, link: string): Promise<boolea
       `<p>Hi ${esc(name) || "there"}, here's your sign-in link for the NMAO Ambassador portal.</p>` +
       `<p>Set your password to get your referral link, media kit, and referrals:</p>` +
       `<p><a href="${link}" style="display:inline-block;background:#C89B3C;color:#141210;font-weight:bold;text-decoration:none;padding:12px 24px;border-radius:10px">Set your password</a></p>` +
-      `<p style="color:#888;font-size:12px">Or paste this into your browser:<br>${link}</p>` +
+      `<p style="color:#888;font-size:12px;word-break:break-all;overflow-wrap:anywhere">Or paste this into your browser:<br>${link}</p>` +
       `<p style="color:#888;font-size:12px">Single-use and expires soon. Request a fresh one from the sign-in page if it lapses.</p></div>`;
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",

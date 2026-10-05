@@ -62,7 +62,7 @@ async function sendConfirm(to: string, name: string, token: string): Promise<boo
       `<p>Hi ${esc(name) || "there"}, thanks for registering your school with the NMAO Tournament League.</p>` +
       `<p>Confirm this email to finish — we'll then send your link to set a password and complete setup:</p>` +
       `<p><a href="${link}" style="display:inline-block;background:#C89B3C;color:#141210;font-weight:bold;text-decoration:none;padding:12px 24px;border-radius:10px">Confirm my email</a></p>` +
-      `<p style="color:#888;font-size:12px">Or paste this into your browser:<br>${link}</p>` +
+      `<p style="color:#888;font-size:12px;word-break:break-all;overflow-wrap:anywhere">Or paste this into your browser:<br>${link}</p>` +
       `<p style="color:#888;font-size:12px">If you didn't register a school with NMAO, you can ignore this email.</p></div>`;
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
