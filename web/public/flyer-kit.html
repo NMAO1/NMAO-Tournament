@@ -50,8 +50,7 @@ html,body{background:#15121f;color:var(--ink);font-family:var(--sans);-webkit-pr
 .cobrand .meta{line-height:1.35}
 .cobrand .pres{font-size:9px;letter-spacing:2.4px;color:var(--muted2);text-transform:uppercase}
 .cobrand .sch{font-family:var(--serif);font-size:16px;color:#fff;font-weight:700}
-.cobrand .logo{width:46px;height:46px;border-radius:10px;background:center/contain no-repeat;flex:none}
-.cobrand .logo:empty,.cobrand .logo[style=""]{display:none}
+.cobrand .logo{width:46px;height:46px;border-radius:10px;background:center/contain no-repeat;flex:none;display:none}
 .eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:700;color:var(--gold);margin:16px 0 7px}
 h1{font-family:var(--serif);font-size:44px;line-height:1.02;letter-spacing:-.5px;color:#fff;text-wrap:balance;margin-bottom:10px}
 .sub{color:var(--muted);font-size:14.5px;line-height:1.5;max-width:5.9in}
@@ -308,6 +307,7 @@ function applyField(name,val){
 function applyLogo(){
   document.querySelectorAll('.schoolLogo').forEach(function(el){
     el.style.backgroundImage=logoData?('url('+logoData+')'):'';
+    el.style.display=logoData?'block':'none';
   });
   var box=document.getElementById('logobox');
   box.style.backgroundImage=logoData?('url('+logoData+')'):'';
