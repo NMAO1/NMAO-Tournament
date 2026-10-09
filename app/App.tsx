@@ -40,11 +40,12 @@ const TABS: { key: Tab; label: string; title: string; icon: string; hue: string;
 function MainTabs() {
   const [tab, setTab] = useState<Tab>("duel");
   // shared active ward — so a guardian with >1 competitor sees the same child everywhere
-  const { comps, activeId, setActive } = useActiveCompetitor();
+  const { comps, activeId, setActive, reload } = useActiveCompetitor();
   const myId = activeId;
   const [unread, setUnread] = useState(0);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [reveal, setReveal] = useState<ActiveReveal | null>(null);
+  const [addingChild, setAddingChild] = useState(false);
   const active = TABS.find((t) => t.key === tab)!;
   // App Store 1.2 #7: an ejected/suspended competitor is locked out of posting
   // and competing. We block the content of every tab but Profile (kept reachable
@@ -97,6 +98,9 @@ function MainTabs() {
               </TouchableOpacity>
             );
           })}
+          <TouchableOpacity onPress={() => setAddingChild(true)} style={{ paddingHorizontal: 13, paddingVertical: 6, borderRadius: 99, borderWidth: 1, borderColor: neutrals.border, borderStyle: "dashed" }}>
+            <Text style={{ color: neutrals.muted2, fontWeight: "700", fontSize: 12 }}>+ Add</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -119,6 +123,10 @@ function MainTabs() {
       </View>
 
       <AlertsSheet visible={alertsOpen} onClose={() => setAlertsOpen(false)} onSelect={routeNotif} />
+
+      <Modal visible={addingChild} animationType="slide" onRequestClose={() => setAddingChild(false)}>
+        <Onboard mode="add" onCancel={() => setAddingChild(false)} onDone={async (id) => { await reload(); if (id) setActive(id); setAddingChild(false); }} />
+      </Modal>
 
       <Modal visible={!!reveal} animationType="fade" onRequestClose={() => setReveal(null)}>
         {reveal?.kind === "duel" ? <DuelReveal duelId={reveal.duelId} myId={myId} onClose={() => setReveal(null)} /> : null}

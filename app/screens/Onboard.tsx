@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator,
 import { LinearGradient } from "expo-linear-gradient";
 import { neutrals, hues, spectrumStops, status as statusColors } from "@nmao/design-tokens";
 import { supabase } from "../lib/supabase";
-import { listSeasons, onboardCompetitor, type Season } from "../lib/onboard";
+import { listSeasons, onboardCompetitor, myGuardian, type Season } from "../lib/onboard";
 
 const RANKS = ["beginner", "intermediate", "advanced"];
 type Lnk = { text: string; url: string };
@@ -16,7 +16,7 @@ const pad = (s: string) => (s.length === 1 ? "0" + s : s);
 
 // First-run onboarding — a guardian registers their competitor: details, school,
 // season (mandatory), and consent. Payment for entries happens later, per event.
-export default function Onboard({ onDone }: { onDone: () => void }) {
+export default function Onboard({ onDone, mode = "first", onCancel }: { onDone: (competitorId?: string) => void; mode?: "first" | "add"; onCancel?: () => void }) {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [gFirst, setGFirst] = useState(""); const [gLast, setGLast] = useState(""); const [gPhone, setGPhone] = useState("");
   const [first, setFirst] = useState(""); const [last, setLast] = useState("");
@@ -31,6 +31,13 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     listSeasons().then((s) => { setSeasons(s); const active = s.find((x) => x.status === "active"); if (active) setSeasonId(active.id); });
   }, []);
+
+  // Add-another-child: prefill the guardian from the existing record so a parent
+  // doesn't re-type their own name/phone (the backend reuses the same guardian).
+  useEffect(() => {
+    if (mode !== "add") return;
+    myGuardian().then((g) => { if (g) { setGFirst(g.first_name || ""); setGLast(g.last_name || ""); setGPhone(g.phone || ""); } }).catch(() => { /* leave blank */ });
+  }, [mode]);
 
   const dob = useMemo(() => (mm && dd && yy.length === 4 ? `${yy}-${pad(mm)}-${pad(dd)}` : ""), [mm, dd, yy]);
   const allConsented = CONSENTS.every((c) => checked[c.key]);
@@ -48,18 +55,22 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
     });
     setBusy(false);
     if (!r.ok) { setMsg(r.error || "Something went wrong."); return; }
-    onDone();
+    onDone(r.competitor_id);
   }
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: neutrals.bg }}>
       <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 60, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <Text style={{ color: neutrals.text, fontSize: 24, fontWeight: "800" }}>Register your competitor</Text>
-          <TouchableOpacity onPress={() => supabase.auth.signOut()}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Sign out</Text></TouchableOpacity>
+          <Text style={{ color: neutrals.text, fontSize: 24, fontWeight: "800" }}>{mode === "add" ? "Add a competitor" : "Register your competitor"}</Text>
+          {mode === "add"
+            ? <TouchableOpacity onPress={onCancel}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Cancel</Text></TouchableOpacity>
+            : <TouchableOpacity onPress={() => supabase.auth.signOut()}><Text style={{ color: neutrals.muted2, fontSize: 13 }}>Sign out</Text></TouchableOpacity>}
         </View>
         <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 14 }}>
-          Every competitor joins a season — the year-long journey of nine tournaments. You can add more competitors later.
+          {mode === "add"
+            ? "Add another competitor under your account. They'll join a season — the year-long journey of nine tournaments."
+            : "Every competitor joins a season — the year-long journey of nine tournaments. You can add more competitors later."}
         </Text>
 
         {/* COPPA §312.4 direct notice — shown BEFORE any child information is entered. */}
@@ -133,7 +144,7 @@ export default function Onboard({ onDone }: { onDone: () => void }) {
 
         <TouchableOpacity onPress={submit} disabled={busy || !ready} activeOpacity={0.85} style={{ marginTop: 22, borderRadius: 12, overflow: "hidden", opacity: ready ? 1 : 0.5 }}>
           <LinearGradient colors={spectrumStops} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ paddingVertical: 15, alignItems: "center" }}>
-            {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>Register & enter the arena</Text>}
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={{ color: "#fff", fontWeight: "800", fontSize: 16 }}>{mode === "add" ? "Add competitor" : "Register & enter the arena"}</Text>}
           </LinearGradient>
         </TouchableOpacity>
         {msg ? <Text style={{ color: statusColors.danger, textAlign: "center", marginTop: 14 }}>{msg}</Text> : null}

@@ -1,37 +1,67 @@
 import { useEffect, useState } from "react";
+import * as SecureStore from "expo-secure-store";
 import { myCompetitors, type MyCompetitor } from "./competitors";
 
-// Shared "active competitor" so a guardian with more than one ward sees the SAME
-// child across every tab (Duel, Honors, Profile, Compete). Previously each screen
-// used myCompetitors()[0], so a parent's second child was unreachable.
-let _activeId: string | null = null;
-const _subs = new Set<() => void>();
+// Shared "active competitor" so a guardian with more than one child sees the SAME
+// competitor across every tab (Duel, Honors, Profile, Compete, Leaderboard).
+// State lives at module scope so every screen reads one source of truth; the
+// chosen child is persisted (SecureStore) so it survives an app restart, and the
+// roster can be reloaded in place (e.g. after a parent adds another child).
+const KEY = "nmao_active_competitor_v1";
 
-export function setActiveCompetitorId(id: string | null) { _activeId = id; _subs.forEach((f) => f()); }
+let _activeId: string | null = null;
+let _comps: MyCompetitor[] = [];
+let _ready = false;
+let _loading: Promise<void> | null = null;
+const _subs = new Set<() => void>();
+const notify = () => _subs.forEach((f) => f());
+
 export function getActiveCompetitorId() { return _activeId; }
 
-export function useActiveCompetitor(): { comps: MyCompetitor[]; activeId: string | null; ready: boolean; setActive: (id: string) => void } {
-  const [comps, setComps] = useState<MyCompetitor[]>([]);
-  const [active, setActive] = useState<string | null>(_activeId);
-  // `ready` flips true once we've finished resolving who this login is — even when
-  // that resolves to zero competitors, or the lookup itself fails. Consumers gate
-  // their loading spinners on this, so an account with no competitor (or a failed
-  // lookup) can show an empty/fallback state instead of spinning forever.
-  const [ready, setReady] = useState(false);
+export function setActiveCompetitorId(id: string | null) {
+  _activeId = id;
+  notify();
+  SecureStore.setItemAsync(KEY, id ?? "").catch(() => { /* non-fatal */ });
+}
+
+async function load(force = false): Promise<void> {
+  if (_loading && !force) return _loading;
+  _loading = (async () => {
+    const rows = await myCompetitors().catch(() => [] as MyCompetitor[]);
+    _comps = rows;
+    // Restore the persisted child if it's still one of ours; otherwise keep a
+    // valid current selection, else fall back to the first child.
+    if (!_activeId) {
+      let saved: string | null = null;
+      try { saved = (await SecureStore.getItemAsync(KEY)) || null; } catch { /* ignore */ }
+      if (saved && rows.some((r) => r.id === saved)) _activeId = saved;
+    }
+    if (_activeId && !rows.some((r) => r.id === _activeId)) _activeId = null; // stale (e.g. removed)
+    if (!_activeId && rows[0]) setActiveCompetitorId(rows[0].id);
+    _ready = true;
+    notify();
+  })();
+  return _loading;
+}
+
+// Re-fetch the roster in place and notify every consumer — call after a parent
+// adds (or removes) a child so the switcher + all tabs pick it up without a restart.
+export async function reloadCompetitors(): Promise<MyCompetitor[]> {
+  _loading = null;
+  await load(true);
+  return _comps;
+}
+
+export function useActiveCompetitor(): {
+  comps: MyCompetitor[]; activeId: string | null; ready: boolean;
+  setActive: (id: string) => void; reload: () => Promise<MyCompetitor[]>;
+} {
+  const [, setTick] = useState(0);
   useEffect(() => {
-    let alive = true;
-    const sync = () => setActive(_activeId);
+    const sync = () => setTick((t) => t + 1);
     _subs.add(sync);
-    myCompetitors()
-      .then((rows) => {
-        if (!alive) return;
-        setComps(rows);
-        if (!_activeId && rows[0]) setActiveCompetitorId(rows[0].id); // seed to first ward
-        else sync();
-      })
-      .catch(() => { /* leave comps empty; never strand a consumer on a spinner */ })
-      .finally(() => { if (alive) setReady(true); });
-    return () => { alive = false; _subs.delete(sync); };
+    if (!_ready) load();
+    return () => { _subs.delete(sync); };
   }, []);
-  return { comps, activeId: active, ready, setActive: setActiveCompetitorId };
+  return { comps: _comps, activeId: _activeId, ready: _ready, setActive: setActiveCompetitorId, reload: reloadCompetitors };
 }

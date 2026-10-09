@@ -11,6 +11,7 @@ import { loadProfile, loadNotifPrefs, setNotifPref, type ProfileInfo } from "../
 import { shareInvite } from "../lib/invite";
 import Journal from "./Journal";
 import Home from "./Home";
+import Family from "./Family";
 import BuyEntry from "./BuyEntry";
 import FrameLab from "./FrameLab";
 import Store from "./Store";
@@ -18,7 +19,7 @@ import SponsorFrames from "./SponsorFrames";
 import MyPrizes from "./MyPrizes";
 import { myBlocked, unblockCompetitor, myLiveDuels, withdrawMyDuel, type BlockedCompetitor, type MyLiveDuel } from "../lib/duel";
 
-type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount" | "blocked" | "safety" | "myvideos";
+type Sub = null | "journal" | "home" | "dojo" | "rules" | "notifs" | "store" | "shop" | "sponsorframe" | "prizes" | "framelab" | "deleteaccount" | "blocked" | "safety" | "myvideos" | "family";
 
 const SUPPORT_EMAIL = "support@nmao.us";
 const RANK = (r: string | null) => (r ? r.replace("_", " ") : "");
@@ -81,6 +82,7 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
   if (sub === "sponsorframe" && me) return <SponsorFrames competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "prizes" && me) return <MyPrizes competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "deleteaccount") return <DeleteAccount onBack={() => setSub(null)} />;
+  if (sub === "family") return <Family onBack={() => setSub(null)} />;
   if (sub === "blocked" && me) return <BlockedAccounts competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "safety") return <SafetyContact onBack={() => setSub(null)} />;
   if (sub === "myvideos" && me) return <MyVideos competitorId={me} onBack={() => setSub(null)} />;
@@ -142,6 +144,7 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
         </TouchableOpacity>
       </View>
 
+      <Row icon="👨‍👩‍👧" label="My competitors" onPress={() => setSub("family")} />
       <Row icon="📓" label="Journal" onPress={() => setSub("journal")} />
       <Row icon="🥋" label="My Dojo" onPress={() => setSub("dojo")} />
       <Row icon="🔔" label="Notifications" onPress={() => setSub("notifs")} />

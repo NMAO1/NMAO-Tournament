@@ -53,6 +53,17 @@ export async function getInvite(t: string): Promise<{ ok: boolean; invite?: Invi
   return data as { ok: boolean; invite?: InvitePrefill; error?: string; status?: string };
 }
 
+// The signed-in guardian's own record, to prefill the "add another child" form so
+// a parent doesn't re-type their name/phone. Null if none yet, or RLS hides it
+// (then the add form just starts with empty guardian fields — still works).
+export async function myGuardian(): Promise<{ first_name: string; last_name: string; phone: string | null } | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const uid = session?.user?.id;
+  if (!uid) return null;
+  const { data } = await supabase.from("guardians").select("first_name, last_name, phone").eq("auth_user_id", uid).maybeSingle();
+  return (data as { first_name: string; last_name: string; phone: string | null } | null) ?? null;
+}
+
 export async function onboardCompetitor(payload: OnboardPayload): Promise<{ ok: boolean; competitor_id?: string; error?: string }> {
   const { data, error } = await supabase.functions.invoke("onboard-competitor", { body: payload });
   if (error) return { ok: false, error: error.message };
