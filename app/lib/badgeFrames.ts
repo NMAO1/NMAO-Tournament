@@ -49,7 +49,11 @@ export type RingConfig = {
   perimeter?: { img: string; per: number; max?: number };  // one motif per `per` of the value, placed around the ring.
   // forged 5-bar TALLY (vector-drawn, no art needed): one chisel notch per `per` of the
   // value, grouped into gates of `groupPer` (the 5th strikes across the prior four).
-  tally?: { per: number; groupPer?: number; max?: number; color?: string };
+  tally?: { per: number; groupPer?: number; max?: number; color?: string;
+    gap?: number;                                  // reserve a center gap (fraction of w) for a crest; notches flank it
+    tiers?: { at: number; color: string }[] };     // notch color upgrades as value passes each `at` (ascending)
+  // a single centered crest motif on the bottom border (e.g. a school medallion)
+  crest?: { img: string; y?: number; scale?: number };
   // crownGems: a centered row of PROMINENT gems along the top border — one per `value`,
   // each the next image in the series (season-colored). For "a gem per season won".
   crownGems?: string[];
@@ -59,6 +63,28 @@ export type RingConfig = {
 export type BadgeFrameSpec = { base: FrameRarity; label?: string; border?: { colors: string[]; glow?: string; texture?: string }; elements: SpecElement[]; fx?: boolean | FxConfig; ring?: RingConfig };
 
 export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
+  // ── TAOSD FOUNDING COMPETITOR · limited-edition school border (badge `taosd-founder`).
+  // Pearl-blue picture frame with the school's seed-of-life medallion as the bottom
+  // crest; a win-tally flanks it — white scratches, upgrading to obsidian at 5 wins
+  // and ruby at 50. Driven by DUEL WINS.
+  "taosd-founder": {
+    base: "legendary",
+    label: "Founding Competitor",
+    ring: {
+      tints: ["#6E8CAE"],                   // pearl-blue base (shows under/instead of art)
+      images: ["taosd-frame"],              // the Firefly pearl-blue border
+      stops: [],                            // static frame (not a value-tiered ring)
+      thickness: 0.17,
+      glow: "#AEC6E2",
+      crest: { img: "taosd-crest", scale: 2.1 },   // the SOU medallion, bottom-center
+      tally: {
+        per: 1, groupPer: 5, max: 50, gap: 0.36,
+        tiers: [{ at: 1, color: "#F2F2F2" }, { at: 5, color: "#1b1b22" }, { at: 50, color: "#C8102E" }],
+      },
+    },
+    elements: [],
+  },
+
   journal_keeper: {
     base: "rare",
     label: "Journal Keeper",

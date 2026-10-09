@@ -36,6 +36,7 @@ export function frameValueFor(code: string | null | undefined, card: Card | null
   if (/^season-champion-s\d+$/.test(code)) return stats?.championships ?? 0;
   switch (code) {
     case "duelist":        return card?.duelWins ?? stats?.duel_wins ?? 0;
+    case "taosd-founder":  return card?.duelWins ?? stats?.duel_wins ?? 0;   // win-tally on the TAOSD border
     case "journal_keeper": return stats?.journal ?? 0;
     case "zen":            return stats?.journal ?? 0;
     case "oracle":         // accuracy %, but only once enough votes have resolved (tough to earn + must be maintained)

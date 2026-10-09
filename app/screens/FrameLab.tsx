@@ -46,6 +46,10 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
   const [ascentVal, setAscentVal] = useState(40);
   const ASCENT_STEPS = [40, 50, 65, 80, 90];
   const ASCENT_LABELS = ["Base camp", "45+", "60+", "75+", "Summit ✦"];
+  // TAOSD Founding border — pearl-blue frame + school crest, win tally (white→obsidian@5→ruby@50)
+  const [taosdVal, setTaosdVal] = useState(1);
+  const TAOSD_STEPS = [1, 5, 20, 50, 100];
+  const TAOSD_LABELS = ["1 · white", "5 · obsidian", "20", "50 · ruby", "100"];
   return (
     <ScrollView style={{ flex: 1, backgroundColor: neutrals.bg }} contentContainerStyle={{ padding: 18, paddingTop: 54, paddingBottom: 44 }}>
       <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
@@ -55,6 +59,30 @@ export default function FrameLab({ onBack }: { onBack: () => void }) {
       <Text style={{ color: neutrals.muted, fontSize: 13, lineHeight: 19, marginBottom: 18 }}>
         The rarity ladder — each tier adds one legible layer. Parametric V1; per-badge specs and signature motifs layer on top.
       </Text>
+
+      {/* ── TAOSD FOUNDING BORDER — pearl-blue frame + school crest + win tally ── */}
+      <View style={{ borderWidth: 1, borderColor: "#3A4B5E", borderRadius: 16, padding: 16, marginBottom: 26, backgroundColor: "rgba(110,140,174,0.08)" }}>
+        <Text style={{ color: "#AEC6E2", fontSize: 12, letterSpacing: 1.2, textTransform: "uppercase", fontWeight: "800", marginBottom: 4 }}>TAOSD Founding Border · win tally</Text>
+        <Text style={{ color: neutrals.muted, fontSize: 12.5, lineHeight: 18, marginBottom: 16 }}>
+          Pearl-blue frame + the school medallion crest. One scratch per duel win, flanking the crest — white, upgrading to obsidian at 5 and ruby at 50. Step the wins to watch it fill.
+        </Text>
+        <View style={{ alignItems: "center" }}>
+          <RingFrame badgeCode="taosd-founder" value={taosdVal} w={240} h={240} radius={22}>
+            <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0b0b12" }}>
+              <Text style={{ color: neutrals.muted2, fontSize: 11 }}>video</Text>
+            </View>
+          </RingFrame>
+          <Text style={{ color: hues.gold.hi, fontSize: 14, fontWeight: "800", marginTop: 12 }}>{taosdVal} duel wins</Text>
+          <View style={{ flexDirection: "row", gap: 6, marginTop: 12 }}>
+            {TAOSD_STEPS.map((v, i) => (
+              <TouchableOpacity key={v} onPress={() => setTaosdVal(v)}
+                style={{ paddingHorizontal: 9, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: taosdVal === v ? "#AEC6E2" : neutrals.border, backgroundColor: taosdVal === v ? "rgba(174,198,226,0.16)" : "transparent" }}>
+                <Text style={{ color: taosdVal === v ? "#AEC6E2" : neutrals.muted, fontSize: 10.5, fontWeight: "700" }}>{TAOSD_LABELS[i]}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
 
       {/* ── PICTURE-FRAME RING (V3 prototype): a Firefly image masked to the border
           ring, cross-fading through tiers as the value climbs, stars accreting around
