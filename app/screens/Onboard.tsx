@@ -22,7 +22,6 @@ export default function Onboard({ onDone, mode = "first", onCancel }: { onDone: 
   const [first, setFirst] = useState(""); const [last, setLast] = useState("");
   const [mm, setMm] = useState(""); const [dd, setDd] = useState(""); const [yy, setYy] = useState("");
   const [rank, setRank] = useState<string | null>(null);
-  const [style, setStyle] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [seasonId, setSeasonId] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
@@ -48,7 +47,7 @@ export default function Onboard({ onDone, mode = "first", onCancel }: { onDone: 
     setBusy(true); setMsg("");
     const r = await onboardCompetitor({
       guardian: { first_name: gFirst.trim(), last_name: gLast.trim(), phone: gPhone.trim() || undefined },
-      competitor: { first_name: first.trim(), last_name: last.trim(), dob, declared_rank: rank!, declared_style: style.trim() },
+      competitor: { first_name: first.trim(), last_name: last.trim(), dob, declared_rank: rank! },
       season_id: seasonId!,
       consent_types: CONSENTS.filter((c) => checked[c.key]).map((c) => c.key),
       join_code: joinCode.trim() || undefined,
@@ -96,7 +95,6 @@ export default function Onboard({ onDone, mode = "first", onCancel }: { onDone: 
         <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
           {RANKS.map((r) => <Chip key={r} label={r[0].toUpperCase() + r.slice(1)} on={rank === r} onPress={() => setRank(r)} />)}
         </View>
-        <View style={{ marginTop: 6 }}><Field label="Style (e.g. Karate, Taekwondo)" value={style} onChange={setStyle} /></View>
 
         <Section title="Your school" />
         <Text style={{ color: neutrals.muted, fontSize: 12, marginBottom: 8, lineHeight: 17 }}>

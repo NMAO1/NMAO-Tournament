@@ -34,7 +34,6 @@ export default function InviteRedeem({ token, onDone, onCancel }: { token: strin
   const [first, setFirst] = useState(""); const [last, setLast] = useState("");
   const [mm, setMm] = useState(""); const [dd, setDd] = useState(""); const [yy, setYy] = useState("");
   const [dobLocked, setDobLocked] = useState(false);
-  const [style, setStyle] = useState("");
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false); const [msg, setMsg] = useState("");
 
@@ -60,7 +59,7 @@ export default function InviteRedeem({ token, onDone, onCancel }: { token: strin
     // school_id + rank are taken from the invite server-side (school owns rank).
     const r = await onboardCompetitor({
       guardian: { first_name: gFirst.trim(), last_name: gLast.trim(), phone: gPhone.trim() || undefined },
-      competitor: { first_name: first.trim(), last_name: last.trim(), dob, declared_style: style.trim() },
+      competitor: { first_name: first.trim(), last_name: last.trim(), dob },
       season_id: seasonId!,
       consent_types: CONSENTS.filter((c) => checked[c.key]).map((c) => c.key),
       invite_token: token,
@@ -117,7 +116,6 @@ export default function InviteRedeem({ token, onDone, onCancel }: { token: strin
         <LockedField value={rankLabel || "Your school will assign your rank"} muted={!rankLabel}
           note={invite.competitor.belt_name ? `Your school's record: ${invite.competitor.belt_name}` : "Set by your school"} />
 
-        <View style={{ marginTop: 6 }}><Field label="Style (e.g. Karate, Taekwondo)" value={style} onChange={setStyle} /></View>
 
         <Section title="Season" />
         {seasons.length === 0 ? <ActivityIndicator color={neutrals.muted} /> : (
