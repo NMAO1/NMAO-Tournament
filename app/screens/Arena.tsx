@@ -6,6 +6,7 @@ import { useVideoPlayer, VideoView, type VideoPlayer } from "expo-video";
 import { neutrals, hues, rarityStops, rarityBase, spectrumStops, type Rarity } from "@nmao/design-tokens";
 import { emblemUrl } from "../lib/badges";
 import { FrameElements } from "../components/LivingFrame";
+import { RingFrame } from "../components/RingFrame";
 import { FRAME_SPECS, frameElementUrl } from "../lib/badgeFrames";
 import { fetchFrameStats, frameSpecKey, frameValueFor, type FrameStats } from "../lib/frameStats";
 import { faceOff, castVote, playbackUrls, duelSponsor, sponsorImpression, reportDuel, blockCompetitor, type FaceOff, type Choice, type Card, type Sponsor, type FrameAnim } from "../lib/duel";
@@ -407,58 +408,74 @@ function Side({
   // Base border material comes from the badge spec (e.g. old wood) when defined.
   const glow = sf ? sf.accentColor : (frameSpec?.border?.glow ?? rarityBase(rarity));
   const borderTexture = !sf && frameSpec?.border?.texture ? frameElementUrl(frameSpec.border.texture) : null;
+  const [cardSize, setCardSize] = useState<{ w: number; h: number } | null>(null);
+  // A pure "ring" spec (full-image picture frame — e.g. the TAOSD founder border) has a
+  // ring config, no shelf elements, and no tiled texture → render it as a RingFrame.
+  const ringSpec = !sf && frameSpec?.ring && (frameSpec.elements?.length ?? 0) === 0 && !frameSpec.border ? frameSpec.ring : null;
+
+  // the video window + its overlays — reused by the texture-border and ring-border paths
+  const videoInner = (
+    <TouchableOpacity activeOpacity={0.95} onPress={onAudio} style={{ flex: 1 }}>
+      <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
+        {hasVideo ? (
+          <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
+        ) : null}
+        {/* nameplate at the top */}
+        <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.72)", paddingVertical: 6, alignItems: "center" }}>
+          <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
+          {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
+        </View>
+        {/* UGC safety: report the video / block this competitor */}
+        <TouchableOpacity onPress={onSafety} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={{ position: "absolute", top: 7, left: 7, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(6,5,4,0.5)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", zIndex: 6 }}>
+          <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>⚑</Text>
+        </TouchableOpacity>
+        {/* both forms roll at once; this chip shows/toggles which side's audio is live */}
+        {hasVideo ? (
+          <View style={{ position: "absolute", right: 10, bottom: 10, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: active ? "rgba(233,193,90,0.94)" : "rgba(0,0,0,0.5)" }}>
+            <Text style={{ fontSize: 13 }}>{active ? "🔊" : "🔇"}</Text>
+            <Text style={{ color: active ? "#141210" : "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.4 }}>{active ? "AUDIO" : "TAP TO HEAR"}</Text>
+          </View>
+        ) : null}
+        {/* sponsor frame branding: featured product image (top-right) + ribbon (bottom-left) */}
+        {sf?.imageUrl ? (
+          <Image source={{ uri: sf.imageUrl }} style={{ position: "absolute", top: 36, right: 8, width: 46, height: 46, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }} resizeMode="cover" />
+        ) : null}
+        {sf ? (
+          <View style={{ position: "absolute", left: 8, bottom: 10, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(6,5,4,0.62)", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 99, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", maxWidth: "78%" }}>
+            {sf.logoUrl ? <Image source={{ uri: sf.logoUrl }} style={{ width: 16, height: 16, borderRadius: 8 }} /> : <Text style={{ fontSize: 10 }}>◆</Text>}
+            <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 0.4 }} numberOfLines={1}>PRESENTED BY {sf.label.toUpperCase()}</Text>
+          </View>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
   return (
-    <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}>
+    <View style={{ flex: 1, opacity: dim ? 0.32 : 1 }}
+      onLayout={(e) => { const { width, height } = e.nativeEvent.layout; if (width > 0 && height > 0 && (cardSize?.w !== width || cardSize?.h !== height)) setCardSize({ w: width, h: height }); }}>
       {/* custom frame: thin top + sides, a THICK bottom band (BAND) that the side
-          borders squeeze into — the big customizable badge/sponsor area. */}
+          borders squeeze into. The equipped badge's living frame renders either as a
+          tiled-texture border (+ element shelf) or, for a pure "ring" spec like the
+          TAOSD founder border, as a full-image RingFrame. */}
       <View style={{ flex: 1, shadowColor: glow, shadowOpacity: 0.6, shadowRadius: 26, shadowOffset: { width: 0, height: 0 } }}>
-        <LinearGradient
-          colors={(borderTexture ? ["rgba(0,0,0,0)", "rgba(0,0,0,0)"] : sf ? [sf.accentColor, sf.accentColor] : (frameSpec?.border?.colors ?? rarityStops(rarity))) as ReturnType<typeof rarityStops>} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={{ flex: 1, borderRadius: 26, overflow: "hidden", paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
-        >
-          {borderTexture ? <Image source={{ uri: borderTexture }} resizeMode="repeat" style={StyleSheet.absoluteFill} /> : null}
-          {sf ? <AnimatedBorder animation={sf.animation} color={sf.accentColor} /> : null}
-          <TouchableOpacity activeOpacity={0.95} onPress={onAudio} style={{ flex: 1 }}>
-            <View style={{ flex: 1, borderRadius: 12, overflow: "hidden", backgroundColor: "#0d0a06", alignItems: "center", justifyContent: "center" }}>
-              {hasVideo ? (
-                <VideoView player={player} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />
-              ) : null}
-              {/* nameplate at the top */}
-              <View style={{ position: "absolute", top: 0, left: 0, right: 0, backgroundColor: "rgba(8,6,4,0.72)", paddingVertical: 6, alignItems: "center" }}>
-                <Text style={{ color: neutrals.text, fontWeight: "800", fontSize: 14 }} numberOfLines={1}>{card.name}</Text>
-                {card.school ? <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 1 }} numberOfLines={1}>{card.school}</Text> : null}
-              </View>
-              {/* UGC safety: report the video / block this competitor */}
-              <TouchableOpacity onPress={onSafety} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{ position: "absolute", top: 7, left: 7, width: 30, height: 30, borderRadius: 15, backgroundColor: "rgba(6,5,4,0.5)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", zIndex: 6 }}>
-                <Text style={{ color: "rgba(255,255,255,0.72)", fontSize: 14 }}>⚑</Text>
-              </TouchableOpacity>
-              {/* both forms roll at once; this chip shows/toggles which side's audio
-                  is live (tap to hear this side; the other side mutes). */}
-              {hasVideo ? (
-                <View style={{ position: "absolute", right: 10, bottom: 10, flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, height: 30, borderRadius: 15, backgroundColor: active ? "rgba(233,193,90,0.94)" : "rgba(0,0,0,0.5)" }}>
-                  <Text style={{ fontSize: 13 }}>{active ? "🔊" : "🔇"}</Text>
-                  <Text style={{ color: active ? "#141210" : "#fff", fontSize: 10, fontWeight: "800", letterSpacing: 0.4 }}>{active ? "AUDIO" : "TAP TO HEAR"}</Text>
-                </View>
-              ) : null}
-              {/* sponsor frame branding: featured product image (top-right) + a
-                  "presented by" ribbon (bottom-left, opposite the audio chip). */}
-              {sf?.imageUrl ? (
-                <Image source={{ uri: sf.imageUrl }} style={{ position: "absolute", top: 36, right: 8, width: 46, height: 46, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }} resizeMode="cover" />
-              ) : null}
-              {sf ? (
-                <View style={{ position: "absolute", left: 8, bottom: 10, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(6,5,4,0.62)", paddingVertical: 4, paddingHorizontal: 8, borderRadius: 99, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", maxWidth: "78%" }}>
-                  {sf.logoUrl ? <Image source={{ uri: sf.logoUrl }} style={{ width: 16, height: 16, borderRadius: 8 }} /> : <Text style={{ fontSize: 10 }}>◆</Text>}
-                  <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800", letterSpacing: 0.4 }} numberOfLines={1}>PRESENTED BY {sf.label.toUpperCase()}</Text>
-                </View>
-              ) : null}
-            </View>
-          </TouchableOpacity>
-        </LinearGradient>
+        {ringSpec && cardSize ? (
+          <RingFrame ring={ringSpec} value={value} w={cardSize.w} h={cardSize.h} radius={26}>
+            {videoInner}
+          </RingFrame>
+        ) : (
+          <LinearGradient
+            colors={(borderTexture ? ["rgba(0,0,0,0)", "rgba(0,0,0,0)"] : sf ? [sf.accentColor, sf.accentColor] : (frameSpec?.border?.colors ?? rarityStops(rarity))) as ReturnType<typeof rarityStops>} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ flex: 1, borderRadius: 26, overflow: "hidden", paddingTop: 14, paddingLeft: 14, paddingRight: 14, paddingBottom: BAND }}
+          >
+            {borderTexture ? <Image source={{ uri: borderTexture }} resizeMode="repeat" style={StyleSheet.absoluteFill} /> : null}
+            {sf ? <AnimatedBorder animation={sf.animation} color={sf.accentColor} /> : null}
+            {videoInner}
+          </LinearGradient>
+        )}
       </View>
       {/* per-badge "living frame" elements ride the thick bottom band (behind the
           vote CTA). Skipped when a sponsor frame owns the band. */}
-      {!sf && frameCode ? (
+      {!sf && frameCode && !ringSpec ? (
         <View onLayout={(e) => { const wd = e.nativeEvent.layout.width; if (wd > 0) setBandW(wd); }} pointerEvents="none"
           style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: SHELF, zIndex: 20 }}>
           {/* elements sit on the band and spill up into the video (fighter is center-frame) */}
