@@ -46,6 +46,9 @@ export type RingConfig = {
   stops: number[];                 // value thresholds; tier i (i>=1) activates when value >= stops[i-1].
   thickness?: number;              // ring thickness as a fraction of min(w,h) (default 0.15).
   glow?: string;
+  fit?: "cover" | "stretch" | "contain";  // how the tier art fills w×h (default "cover"). A full
+                                           // picture-frame bezel needs "stretch" so all four borders
+                                           // reach the edges on a non-square card (cover crops them).
   perimeter?: { img: string; per: number; max?: number };  // one motif per `per` of the value, placed around the ring.
   // forged 5-bar TALLY (vector-drawn, no art needed): one chisel notch per `per` of the
   // value, grouped into gates of `groupPer` (the 5th strikes across the prior four).
@@ -76,7 +79,8 @@ export const FRAME_SPECS: Record<string, BadgeFrameSpec> = {
       stops: [],                            // static frame (not a value-tiered ring)
       thickness: 0.17,
       glow: "#AEC6E2",
-      crest: { img: "taosd-crest", scale: 2.1 },   // the SOU medallion, bottom-center
+      fit: "stretch",                               // bezel reaches all four edges (no top/bottom crop)
+      crest: { img: "taosd-crest", scale: 1.58 },  // the SOU medallion, bottom-center (25% smaller)
       tally: {
         per: 1, groupPer: 5, max: 50, gap: 0.36,
         tiers: [{ at: 1, color: "#F2F2F2" }, { at: 5, color: "#1b1b22" }, { at: 50, color: "#C8102E" }],

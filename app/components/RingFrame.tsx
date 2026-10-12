@@ -32,7 +32,8 @@ export function RingFrame({ badgeCode, ring, value, w, h, radius = 20, children 
       {/* the ring art — stacked tiers, each fades in as its stop is passed (higher = on top) */}
       <View style={{ position: "absolute", width: w, height: h, borderRadius: radius, overflow: "hidden" }}>
         {cfg.tints.map((tint, i) => (
-          <TierLayer key={i} tint={tint} img={cfg.images?.[i]} active={i <= activeTier} w={w} h={h} kenBurns={i === activeTier} />
+          <TierLayer key={i} tint={tint} img={cfg.images?.[i]} active={i <= activeTier} w={w} h={h}
+            fit={cfg.fit} kenBurns={i === activeTier && (cfg.fit ?? "cover") === "cover"} />
         ))}
       </View>
 
@@ -157,7 +158,7 @@ function ShootingStar({ w, h }: { w: number; h: number }) {
 
 // One ring tier: a tint gradient (always) with the Firefly art over it (when present),
 // cross-fading in when its stop is passed. The active tier slowly ken-burns.
-function TierLayer({ tint, img, active, w, h, kenBurns }: { tint: string; img?: string; active: boolean; w: number; h: number; kenBurns: boolean }) {
+function TierLayer({ tint, img, active, w, h, kenBurns, fit }: { tint: string; img?: string; active: boolean; w: number; h: number; kenBurns: boolean; fit?: "cover" | "stretch" | "contain" }) {
   const op = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => { Animated.timing(op, { toValue: active ? 1 : 0, duration: 650, easing: Easing.inOut(Easing.quad), useNativeDriver: true }).start(); }, [active, op]);
   const kb = useRef(new Animated.Value(0)).current;
@@ -178,8 +179,14 @@ function TierLayer({ tint, img, active, w, h, kenBurns }: { tint: string; img?: 
     <Animated.View pointerEvents="none" style={{ position: "absolute", width: w, height: h, opacity: op }}>
       <LinearGradient colors={[shade(tint, 0.15), tint, darker]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ position: "absolute", width: w, height: h }} />
       {url && !failed ? (
-        <Animated.Image source={{ uri: url }} resizeMode="cover" onError={() => setFailed(true)}
-          style={{ position: "absolute", width: w, height: h, transform: [{ scale }, { translateX: tx }] }} />
+        fit === "stretch" ? (
+          // a full bezel: fill w×h exactly (all four borders reach the edges), held steady
+          <Image source={{ uri: url }} resizeMode="stretch" onError={() => setFailed(true)}
+            style={{ position: "absolute", width: w, height: h }} />
+        ) : (
+          <Animated.Image source={{ uri: url }} resizeMode={fit ?? "cover"} onError={() => setFailed(true)}
+            style={{ position: "absolute", width: w, height: h, transform: [{ scale }, { translateX: tx }] }} />
+        )
       ) : null}
     </Animated.View>
   );
