@@ -115,7 +115,7 @@ Open questions [TO DEFINE]: who's accredited (schools/instructors/both); criteri
 
 ## 6. Member Platform — proposed scope (mostly [TO DEFINE])
 
-Likely: SaaS for running a martial arts school. Adopting it earns the top 35% tournament revenue tier and feeds clean student/rank data into the other products.
+Likely: SaaS for running a martial arts school. Adopting it earns the top 40% tournament revenue tier and feeds clean student/rank data into the other products.
 
 Likely v1 features: roster & profiles · rank/belt progression · scheduling & attendance · billing/dues · communication · curriculum library · instructor management · reporting.
 
