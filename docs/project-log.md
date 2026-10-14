@@ -129,7 +129,7 @@ Full Q&A in `docs/open-questions.md`. Engine/product locks:
 - **Scoring — CHANGED:** judges score **per criterion** using the Traditional/Open weight profiles (`rubric_weights`); the per-judge score = weighted sum of criteria. This supersedes the single-0-100-per-judge lock. `resolvePod`/placement/rating are unchanged; needs per-criterion capture (`submission_scores`) re-added + judge-app fields. (Confirm scale + 3-judge averaging.)
 - **Rating → rank:** member-platform rank auto-seeds `declared_rank`; add a **school-configurable belt→tier mapping** (beginner/intermediate/advanced/black belt) since belt systems differ by style.
 - **Identity:** self sign-up for school/guardian/competitor; **judges invited** by a tournament admin. School app uses a `school_members(school_id, auth_user_id, role)` table (owner + assistant instructors).
-- **Payments:** Stripe. Entry fee **$45**, captured at sign-up. School payouts **per round via Stripe Connect**, tiers 15/25/35% automated (35% = tournament + accreditation + member platform).
+- **Payments:** Stripe. Entry fee **$45**, captured at sign-up. School payouts **per round via Stripe Connect**, tiers 15/25/40% automated (40% = tournament + accreditation + member platform).
 - **Video:** Vimeo (no ads); minor-safety protocols (private/unlisted, no public discovery).
 - **Consent:** signed e-waiver (COPPA).
 - **Legal:** incorporated. D-U-N-S meeting Aug 24. Privacy policy to be drafted here (reuse member-platform policy).

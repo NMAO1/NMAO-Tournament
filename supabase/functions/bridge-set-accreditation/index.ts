@@ -4,7 +4,7 @@
 // same custom HS256 bridge token as bridge-provision-school (shared secret
 // TOURNAMENT_BRIDGE_SECRET), integrity-checks the body via body_sha256, then sets
 // schools.accredited for the matching school. The schools payout-tier trigger
-// recomputes payout_tier automatically (15/25/35). Idempotent — setting the same
+// recomputes payout_tier automatically (15/25/40). Idempotent — setting the same
 // value is a no-op. No school match = harmless ok.
 //
 // TARGETING (exactly ONE identifier per call; the signed body_sha256 covers
