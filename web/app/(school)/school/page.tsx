@@ -96,6 +96,7 @@ export default function SchoolPortal() {
   const [codeCopied, setCodeCopied] = useState(false);
   const [selRoster, setSelRoster] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set()); // which competitor rows show their controls
+  const [readyFilter, setReadyFilter] = useState<null | "ready" | "consent" | "events">(null); // roster readiness filter
   const [bulkRank, setBulkRank] = useState("beginner");
   const [bulkClass, setBulkClass] = useState("");
   const [groupRank, setGroupRank] = useState<Record<string, string>>({}); // per belt-group rank override (pending list)
@@ -424,6 +425,13 @@ export default function SchoolPortal() {
   function currentSettings(id: string): Settings {
     return settings[id] ?? { competitor_id: id, allowed_events: null, dueling_enabled: false, competition_class: null, geo_exclude_miles: null, merch_enabled: false };
   }
+  // Per-competitor readiness — what (if anything) is blocking them from competing.
+  function readinessOf(id: string) {
+    const s = currentSettings(id);
+    const needsConsent = !!consent[id]?.is_minor && !consent[id]?.has_consent;
+    const noEvents = (s.allowed_events ?? []).length === 0;
+    return { needsConsent, noEvents, duelReady: !!compDueling[id] && !needsConsent };
+  }
   async function saveSetting(id: string, patch: Partial<Settings>) {
     if (!school) return;
     const next = { ...currentSettings(id), ...patch };
@@ -640,6 +648,63 @@ export default function SchoolPortal() {
                     ))}
                   </div>
                 )}
+                <div style={{ ...card, padding: 16, marginBottom: 22 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Add athlete</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <button onClick={() => setImportOpen(true)} style={{ border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>⬆ Import list</button>
+                      <Hint on={hintsOn} align="right">Bulk-add competitors — one per line as <code>First, Last, YYYY-MM-DD, rank</code>. Date &amp; rank are optional (rank defaults to beginner).</Hint>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 140px 150px", gap: 10 }}>
+                    <input style={inp} placeholder="First name" value={form.first} onChange={(e) => setForm({ ...form, first: e.target.value })} />
+                    <input style={inp} placeholder="Last name" value={form.last} onChange={(e) => setForm({ ...form, last: e.target.value })} />
+                    <input style={inp} type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} />
+                    <select style={inp} value={form.rank} onChange={(e) => setForm({ ...form, rank: e.target.value })}>{RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}</select>
+                  </div>
+                  <button onClick={addAthlete} disabled={saving} style={{ marginTop: 12, border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 20px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: saving ? 0.6 : 1 }}>{saving ? "Adding…" : "Add to roster"}</button>
+                </div>
+                {school && (
+                  <div style={{ ...card, padding: 16, marginBottom: 22 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Defaults for new competitors</div>
+                      <Hint on={hintsOn} align="right">Set these once — every competitor you add or import from now on starts with these events, class and dueling setting. You can still fine-tune anyone individually below.</Hint>
+                    </div>
+                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 6 }}>Applied automatically to anyone you add or import from here on.</div>
+                    <CtlRow label="Event categories" sub="allowed by default">
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {EVENTS.map((e) => { const on = (school.default_tour_events ?? []).includes(e.code); return <Chip key={e.code} on={on} label={e.name} onClick={() => { const cur = school.default_tour_events ?? []; saveDefaults({ default_tour_events: on ? cur.filter((c) => c !== e.code) : [...cur, e.code] }); }} />; })}
+                      </div>
+                    </CtlRow>
+                    <CtlRow label="Class / level" sub="default competition tier">
+                      <select style={{ ...inp, background: neutrals.surface2 }} value={school.default_tour_class ?? ""} onChange={(e) => saveDefaults({ default_tour_class: e.target.value || null })}>
+                        <option value="">— none —</option>{CLASSES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
+                      </select>
+                    </CtlRow>
+                    <CtlRow label="Dueling" sub="enable 1-v-1 by default (guardian consent still required for minors)">
+                      <Toggle on={school.default_tour_dueling} onChange={(v) => saveDefaults({ default_tour_dueling: v })} />
+                    </CtlRow>
+                  </div>
+                )}
+                {roster.length > 0 && (() => {
+                  const ready = roster.filter((a) => readinessOf(a.id).duelReady).length;
+                  const needConsent = roster.filter((a) => readinessOf(a.id).needsConsent).length;
+                  const noEvents = roster.filter((a) => readinessOf(a.id).noEvents).length;
+                  const chip = (active: boolean, color: string, label: string, onClick: () => void) => (
+                    <button onClick={onClick} style={{ fontSize: 12, fontWeight: 700, color: active ? "#141210" : color, background: active ? color : "transparent", border: `1px solid ${color}`, borderRadius: 99, padding: "4px 11px", cursor: "pointer", whiteSpace: "nowrap" }}>{label}</button>
+                  );
+                  return (
+                    <div style={{ ...card, padding: "12px 16px", marginBottom: 10, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, textTransform: "uppercase", color: neutrals.muted2 }}>Readiness</span>
+                      <span style={{ fontSize: 13, color: neutrals.muted }}>{roster.length} competitor{roster.length === 1 ? "" : "s"}</span>
+                      <div style={{ flex: 1 }} />
+                      {chip(readyFilter === "ready", status.success, `✓ ${ready} duel-ready`, () => setReadyFilter(readyFilter === "ready" ? null : "ready"))}
+                      {needConsent > 0 && chip(readyFilter === "consent", status.danger, `⚠ ${needConsent} need consent`, () => setReadyFilter(readyFilter === "consent" ? null : "consent"))}
+                      {noEvents > 0 && chip(readyFilter === "events", hues.gold.base, `⚠ ${noEvents} no events`, () => setReadyFilter(readyFilter === "events" ? null : "events"))}
+                      {readyFilter && <button onClick={() => setReadyFilter(null)} style={miniGhost}>Clear</button>}
+                    </div>
+                  );
+                })()}
                 {roster.length > 0 && (
                   <div style={{ ...card, padding: "10px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: neutrals.text, cursor: "pointer" }}>
@@ -674,7 +739,7 @@ export default function SchoolPortal() {
                 {roster.length > 5 && (
                   <input style={{ ...inp, width: "100%", marginBottom: 10 }} placeholder="Search competitors…" value={ctlSearch} onChange={(e) => setCtlSearch(e.target.value)} />
                 )}
-                {roster.filter((a) => `${a.first_name} ${a.last_name}`.toLowerCase().includes(ctlSearch.trim().toLowerCase())).map((a) => {
+                {roster.filter((a) => `${a.first_name} ${a.last_name}`.toLowerCase().includes(ctlSearch.trim().toLowerCase()) && (!readyFilter || (readyFilter === "ready" ? readinessOf(a.id).duelReady : readyFilter === "consent" ? readinessOf(a.id).needsConsent : readinessOf(a.id).noEvents))).map((a) => {
                   const s = currentSettings(a.id);
                   const isOpen = expanded.has(a.id);
                   const evCount = (s.allowed_events ?? []).length;
@@ -735,44 +800,6 @@ export default function SchoolPortal() {
                   );
                 })}
                 <Hint on={hintsOn}>Each competitor&apos;s <b>Controls ▾</b> set their events, <b>class/level</b>, <b>dueling</b> (1-v-1 challenges, matched by your <b>Geo-location</b> rule), and rank. Changes save automatically — watch for <b>✓ Saved</b>.</Hint>
-                <div style={{ ...card, padding: 16, marginBottom: 22 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Add athlete</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <button onClick={() => setImportOpen(true)} style={{ border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>⬆ Import list</button>
-                      <Hint on={hintsOn} align="right">Bulk-add competitors — one per line as <code>First, Last, YYYY-MM-DD, rank</code>. Date &amp; rank are optional (rank defaults to beginner).</Hint>
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 140px 150px", gap: 10 }}>
-                    <input style={inp} placeholder="First name" value={form.first} onChange={(e) => setForm({ ...form, first: e.target.value })} />
-                    <input style={inp} placeholder="Last name" value={form.last} onChange={(e) => setForm({ ...form, last: e.target.value })} />
-                    <input style={inp} type="date" value={form.dob} onChange={(e) => setForm({ ...form, dob: e.target.value })} />
-                    <select style={inp} value={form.rank} onChange={(e) => setForm({ ...form, rank: e.target.value })}>{RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}</select>
-                  </div>
-                  <button onClick={addAthlete} disabled={saving} style={{ marginTop: 12, border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 20px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: saving ? 0.6 : 1 }}>{saving ? "Adding…" : "Add to roster"}</button>
-                </div>
-                {school && (
-                  <div style={{ ...card, padding: 16, marginBottom: 22 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Defaults for new competitors</div>
-                      <Hint on={hintsOn} align="right">Set these once — every competitor you add or import from now on starts with these events, class and dueling setting. You can still fine-tune anyone individually below.</Hint>
-                    </div>
-                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 6 }}>Applied automatically to anyone you add or import from here on.</div>
-                    <CtlRow label="Event categories" sub="allowed by default">
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        {EVENTS.map((e) => { const on = (school.default_tour_events ?? []).includes(e.code); return <Chip key={e.code} on={on} label={e.name} onClick={() => { const cur = school.default_tour_events ?? []; saveDefaults({ default_tour_events: on ? cur.filter((c) => c !== e.code) : [...cur, e.code] }); }} />; })}
-                      </div>
-                    </CtlRow>
-                    <CtlRow label="Class / level" sub="default competition tier">
-                      <select style={{ ...inp, background: neutrals.surface2 }} value={school.default_tour_class ?? ""} onChange={(e) => saveDefaults({ default_tour_class: e.target.value || null })}>
-                        <option value="">— none —</option>{CLASSES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
-                      </select>
-                    </CtlRow>
-                    <CtlRow label="Dueling" sub="enable 1-v-1 by default (guardian consent still required for minors)">
-                      <Toggle on={school.default_tour_dueling} onChange={(v) => saveDefaults({ default_tour_dueling: v })} />
-                    </CtlRow>
-                  </div>
-                )}
               </>
             )}
 
