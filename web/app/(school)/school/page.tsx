@@ -270,9 +270,10 @@ export default function SchoolPortal() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Load Stripe Connect status when the Payouts tab is opened (or returned to from Stripe).
+  // Load Stripe Connect status when the Payouts tab is opened (or returned to from
+  // Stripe), and on the Dashboard so the setup checklist reflects the real bank state.
   useEffect(() => {
-    if (section !== "payouts" || !school) return;
+    if ((section !== "payouts" && section !== "dashboard") || !school) return;
     let cancelled = false;
     (async () => {
       const { data: sess } = await supabase.auth.getSession();
@@ -945,6 +946,27 @@ export default function SchoolPortal() {
 
             {section === "dashboard" && (
               <>
+                {joinReqs.length > 0 && (
+                  <div style={{ ...card, padding: "12px 16px", marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, borderColor: hues.gold.base }}>
+                    <div style={{ fontSize: 13.5, color: neutrals.text }}><b>{joinReqs.length}</b> student{joinReqs.length > 1 ? "s are" : " is"} waiting for you to approve their join request.</div>
+                    <button onClick={() => setSection("roster")} style={{ border: "none", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, color: "#141210", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap" }}>Review →</button>
+                  </div>
+                )}
+                {(() => {
+                  const profileDone = !!(school?.contact_email && school?.address?.line1);
+                  const bankDone = !!connect?.payouts_enabled;
+                  const rosterDone = roster.length > 0;
+                  const defaultsDone = !!((school?.default_tour_events?.length ?? 0) > 0 || school?.default_tour_dueling || school?.default_tour_class);
+                  const duelingDone = Object.values(compDueling).some(Boolean);
+                  const items = [
+                    { key: "profile", label: "Complete your school profile", hint: "Name, contact, and address — your address powers duel geo-matching.", done: profileDone, go: "settings" },
+                    { key: "roster", label: "Add your competitors", hint: "Add athletes directly or share your join code with students.", done: rosterDone, go: "roster" },
+                    { key: "defaults", label: "Set defaults for new competitors", hint: "Pre-set events, class, and dueling so new athletes arrive ready.", done: defaultsDone, go: "roster" },
+                    { key: "dueling", label: "Turn on dueling for your competitors", hint: "Dueling is off by default and set per competitor (consent required for minors).", done: duelingDone, go: "roster" },
+                    { key: "bank", label: "Connect your bank for payouts", hint: "Link Stripe so NMAO can pay your league share.", done: bankDone, go: "payouts" },
+                  ];
+                  return <SetupChecklist items={items} onGo={(s) => setSection(s as SectionKey)} />;
+                })()}
                 {deadline && (
                   <div style={{ ...card, padding: "12px 16px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
                     <div>
@@ -1116,6 +1138,46 @@ function DrillRow({ left, right, good, warn }: { left: string; right: string; go
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 2px", borderBottom: `1px solid ${neutrals.surface2}`, fontSize: 13, gap: 12 }}>
       <span style={{ color: neutrals.text }}>{left}</span>
       <span style={{ color: good ? "#7ED0A0" : warn ? hues.gold.hi : neutrals.muted, whiteSpace: "nowrap" }}>{right}</span>
+    </div>
+  );
+}
+function SetupChecklist({ items, onGo }: { items: { key: string; label: string; hint: string; done: boolean; go: string }[]; onGo: (s: string) => void }) {
+  const done = items.filter((i) => i.done).length;
+  const allDone = done === items.length;
+  const card = { background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 14 } as const;
+  if (allDone) {
+    return (
+      <div style={{ ...card, padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10, borderColor: status.success, flexWrap: "wrap" }}>
+        <span style={{ color: status.success, fontSize: 16 }}>✓</span>
+        <span style={{ fontSize: 13.5, color: neutrals.text, fontWeight: 600 }}>Your school is fully set up.</span>
+        <span style={{ fontSize: 12.5, color: neutrals.muted2 }}>Everything below is ready to go.</span>
+      </div>
+    );
+  }
+  return (
+    <div style={{ ...card, padding: 18, marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.gold.hi }}>Get set up</div>
+        <div style={{ fontSize: 12, color: neutrals.muted2 }}>{done} of {items.length} done</div>
+      </div>
+      <div style={{ height: 4, borderRadius: 99, background: neutrals.surface2, overflow: "hidden", marginBottom: 14 }}>
+        <div style={{ height: "100%", width: `${(done / items.length) * 100}%`, background: `linear-gradient(90deg, ${hues.gold.shadow}, ${hues.gold.base} 60%, ${hues.gold.hi})`, transition: "width .3s" }} />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {items.map((i) => (
+          <div key={i.key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ flex: "0 0 auto", width: 20, height: 20, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 800,
+              background: i.done ? status.success : "transparent", color: i.done ? "#0d120f" : neutrals.muted2, border: i.done ? "none" : `1.5px solid ${neutrals.border}` }}>{i.done ? "✓" : ""}</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: i.done ? neutrals.muted : neutrals.text, textDecoration: i.done ? "line-through" : "none" }}>{i.label}</div>
+              {!i.done && <div style={{ fontSize: 12, color: neutrals.muted2, marginTop: 1 }}>{i.hint}</div>}
+            </div>
+            {!i.done && (
+              <button onClick={() => onGo(i.go)} style={{ flex: "0 0 auto", border: `1px solid ${hues.gold.shadow}`, background: "transparent", color: hues.gold.hi, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12.5, fontWeight: 700, whiteSpace: "nowrap" }}>Go →</button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
