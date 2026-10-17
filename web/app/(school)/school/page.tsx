@@ -10,7 +10,7 @@ type Address = { line1?: string; city?: string; state?: string; postal?: string;
 // schools.dueling_area jsonb — the ENFORCED geo rule for 1-v-1 matchmaking
 // (nmao.area_passes / duel_geo_allowed). Both schools' rules must pass.
 type DuelArea = { level?: string; min_miles?: number; max_miles?: number };
-type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null; default_tour_events: string[] | null; default_tour_class: string | null; default_tour_dueling: boolean; dueling_area: DuelArea | null };
+type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null; default_tour_events: string[] | null; default_tour_class: string | null; default_tour_dueling: boolean; dueling_area: DuelArea | null; notify_join_requests: boolean };
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null; dueling_enabled?: boolean | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
@@ -130,6 +130,7 @@ export default function SchoolPortal() {
   useEffect(() => { setNowTs(Date.now()); const t = setInterval(() => setNowTs(Date.now()), 30000); return () => clearInterval(t); }, []);
   function toggleHints(v: boolean) { setHintsOn(v); localStorage.setItem("nmao_hints", v ? "on" : "off"); }
   async function toggleAutoApprove(v: boolean) { if (!profile) return; setProfile({ ...profile, auto_approve_join: v }); await supabase.from("schools").update({ auto_approve_join: v }).eq("id", profile.id); }
+  async function toggleNotifyJoin(v: boolean) { if (!profile) return; setProfile({ ...profile, notify_join_requests: v }); await supabase.from("schools").update({ notify_join_requests: v }).eq("id", profile.id); }
 
   useEffect(() => {
     if (section !== "promotion" || !school) return;
@@ -224,7 +225,7 @@ export default function SchoolPortal() {
     // Take the first owned school rather than .maybeSingle() — an owner accidentally
     // linked to >1 school (e.g. demo/test rows) would otherwise make maybeSingle() error
     // and return null, blanking the portal with "not linked". Prefer the oldest.
-    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join, accredited, external_member_school_id, default_tour_events, default_tour_class, default_tour_dueling, dueling_area").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
+    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join, accredited, external_member_school_id, default_tour_events, default_tour_class, default_tour_dueling, dueling_area, notify_join_requests").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
     const sch = schList?.[0] ?? null;
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
@@ -822,6 +823,11 @@ export default function SchoolPortal() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, paddingTop: 14, borderTop: `1px solid ${neutrals.border}` }}>
                   <div style={{ maxWidth: 380 }}><div style={{ fontSize: 14 }}>Auto-accept join codes</div><div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>When on, a competitor who enters your join code joins your roster immediately. When off, you approve each request first (keeps strangers out).</div></div>
                   <Toggle on={!!profile.auto_approve_join} onChange={toggleAutoApprove} />
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${neutrals.border}` }}>
+                  <div style={{ maxWidth: 380 }}><div style={{ fontSize: 14 }}>Email me about new join requests</div><div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>Get an email at <b style={{ color: neutrals.muted }}>{profile.contact_email || "your contact email"}</b> whenever a competitor enters your join code and is waiting for approval. Turn off to stop these emails.</div></div>
+                  <Toggle on={!!profile.notify_join_requests} onChange={toggleNotifyJoin} />
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${neutrals.border}` }}>

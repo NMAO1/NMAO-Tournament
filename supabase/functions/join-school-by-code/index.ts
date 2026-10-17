@@ -12,6 +12,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { notifyOwnerOfJoinRequest } from "../_shared/notifyOwnerJoin.ts";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -103,6 +104,9 @@ Deno.serve(async (req) => {
       const { error: iErr } = await svc.from("school_affiliation_requests").insert({ competitor_id: competitorId, school_id: school.id });
       if (iErr) return json({ ok: false, error: iErr.message }, 500);
     }
+
+    // Best-effort: email the owner that a new competitor is waiting for approval.
+    await notifyOwnerOfJoinRequest(svc, school.id, competitorId);
 
     return json({ ok: true, school: { id: school.id, name: school.name }, status: "pending" });
   } catch (e: any) {

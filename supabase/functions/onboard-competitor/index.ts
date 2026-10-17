@@ -16,6 +16,7 @@
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { notifyOwnerOfJoinRequest } from "../_shared/notifyOwnerJoin.ts";
 
 const URL_ = Deno.env.get("SUPABASE_URL")!;
 const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -144,6 +145,8 @@ Deno.serve(async (req) => {
         autoApprove
           ? { competitor_id: competitorId, school_id: selfSchoolId, status: "approved", decided_at: new Date().toISOString() }
           : { competitor_id: competitorId, school_id: selfSchoolId });
+      // Best-effort: email the owner about a NEW pending request (not auto-approved).
+      if (!autoApprove) await notifyOwnerOfJoinRequest(svc, selfSchoolId, competitorId);
     }
 
     // ---- link + consents + enrollment ----
