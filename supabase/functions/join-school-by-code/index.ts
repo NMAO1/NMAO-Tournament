@@ -88,6 +88,8 @@ Deno.serve(async (req) => {
       // clear any stale pending request + log an approved one for the audit trail
       await svc.from("school_affiliation_requests").delete().eq("competitor_id", competitorId).eq("status", "pending");
       await svc.from("school_affiliation_requests").insert({ competitor_id: competitorId, school_id: school.id, status: "approved", decided_at: new Date().toISOString() });
+      // Best-effort: let the owner know a new competitor joined their team.
+      await notifyOwnerOfJoinRequest(svc, school.id, competitorId, { approved: true });
       return json({ ok: true, school: { id: school.id, name: school.name }, status: "confirmed" });
     }
 

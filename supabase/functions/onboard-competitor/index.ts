@@ -145,8 +145,9 @@ Deno.serve(async (req) => {
         autoApprove
           ? { competitor_id: competitorId, school_id: selfSchoolId, status: "approved", decided_at: new Date().toISOString() }
           : { competitor_id: competitorId, school_id: selfSchoolId });
-      // Best-effort: email the owner about a NEW pending request (not auto-approved).
-      if (!autoApprove) await notifyOwnerOfJoinRequest(svc, selfSchoolId, competitorId);
+      // Best-effort: let the owner know a new competitor signed up for their
+      // team — whether it auto-approved or is waiting for approval.
+      await notifyOwnerOfJoinRequest(svc, selfSchoolId, competitorId, { approved: autoApprove });
     }
 
     // ---- link + consents + enrollment ----

@@ -826,7 +826,7 @@ export default function SchoolPortal() {
                 </div>
 
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14, paddingTop: 14, borderTop: `1px solid ${neutrals.border}` }}>
-                  <div style={{ maxWidth: 380 }}><div style={{ fontSize: 14 }}>Email me about new join requests</div><div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>Get an email at <b style={{ color: neutrals.muted }}>{profile.contact_email || "your contact email"}</b> whenever a competitor enters your join code and is waiting for approval. Turn off to stop these emails.</div></div>
+                  <div style={{ maxWidth: 380 }}><div style={{ fontSize: 14 }}>Email me about new sign-ups</div><div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>Get an email at <b style={{ color: neutrals.muted }}>{profile.contact_email || "your contact email"}</b> whenever a competitor signs up for your team with your join code — whether it auto-joins or is waiting for your approval. Turn off to stop these emails.</div></div>
                   <Toggle on={!!profile.notify_join_requests} onChange={toggleNotifyJoin} />
                 </div>
 
