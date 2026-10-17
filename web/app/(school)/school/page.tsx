@@ -7,7 +7,10 @@ import InHouse from "./InHouse";
 import Walkthrough, { type TourStep } from "./Walkthrough";
 
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
-type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null; default_tour_events: string[] | null; default_tour_class: string | null; default_tour_dueling: boolean };
+// schools.dueling_area jsonb — the ENFORCED geo rule for 1-v-1 matchmaking
+// (nmao.area_passes / duel_geo_allowed). Both schools' rules must pass.
+type DuelArea = { level?: string; min_miles?: number; max_miles?: number };
+type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null; default_tour_events: string[] | null; default_tour_class: string | null; default_tour_dueling: boolean; dueling_area: DuelArea | null };
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null; dueling_enabled?: boolean | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
@@ -221,7 +224,7 @@ export default function SchoolPortal() {
     // Take the first owned school rather than .maybeSingle() — an owner accidentally
     // linked to >1 school (e.g. demo/test rows) would otherwise make maybeSingle() error
     // and return null, blanking the portal with "not linked". Prefer the oldest.
-    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join, accredited, external_member_school_id, default_tour_events, default_tour_class, default_tour_dueling").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
+    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join, accredited, external_member_school_id, default_tour_events, default_tour_class, default_tour_dueling, dueling_area").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
     const sch = schList?.[0] ?? null;
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
@@ -789,18 +792,12 @@ export default function SchoolPortal() {
                               <Toggle on={s.dueling_enabled} disabled={!!consent[a.id]?.is_minor && !consent[a.id]?.has_consent && !s.dueling_enabled} onChange={(v) => saveSetting(a.id, { dueling_enabled: v })} />
                             </div>
                           </CtlRow>
-                          <CtlRow label="Geo-location" sub="compete only vs. schools farther than…">
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <input style={{ ...inp, width: 90 }} type="number" min={0} placeholder="e.g. 25" value={s.geo_exclude_miles ?? ""} onChange={(e) => saveSetting(a.id, { geo_exclude_miles: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })} />
-                              <span style={{ color: neutrals.muted2, fontSize: 12 }}>miles</span>
-                            </div>
-                          </CtlRow>
                         </div>
                       )}
                     </div>
                   );
                 })}
-                <Hint on={hintsOn}>Each competitor&apos;s <b>Controls ▾</b> set their events, <b>class/level</b>, <b>dueling</b> (1-v-1 challenges, matched by your <b>Geo-location</b> rule), and rank. Changes save automatically — watch for <b>✓ Saved</b>.</Hint>
+                <Hint on={hintsOn}>Each competitor&apos;s <b>Controls ▾</b> set their events, <b>class/level</b>, <b>dueling</b> (1-v-1 challenges), and rank. Changes save automatically — watch for <b>✓ Saved</b>. Set how far afield duels are matched under <b>Settings → Dueling reach</b>.</Hint>
               </>
             )}
 
@@ -840,6 +837,18 @@ export default function SchoolPortal() {
                   {savedMsg && <span style={{ color: status.success, fontSize: 13 }}>{savedMsg}</span>}
                 </div>
               </div>
+            )}
+
+            {section === "settings" && school && (
+              <DuelingReach
+                key={school.id}
+                initial={school.dueling_area ?? null}
+                onSave={async (area) => {
+                  const { error } = await supabase.from("schools").update({ dueling_area: area }).eq("id", school.id);
+                  if (error) throw new Error(error.message);
+                  load();
+                }}
+              />
             )}
 
             {section === "payouts" && (
@@ -1177,6 +1186,68 @@ function SetupChecklist({ items, onGo }: { items: { key: string; label: string; 
             )}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+function DuelingReach({ initial, onSave }: { initial: DuelArea | null; onSave: (a: DuelArea | null) => Promise<void> }) {
+  const [minM, setMinM] = useState(initial?.min_miles != null ? String(initial.min_miles) : "");
+  const [maxM, setMaxM] = useState(initial?.max_miles != null ? String(initial.max_miles) : "");
+  const [sameCountry, setSameCountry] = useState(initial?.level === "country");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const card = { background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 14 } as const;
+  const inp: React.CSSProperties = { padding: "9px 11px", borderRadius: 9, border: `1px solid ${neutrals.border}`, background: "#0e0e11", color: neutrals.text, fontSize: 14, width: 90 };
+
+  async function save() {
+    const mn = minM.trim() === "" ? undefined : Math.max(0, Math.round(Number(minM)));
+    const mx = maxM.trim() === "" ? undefined : Math.max(0, Math.round(Number(maxM)));
+    if (mn != null && mx != null && mn > mx) { setErr("Nearest can't be greater than farthest."); return; }
+    setErr(""); setBusy(true); setMsg("");
+    const area: DuelArea | null =
+      (mn == null && mx == null && !sameCountry) ? null
+        : { ...(sameCountry ? { level: "country" } : {}), ...(mn != null ? { min_miles: mn } : {}), ...(mx != null ? { max_miles: mx } : {}) };
+    try { await onSave(area); setMsg("Saved"); } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't save"); }
+    setBusy(false);
+  }
+
+  const noLimit = minM.trim() === "" && maxM.trim() === "" && !sameCountry;
+  return (
+    <div style={{ ...card, padding: 18, maxWidth: 580, marginTop: 16 }}>
+      <div style={{ fontSize: 15, fontWeight: 700, color: neutrals.text }}>⚔ Dueling reach</div>
+      <p style={{ color: neutrals.muted2, fontSize: 13, lineHeight: 1.6, margin: "6px 0 2px" }}>
+        How far afield your students are matched for 1-v-1 duels. Applies to your whole school and only once your address is located. Leave blank for <b style={{ color: neutrals.muted }}>no limit</b> — students can be matched with any school nationwide.
+      </p>
+      <div style={{ display: "flex", gap: 20, flexWrap: "wrap", marginTop: 14 }}>
+        <div>
+          <div style={{ fontSize: 12.5, color: neutrals.text, marginBottom: 5 }}>Nearest opponent</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <span style={{ color: neutrals.muted2, fontSize: 12 }}>at least</span>
+            <input style={inp} type="number" min={0} placeholder="—" value={minM} onChange={(e) => setMinM(e.target.value)} />
+            <span style={{ color: neutrals.muted2, fontSize: 12 }}>miles away</span>
+          </div>
+          <div style={{ color: neutrals.muted2, fontSize: 11.5, marginTop: 4 }}>Avoid matching students against nearby schools.</div>
+        </div>
+        <div>
+          <div style={{ fontSize: 12.5, color: neutrals.text, marginBottom: 5 }}>Farthest opponent</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+            <span style={{ color: neutrals.muted2, fontSize: 12 }}>within</span>
+            <input style={inp} type="number" min={0} placeholder="—" value={maxM} onChange={(e) => setMaxM(e.target.value)} />
+            <span style={{ color: neutrals.muted2, fontSize: 12 }}>miles</span>
+          </div>
+          <div style={{ color: neutrals.muted2, fontSize: 11.5, marginTop: 4 }}>Keep matches regional instead of nationwide.</div>
+        </div>
+      </div>
+      <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 14, cursor: "pointer", fontSize: 13, color: neutrals.text }}>
+        <input type="checkbox" checked={sameCountry} onChange={(e) => setSameCountry(e.target.checked)} />
+        Same country only
+      </label>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
+        <button onClick={save} disabled={busy} style={{ border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "9px 18px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: busy ? 0.6 : 1 }}>{busy ? "Saving…" : "Save reach"}</button>
+        {noLimit && <span style={{ color: neutrals.muted2, fontSize: 12.5 }}>No limit — nationwide matches.</span>}
+        {msg && <span style={{ color: status.success, fontSize: 13 }}>{msg}</span>}
+        {err && <span style={{ color: status.danger, fontSize: 13 }}>{err}</span>}
       </div>
     </div>
   );
