@@ -8,7 +8,7 @@ import Walkthrough, { type TourStep } from "./Walkthrough";
 
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
 type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null };
-type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null };
+type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null; dueling_enabled?: boolean | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
 type JoinReq = { request_id: string; competitor_id: string; first_name: string; last_name: string; dob: string; requested_at: string };
@@ -86,6 +86,11 @@ export default function SchoolPortal() {
   const [selStudent, setSelStudent] = useState<string>("");
   const [profile, setProfile] = useState<School | null>(null);
   const [savedMsg, setSavedMsg] = useState("");
+  // Per-competitor save feedback (fixes the silent-save-miss: the owner now sees
+  // Saving… → Saved ✓, or a loud retry on failure). compDueling mirrors the
+  // ENFORCED competitors.dueling_enabled so the toggle shows end-to-end truth.
+  const [saveState, setSaveState] = useState<Record<string, "saving" | "saved" | "error">>({});
+  const [compDueling, setCompDueling] = useState<Record<string, boolean>>({});
   const [codeCopied, setCodeCopied] = useState(false);
   const [selRoster, setSelRoster] = useState<Set<string>>(new Set());
   const [bulkRank, setBulkRank] = useState("beginner");
@@ -224,9 +229,10 @@ export default function SchoolPortal() {
       .then(({ data }) => setDeadline(pickDeadline(data as Record<string, unknown> | null)));
 
     const { data: comps } = await supabase.from("competitors")
-      .select("id, first_name, last_name, dob, declared_rank").eq("school_id", (sch as School).id).order("last_name");
+      .select("id, first_name, last_name, dob, declared_rank, dueling_enabled").eq("school_id", (sch as School).id).order("last_name");
     const list = (comps ?? []) as Athlete[];
     setRoster(list);
+    setCompDueling(Object.fromEntries(list.map((c) => [c.id, !!c.dueling_enabled])));
 
     // Bridge-invited students (from the membership roster) still awaiting redeem.
     supabase.from("bridge_pending_athletes").select("id, first_name, last_name, belt_name, declared_rank, dob, status")
@@ -415,13 +421,28 @@ export default function SchoolPortal() {
     if (!school) return;
     const next = { ...currentSettings(id), ...patch };
     setSettings((s) => ({ ...s, [id]: next })); // optimistic
-    const { error } = await supabase.from("student_tournament_settings").upsert({
+    setSaveState((s) => ({ ...s, [id]: "saving" }));
+    // Verify-on-write: read the row back. If RLS/a race drops it we get no row and
+    // surface a retry instead of a false success (the old code could miss silently).
+    const { data, error } = await supabase.from("student_tournament_settings").upsert({
       competitor_id: id, school_id: school.id, allowed_events: next.allowed_events, dueling_enabled: next.dueling_enabled,
       competition_class: next.competition_class, geo_exclude_miles: next.geo_exclude_miles, merch_enabled: next.merch_enabled,
       updated_at: new Date().toISOString(),
-    }, { onConflict: "competitor_id" });
-    if (error) { setErr(error.message); load(); }
+    }, { onConflict: "competitor_id" }).select("competitor_id, dueling_enabled").maybeSingle();
+    if (error || !data) {
+      setSaveState((s) => ({ ...s, [id]: "error" }));
+      setErr(error?.message || "That change didn't save — check your connection and tap Retry.");
+      return;
+    }
+    // Confirmed saved. The DB trigger has mirrored dueling_enabled into the enforced
+    // competitors flag (what duel sign-up actually checks), so reflect it live.
+    setCompDueling((d) => ({ ...d, [id]: !!(data as { dueling_enabled: boolean }).dueling_enabled }));
+    setErr("");
+    setSaveState((s) => ({ ...s, [id]: "saved" }));
+    setTimeout(() => setSaveState((s) => { if (s[id] !== "saved") return s; const n = { ...s }; delete n[id]; return n; }), 2500);
   }
+  // Retry re-saves the current (already-optimistic) settings for this competitor.
+  function retrySave(id: string) { saveSetting(id, {}); }
   function setAddr(patch: Partial<Address>) { setProfile((p) => (p ? { ...p, address: { ...(p.address ?? {}), ...patch } } : p)); }
   async function saveProfile() {
     if (!profile) return;
@@ -635,6 +656,7 @@ export default function SchoolPortal() {
                   <select style={inp} value={selStudent} onChange={(e) => setSelStudent(e.target.value)}>
                     {roster.filter((a) => `${a.first_name} ${a.last_name}`.toLowerCase().includes(ctlSearch.trim().toLowerCase())).map((a) => <option key={a.id} value={a.id}>{a.first_name} {a.last_name}</option>)}
                   </select>
+                  {selStudent && <span style={{ marginLeft: "auto" }}><SaveBadge state={saveState[selStudent]} onRetry={() => retrySave(selStudent)} /></span>}
                 </div>
                 {selStudent && (() => {
                   const s = currentSettings(selStudent);
@@ -653,7 +675,14 @@ export default function SchoolPortal() {
                           <option value="">— set —</option>{CLASSES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
                         </select>
                       </CtlRow>
-                      <CtlRow label="Dueling" sub="allow 1-v-1 challenges (per competitor)"><Toggle on={s.dueling_enabled} onChange={(v) => saveSetting(selStudent, { dueling_enabled: v })} /></CtlRow>
+                      <CtlRow label="Dueling" sub="allow 1-v-1 challenges (per competitor)">
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          {s.dueling_enabled && (compDueling[selStudent]
+                            ? <span style={{ fontSize: 11, fontWeight: 700, color: status.success, whiteSpace: "nowrap" }}>✓ Can duel</span>
+                            : <span style={{ fontSize: 11, fontWeight: 700, color: hues.gold.base, whiteSpace: "nowrap" }}>finishing…</span>)}
+                          <Toggle on={s.dueling_enabled} onChange={(v) => saveSetting(selStudent, { dueling_enabled: v })} />
+                        </div>
+                      </CtlRow>
                       <CtlRow label="Geo-location" sub="compete only vs. schools farther than…">
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                           <input style={{ ...inp, width: 90 }} type="number" min={0} placeholder="miles" value={s.geo_exclude_miles ?? ""} onChange={(e) => saveSetting(selStudent, { geo_exclude_miles: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })} />
@@ -999,6 +1028,17 @@ function Hint({ on, children, align = "left" }: { on: boolean; children: React.R
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div style={{ marginBottom: 12 }}><div style={{ color: neutrals.muted2, fontSize: 11, marginBottom: 4 }}>{label}</div>{children}</div>;
+}
+function SaveBadge({ state, onRetry }: { state?: "saving" | "saved" | "error"; onRetry: () => void }) {
+  if (state === "saving") return <span style={{ fontSize: 12, color: neutrals.muted2 }}>Saving…</span>;
+  if (state === "saved") return <span style={{ fontSize: 12, fontWeight: 700, color: status.success }}>✓ Saved</span>;
+  if (state === "error") return (
+    <span style={{ fontSize: 12, color: status.danger, display: "inline-flex", alignItems: "center", gap: 8 }}>
+      ⚠ Didn’t save
+      <button onClick={onRetry} style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: status.danger, border: "none", borderRadius: 7, padding: "4px 9px", cursor: "pointer" }}>Retry</button>
+    </span>
+  );
+  return <span style={{ fontSize: 12, color: neutrals.muted2 }}>Changes save automatically</span>;
 }
 function CtlRow({ label, sub, children }: { label: string; sub: string; children: React.ReactNode }) {
   return (
