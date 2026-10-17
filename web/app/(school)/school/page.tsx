@@ -7,7 +7,7 @@ import InHouse from "./InHouse";
 import Walkthrough, { type TourStep } from "./Walkthrough";
 
 type Address = { line1?: string; city?: string; state?: string; postal?: string; country?: string };
-type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null };
+type School = { id: string; name: string; contact_name: string | null; contact_email: string | null; phone: string | null; address: Address | null; logo_url: string | null; lat: number | null; lng: number | null; payout_tier: number | null; join_code: string | null; auto_approve_join: boolean; accredited: boolean; external_member_school_id: string | null; default_tour_events: string[] | null; default_tour_class: string | null; default_tour_dueling: boolean };
 type Athlete = { id: string; first_name: string; last_name: string; dob: string; declared_rank: string | null; dueling_enabled?: boolean | null };
 // Bridge-provisioned students from the membership roster, awaiting a rank + guardian redeem.
 type Pending = { id: string; first_name: string; last_name: string; belt_name: string | null; declared_rank: string | null; dob: string | null; status: string };
@@ -94,6 +94,7 @@ export default function SchoolPortal() {
   const [selRoster, setSelRoster] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set()); // which competitor rows show their controls
   const [bulkRank, setBulkRank] = useState("beginner");
+  const [bulkClass, setBulkClass] = useState("");
   const [groupRank, setGroupRank] = useState<Record<string, string>>({}); // per belt-group rank override (pending list)
   const [connect, setConnect] = useState<{ connected: boolean; payouts_enabled: boolean; details_submitted: boolean } | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -216,7 +217,7 @@ export default function SchoolPortal() {
     // Take the first owned school rather than .maybeSingle() — an owner accidentally
     // linked to >1 school (e.g. demo/test rows) would otherwise make maybeSingle() error
     // and return null, blanking the portal with "not linked". Prefer the oldest.
-    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join, accredited, external_member_school_id").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
+    const { data: schList } = await supabase.from("schools").select("id, name, contact_name, contact_email, phone, address, logo_url, lat, lng, payout_tier, join_code, auto_approve_join, accredited, external_member_school_id, default_tour_events, default_tour_class, default_tour_dueling").eq("auth_user_id", sess.session.user.id).order("created_at", { ascending: true }).limit(1);
     const sch = schList?.[0] ?? null;
     if (!sch) { setErr("This account isn't linked to a school."); setLoading(false); return; }
     setSchool(sch as School);
@@ -444,6 +445,31 @@ export default function SchoolPortal() {
   }
   // Retry re-saves the current (already-optimistic) settings for this competitor.
   function retrySave(id: string) { saveSetting(id, {}); }
+
+  // Per-school defaults for NEW competitors (a DB trigger seeds each new competitor's
+  // settings from these). Saved on the schools row; owner-editable via existing RLS.
+  async function saveDefaults(patch: Partial<Pick<School, "default_tour_events" | "default_tour_class" | "default_tour_dueling">>) {
+    if (!school) return;
+    setSchool({ ...school, ...patch });
+    setProfile((p) => (p ? { ...p, ...patch } : p));
+    const { error } = await supabase.from("schools").update(patch).eq("id", school.id);
+    if (error) { setErr(error.message); } else { setErr(""); setSavedMsg("Defaults saved."); }
+  }
+
+  // Apply a settings patch to every selected competitor in one write.
+  async function bulkApply(patchFor: (id: string) => Partial<Settings>, label: string) {
+    if (!school || selRoster.size === 0) return;
+    const ids = [...selRoster];
+    const rows = ids.map((id) => {
+      const next = { ...currentSettings(id), ...patchFor(id) };
+      return { competitor_id: id, school_id: school.id, allowed_events: next.allowed_events, dueling_enabled: next.dueling_enabled, competition_class: next.competition_class, geo_exclude_miles: next.geo_exclude_miles, merch_enabled: next.merch_enabled, updated_at: new Date().toISOString() };
+    });
+    const { data, error } = await supabase.from("student_tournament_settings").upsert(rows, { onConflict: "competitor_id" }).select("competitor_id, dueling_enabled");
+    if (error || !data || data.length === 0) { setErr(error?.message || "Bulk update didn't save — try again."); return; }
+    setSettings((prev) => { const n = { ...prev }; for (const id of ids) n[id] = { ...currentSettings(id), ...patchFor(id) }; return n; });
+    setCompDueling((d) => { const n = { ...d }; for (const r of data as { competitor_id: string; dueling_enabled: boolean }[]) n[r.competitor_id] = !!r.dueling_enabled; return n; });
+    setErr(""); setSavedMsg(`${label} — ${ids.length} competitor${ids.length === 1 ? "" : "s"}.`);
+  }
   function setAddr(patch: Partial<Address>) { setProfile((p) => (p ? { ...p, address: { ...(p.address ?? {}), ...patch } } : p)); }
   async function saveProfile() {
     if (!profile) return;
@@ -470,6 +496,8 @@ export default function SchoolPortal() {
   const inp: React.CSSProperties = { padding: "10px 12px", borderRadius: 9, border: `1px solid ${neutrals.border}`, background: "#0e0e11", color: neutrals.text, fontSize: 14 };
   const inpF: React.CSSProperties = { ...inp, width: "100%" };
   const card = { background: neutrals.surface, border: `1px solid ${neutrals.border}`, borderRadius: 14 } as const;
+  const miniBtn: React.CSSProperties = { border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 7, padding: "6px 11px", fontSize: 12, background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})` };
+  const miniGhost: React.CSSProperties = { border: `1px solid ${neutrals.border}`, background: "transparent", color: neutrals.text, borderRadius: 7, padding: "6px 11px", cursor: "pointer", fontSize: 12, fontWeight: 600 };
 
   const paidEntries = entries.filter((e) => e.payment_status === "paid");
   const paidCount = paidEntries.length;
@@ -623,6 +651,28 @@ export default function SchoolPortal() {
                   </div>
                   <button onClick={addAthlete} disabled={saving} style={{ marginTop: 12, border: "none", cursor: "pointer", fontWeight: 700, color: "#141210", borderRadius: 10, padding: "10px 20px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: saving ? 0.6 : 1 }}>{saving ? "Adding…" : "Add to roster"}</button>
                 </div>
+                {school && (
+                  <div style={{ ...card, padding: 16, marginBottom: 22 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2 }}>Defaults for new competitors</div>
+                      <Hint on={hintsOn} align="right">Set these once — every competitor you add or import from now on starts with these events, class and dueling setting. You can still fine-tune anyone individually below.</Hint>
+                    </div>
+                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 6 }}>Applied automatically to anyone you add or import from here on.</div>
+                    <CtlRow label="Event categories" sub="allowed by default">
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                        {EVENTS.map((e) => { const on = (school.default_tour_events ?? []).includes(e.code); return <Chip key={e.code} on={on} label={e.name} onClick={() => { const cur = school.default_tour_events ?? []; saveDefaults({ default_tour_events: on ? cur.filter((c) => c !== e.code) : [...cur, e.code] }); }} />; })}
+                      </div>
+                    </CtlRow>
+                    <CtlRow label="Class / level" sub="default competition tier">
+                      <select style={{ ...inp, background: neutrals.surface2 }} value={school.default_tour_class ?? ""} onChange={(e) => saveDefaults({ default_tour_class: e.target.value || null })}>
+                        <option value="">— none —</option>{CLASSES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
+                      </select>
+                    </CtlRow>
+                    <CtlRow label="Dueling" sub="enable 1-v-1 by default (guardian consent still required for minors)">
+                      <Toggle on={school.default_tour_dueling} onChange={(v) => saveDefaults({ default_tour_dueling: v })} />
+                    </CtlRow>
+                  </div>
+                )}
                 {roster.length > 0 && (
                   <div style={{ ...card, padding: "10px 14px", marginBottom: 10, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: neutrals.text, cursor: "pointer" }}>
@@ -634,6 +684,24 @@ export default function SchoolPortal() {
                     <span style={{ color: neutrals.muted, fontSize: 13 }}>Set rank to</span>
                     <select value={bulkRank} onChange={(e) => setBulkRank(e.target.value)} style={{ ...inp, width: 150, background: neutrals.surface2 }}>{RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}</select>
                     <button onClick={bulkSetRank} disabled={selRoster.size === 0} style={{ border: "none", cursor: selRoster.size ? "pointer" : "default", fontWeight: 700, color: "#141210", borderRadius: 8, padding: "8px 16px", fontSize: 13, background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: selRoster.size ? 1 : 0.45 }}>Apply</button>
+                  </div>
+                )}
+                {selRoster.size > 0 && (
+                  <div style={{ ...card, padding: "10px 14px", marginBottom: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 0.8, textTransform: "uppercase", color: neutrals.muted2, marginBottom: 8 }}>Bulk-apply tournament controls to {selRoster.size} selected</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                      <span style={{ fontSize: 12, color: neutrals.muted }}>Dueling</span>
+                      <button onClick={() => bulkApply(() => ({ dueling_enabled: true }), "Dueling turned on")} style={miniBtn}>On</button>
+                      <button onClick={() => bulkApply(() => ({ dueling_enabled: false }), "Dueling turned off")} style={miniGhost}>Off</button>
+                      <span style={{ width: 1, height: 20, background: neutrals.border }} />
+                      <span style={{ fontSize: 12, color: neutrals.muted }}>Class</span>
+                      <select value={bulkClass} onChange={(e) => setBulkClass(e.target.value)} style={{ ...inp, padding: "6px 9px", background: neutrals.surface2 }}><option value="">—</option>{CLASSES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}</select>
+                      <button onClick={() => bulkClass && bulkApply(() => ({ competition_class: bulkClass }), `Class → ${cap(bulkClass)}`)} disabled={!bulkClass} style={{ ...miniBtn, opacity: bulkClass ? 1 : 0.45 }}>Apply</button>
+                      <span style={{ width: 1, height: 20, background: neutrals.border }} />
+                      <span style={{ fontSize: 12, color: neutrals.muted }}>Allow event</span>
+                      {EVENTS.map((e) => <button key={e.code} onClick={() => bulkApply((id) => { const cur = currentSettings(id).allowed_events ?? []; return { allowed_events: cur.includes(e.code) ? cur : [...cur, e.code] }; }, `Allowed ${e.name}`)} style={miniGhost}>+ {e.name}</button>)}
+                      <button onClick={() => bulkApply(() => ({ allowed_events: [] }), "Cleared events")} style={miniGhost}>Clear events</button>
+                    </div>
                   </div>
                 )}
                 {roster.length > 5 && (
