@@ -11,7 +11,7 @@ export type TourStep = {
   title: string;
   body: React.ReactNode;
   // Portal tab to reveal while this step is showing.
-  section: "dashboard" | "roster" | "controls" | "entries" | "inhouse" | "payouts" | "settings";
+  section: "dashboard" | "roster" | "entries" | "inhouse" | "promotion" | "payouts" | "settings";
 };
 
 export default function Walkthrough({

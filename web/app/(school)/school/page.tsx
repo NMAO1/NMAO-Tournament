@@ -43,8 +43,7 @@ const EVENTS = [
 ];
 const NAV = [
   { key: "dashboard", label: "Dashboard", icon: "📊" },
-  { key: "roster", label: "Roster", icon: "👥" },
-  { key: "controls", label: "Tournament Controls", icon: "🎛️" },
+  { key: "roster", label: "Competitors", icon: "👥" },
   { key: "entries", label: "Entries & Payments", icon: "🧾" },
   { key: "inhouse", label: "In-house Tournaments", icon: "🏆" },
   { key: "promotion", label: "Promotion", icon: "📣" },
@@ -93,6 +92,7 @@ export default function SchoolPortal() {
   const [compDueling, setCompDueling] = useState<Record<string, boolean>>({});
   const [codeCopied, setCodeCopied] = useState(false);
   const [selRoster, setSelRoster] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set()); // which competitor rows show their controls
   const [bulkRank, setBulkRank] = useState("beginner");
   const [groupRank, setGroupRank] = useState<Record<string, string>>({}); // per belt-group rank override (pending list)
   const [connect, setConnect] = useState<{ connected: boolean; payouts_enabled: boolean; details_submitted: boolean } | null>(null);
@@ -175,8 +175,8 @@ export default function SchoolPortal() {
       body: <>{school?.join_code ? <>Your join code is <b style={{ color: hues.gold.hi }}>{school.join_code}</b>. </> : null}Students enter this code in the NMAO app to request to join your school — they’ll show up here for you to approve (or auto-accept, in Settings).</>,
     },
     {
-      icon: "⚔️", title: "4. Turn on dueling — per student", section: "controls",
-      body: <><b>Easy to miss:</b> dueling (1-v-1 challenges) is <b>off by default</b> and set <b>per competitor</b>. Pick a student here, then flip the <b>Dueling</b> toggle for each one who should take part. {/* COPPA: when guardian-consent status lands, surface it here — e.g. gate/annotate this toggle by the student's consent state. */}Guardian consent is required before a minor can duel.</>,
+      icon: "⚔️", title: "4. Turn on dueling — per student", section: "roster",
+      body: <><b>Easy to miss:</b> dueling (1-v-1 challenges) is <b>off by default</b> and set <b>per competitor</b>. Open a competitor&apos;s <b>Controls ▾</b> and flip the <b>Dueling</b> toggle for each one who should take part. {/* COPPA: when guardian-consent status lands, surface it here — e.g. gate/annotate this toggle by the student's consent state. */}Guardian consent is required before a minor can duel.</>,
     },
     {
       icon: "🏆", title: "5. Run an in-house tournament", section: "inhouse",
@@ -358,6 +358,7 @@ export default function SchoolPortal() {
     if (error) { setErr(error.message); load(); }
   }
   function toggleSel(id: string) { setSelRoster((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
+  function toggleExpand(id: string) { setExpanded((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; }); }
   async function bulkSetRank() {
     const ids = [...selRoster];
     if (!ids.length) return;
@@ -635,65 +636,68 @@ export default function SchoolPortal() {
                     <button onClick={bulkSetRank} disabled={selRoster.size === 0} style={{ border: "none", cursor: selRoster.size ? "pointer" : "default", fontWeight: 700, color: "#141210", borderRadius: 8, padding: "8px 16px", fontSize: 13, background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: selRoster.size ? 1 : 0.45 }}>Apply</button>
                   </div>
                 )}
-                {roster.map((a) => (
-                  <div key={a.id} style={{ ...card, padding: "14px 16px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <input type="checkbox" checked={selRoster.has(a.id)} onChange={() => toggleSel(a.id)} />
-                      <div><div style={{ fontSize: 15, fontWeight: 600 }}>{a.first_name} {a.last_name}</div>
-                        <div style={{ color: neutrals.muted, fontSize: 13, marginTop: 3 }}>Age {ageOf(a.dob)} · Rating {ratings[a.id] != null ? Math.round(ratings[a.id]) : "—"}{medals[a.id] ? ` · 🏅 ${medals[a.id]}` : ""}</div></div>
-                    </div>
-                    <select value={a.declared_rank ?? "beginner"} onChange={(e) => setRank(a.id, e.target.value)} style={{ ...inp, background: neutrals.surface2 }} title="Rank — only the school owner can change this">{RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}</select>
-                  </div>
-                ))}
-              </>
-            )}
-
-            {section === "controls" && (
-              <>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-                  <span style={{ color: neutrals.muted, fontSize: 13 }}>Competitor</span>
-                  <input style={{ ...inp, width: 170 }} placeholder="Search…" value={ctlSearch} onChange={(e) => setCtlSearch(e.target.value)} />
-                  <select style={inp} value={selStudent} onChange={(e) => setSelStudent(e.target.value)}>
-                    {roster.filter((a) => `${a.first_name} ${a.last_name}`.toLowerCase().includes(ctlSearch.trim().toLowerCase())).map((a) => <option key={a.id} value={a.id}>{a.first_name} {a.last_name}</option>)}
-                  </select>
-                  {selStudent && <span style={{ marginLeft: "auto" }}><SaveBadge state={saveState[selStudent]} onRetry={() => retrySave(selStudent)} /></span>}
-                </div>
-                {selStudent && (() => {
-                  const s = currentSettings(selStudent);
+                {roster.length > 5 && (
+                  <input style={{ ...inp, width: "100%", marginBottom: 10 }} placeholder="Search competitors…" value={ctlSearch} onChange={(e) => setCtlSearch(e.target.value)} />
+                )}
+                {roster.filter((a) => `${a.first_name} ${a.last_name}`.toLowerCase().includes(ctlSearch.trim().toLowerCase())).map((a) => {
+                  const s = currentSettings(a.id);
+                  const isOpen = expanded.has(a.id);
+                  const evCount = (s.allowed_events ?? []).length;
+                  const myEntries = entries.filter((e) => e.competitor_id === a.id);
+                  const paidCount = myEntries.filter((e) => e.payment_status === "paid").length;
                   return (
-                    <div style={{ ...card, padding: "4px 16px" }}>
-                      <CtlRow label="Event categories" sub="which events they may enter">
-                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                          {EVENTS.map((e) => {
-                            const on = (s.allowed_events ?? []).includes(e.code);
-                            return <Chip key={e.code} on={on} label={e.name} onClick={() => { const cur = s.allowed_events ?? []; saveSetting(selStudent, { allowed_events: on ? cur.filter((c) => c !== e.code) : [...cur, e.code] }); }} />;
-                          })}
+                    <div key={a.id} style={{ ...card, marginBottom: 10 }}>
+                      <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                        <input type="checkbox" checked={selRoster.has(a.id)} onChange={() => toggleSel(a.id)} />
+                        <div style={{ flex: 1, minWidth: 180 }}>
+                          <div style={{ fontSize: 15, fontWeight: 600 }}>{a.first_name} {a.last_name}</div>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                            <Tag>Age {ageOf(a.dob)}</Tag>
+                            <Tag>{cap(a.declared_rank ?? "beginner")}</Tag>
+                            {s.competition_class && <Tag>{cap(s.competition_class)}</Tag>}
+                            <Tag>{evCount} event{evCount === 1 ? "" : "s"}</Tag>
+                            {compDueling[a.id] ? <Tag color={status.success}>⚔ duel-ready</Tag> : s.dueling_enabled ? <Tag color={hues.gold.base}>⚔ finishing…</Tag> : <Tag>⚔ off</Tag>}
+                            {ratings[a.id] != null && <Tag>★ {Math.round(ratings[a.id])}</Tag>}
+                            {medals[a.id] ? <Tag>🏅 {medals[a.id]}</Tag> : null}
+                            {myEntries.length > 0 && <Tag color={paidCount === myEntries.length ? status.success : hues.gold.base}>{paidCount}/{myEntries.length} paid</Tag>}
+                          </div>
                         </div>
-                      </CtlRow>
-                      <CtlRow label="Class / level" sub="competition tier (from belt)">
-                        <select style={{ ...inp, background: neutrals.surface2 }} value={s.competition_class ?? ""} onChange={(e) => saveSetting(selStudent, { competition_class: e.target.value || null })}>
-                          <option value="">— set —</option>{CLASSES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
-                        </select>
-                      </CtlRow>
-                      <CtlRow label="Dueling" sub="allow 1-v-1 challenges (per competitor)">
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          {s.dueling_enabled && (compDueling[selStudent]
-                            ? <span style={{ fontSize: 11, fontWeight: 700, color: status.success, whiteSpace: "nowrap" }}>✓ Can duel</span>
-                            : <span style={{ fontSize: 11, fontWeight: 700, color: hues.gold.base, whiteSpace: "nowrap" }}>finishing…</span>)}
-                          <Toggle on={s.dueling_enabled} onChange={(v) => saveSetting(selStudent, { dueling_enabled: v })} />
+                        <select value={a.declared_rank ?? "beginner"} onChange={(e) => setRank(a.id, e.target.value)} style={{ ...inp, background: neutrals.surface2 }} title="Rank — only the school owner can change this">{RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}</select>
+                        <button onClick={() => toggleExpand(a.id)} style={{ border: `1px solid ${neutrals.border}`, background: isOpen ? neutrals.surface2 : "transparent", color: neutrals.text, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{isOpen ? "Hide ▲" : "Controls ▾"}</button>
+                      </div>
+                      {isOpen && (
+                        <div style={{ borderTop: `1px solid ${neutrals.surface2}`, padding: "2px 16px 8px" }}>
+                          <div style={{ display: "flex", justifyContent: "flex-end", padding: "6px 0 0" }}><SaveBadge state={saveState[a.id]} onRetry={() => retrySave(a.id)} /></div>
+                          <CtlRow label="Event categories" sub="which events they may enter">
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                              {EVENTS.map((e) => { const on = (s.allowed_events ?? []).includes(e.code); return <Chip key={e.code} on={on} label={e.name} onClick={() => { const cur = s.allowed_events ?? []; saveSetting(a.id, { allowed_events: on ? cur.filter((c) => c !== e.code) : [...cur, e.code] }); }} />; })}
+                            </div>
+                          </CtlRow>
+                          <CtlRow label="Class / level" sub="competition tier (from belt)">
+                            <select style={{ ...inp, background: neutrals.surface2 }} value={s.competition_class ?? ""} onChange={(e) => saveSetting(a.id, { competition_class: e.target.value || null })}>
+                              <option value="">— set —</option>{CLASSES.map((c) => <option key={c} value={c}>{cap(c)}</option>)}
+                            </select>
+                          </CtlRow>
+                          <CtlRow label="Dueling" sub="allow 1-v-1 challenges (per competitor)">
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              {s.dueling_enabled && (compDueling[a.id]
+                                ? <span style={{ fontSize: 11, fontWeight: 700, color: status.success, whiteSpace: "nowrap" }}>✓ Can duel</span>
+                                : <span style={{ fontSize: 11, fontWeight: 700, color: hues.gold.base, whiteSpace: "nowrap" }}>finishing…</span>)}
+                              <Toggle on={s.dueling_enabled} onChange={(v) => saveSetting(a.id, { dueling_enabled: v })} />
+                            </div>
+                          </CtlRow>
+                          <CtlRow label="Geo-location" sub="compete only vs. schools farther than…">
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <input style={{ ...inp, width: 90 }} type="number" min={0} placeholder="e.g. 25" value={s.geo_exclude_miles ?? ""} onChange={(e) => saveSetting(a.id, { geo_exclude_miles: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })} />
+                              <span style={{ color: neutrals.muted2, fontSize: 12 }}>miles</span>
+                            </div>
+                          </CtlRow>
                         </div>
-                      </CtlRow>
-                      <CtlRow label="Geo-location" sub="compete only vs. schools farther than…">
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <input style={{ ...inp, width: 90 }} type="number" min={0} placeholder="miles" value={s.geo_exclude_miles ?? ""} onChange={(e) => saveSetting(selStudent, { geo_exclude_miles: e.target.value === "" ? null : Math.max(0, Number(e.target.value)) })} />
-                          <span style={{ color: neutrals.muted2, fontSize: 12 }}>miles</span>
-                        </div>
-                      </CtlRow>
+                      )}
                     </div>
                   );
-                })()}
-                <Hint on={hintsOn}>These apply per competitor. <b>Class/level</b> sets their competition tier; <b>Dueling</b> allows 1-v-1 challenges, matched according to your <b>Geo-location</b> setting — which only pairs them against schools beyond a set distance.</Hint>
-                {!roster.length && <p style={{ color: neutrals.muted2 }}>Add athletes to your roster first.</p>}
+                })}
+                <Hint on={hintsOn}>Each competitor&apos;s <b>Controls ▾</b> set their events, <b>class/level</b>, <b>dueling</b> (1-v-1 challenges, matched by your <b>Geo-location</b> rule), and rank. Changes save automatically — watch for <b>✓ Saved</b>.</Hint>
               </>
             )}
 
@@ -1028,6 +1032,9 @@ function Hint({ on, children, align = "left" }: { on: boolean; children: React.R
 }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div style={{ marginBottom: 12 }}><div style={{ color: neutrals.muted2, fontSize: 11, marginBottom: 4 }}>{label}</div>{children}</div>;
+}
+function Tag({ children, color }: { children: React.ReactNode; color?: string }) {
+  return <span style={{ fontSize: 11, fontWeight: 600, color: color ?? neutrals.muted, border: `1px solid ${color ?? neutrals.border}`, borderRadius: 99, padding: "2px 8px", whiteSpace: "nowrap" }}>{children}</span>;
 }
 function SaveBadge({ state, onRetry }: { state?: "saving" | "saved" | "error"; onRetry: () => void }) {
   if (state === "saving") return <span style={{ fontSize: 12, color: neutrals.muted2 }}>Saving…</span>;
