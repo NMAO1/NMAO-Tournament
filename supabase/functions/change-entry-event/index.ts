@@ -6,11 +6,14 @@
 // allowed while the round is still open/collecting (before divide), so there are
 // no divisions / pods / judge scores / medals tied to the old event yet.
 //
-// If a video was already uploaded it is CLEARED (a forms clip isn't valid under
-// a weapons rubric) and the competitor is notified to upload a new one.
+// A video already uploaded CARRIES OVER by default — most event changes are just
+// a mislabeled entry (e.g. a traditional form entered under Open Forms), so the
+// clip is actually correct for the new event. Pass clear_video:true for the rare
+// case the video doesn't match; then it's cleared and the competitor is asked to
+// re-upload. Either way the competitor is notified.
 //
 // AUTH: Verify JWT = ON. Caller must OWN the athlete's school.
-// POST { entry_id, to_event } -> { ok, entry_id, to_event, cleared_video }
+// POST { entry_id, to_event, clear_video? } -> { ok, entry_id, to_event, cleared_video }
 // Deploy (editor-safe, no _shared): name = change-entry-event, Verify JWT ON.
 // =====================================================================
 
@@ -92,12 +95,15 @@ Deno.serve(async (req) => {
     if (dup) return json({ ok: false, error: `This competitor already has a ${evtName(toEvent)} entry this round.` }, 409);
 
     const hadVideo = !!(e.video_url || e.video_url_2);
+    // Keep the video by default (usually just a mislabeled entry). Only clear it
+    // when the owner says it doesn't match the new event.
+    const clearVideo = body.clear_video === true && hadVideo;
 
     // Apply the change on the SAME row — payment/credit/entitlement untouched.
     // age_bracket / declared_rank / rating_at_entry do not depend on the event,
-    // so they stay. Clear videos if any (content was for the old event's rubric).
+    // so they stay. The video carries over unless the owner asked to clear it.
     const patch: Record<string, unknown> = { event: toEvent, updated_at: new Date().toISOString() };
-    if (hadVideo) { patch.video_url = null; patch.video_url_2 = null; }
+    if (clearVideo) { patch.video_url = null; patch.video_url_2 = null; }
     const { error: uerr } = await svc.from("entries").update(patch).eq("id", entryId);
     if (uerr) {
       console.error("change-entry-event update:", uerr);
@@ -110,21 +116,23 @@ Deno.serve(async (req) => {
     try {
       await svc.from("entry_event_changes").insert({
         entry_id: entryId, round_id: e.round_id, competitor_id: e.competitor_id, school_id: schoolId,
-        from_event: e.event, to_event: toEvent, cleared_video: hadVideo, changed_by: uid,
+        from_event: e.event, to_event: toEvent, cleared_video: clearVideo, changed_by: uid,
       });
     } catch (ae) { console.error("entry_event_changes audit:", (ae as Error).message); }
 
     // Notify the competitor (owner-initiated account event — important, not gated).
     const toName = evtName(toEvent);
-    const bodyMsg = hadVideo
+    const title = clearVideo ? "Event changed — re-upload needed" : "Your event was changed";
+    const bodyMsg = clearVideo
       ? `Your school moved your entry to ${toName}. Your previous video was removed — please upload a new ${toName} video in the Compete app.`
-      : `Your school moved your entry to ${toName}. Make sure you compete in ${toName} this round.`;
+      : hadVideo
+        ? `Your school moved your entry to ${toName}. Your uploaded video carries over — double-check it's a ${toName} performance.`
+        : `Your school moved your entry to ${toName}. Make sure you compete in ${toName} this round.`;
     try {
       await svc.from("notifications").insert({
         competitor_id: e.competitor_id, type: "event_changed",
-        title: hadVideo ? "Event changed — re-upload needed" : "Your event was changed",
-        body: bodyMsg,
-        data: { entry_id: entryId, from_event: e.event, to_event: toEvent, cleared_video: hadVideo },
+        title, body: bodyMsg,
+        data: { entry_id: entryId, from_event: e.event, to_event: toEvent, cleared_video: clearVideo },
       });
     } catch (ne) { console.error("event_changed notification:", (ne as Error).message); }
 
@@ -138,7 +146,7 @@ Deno.serve(async (req) => {
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#141416;border:1px solid #26262b">
 <tr><td style="padding:28px 32px 6px 32px"><div style="font-family:Georgia,'Times New Roman',serif;font-size:21px;color:#C9A84C;letter-spacing:.08em">National Martial Arts Org.</div></td></tr>
 <tr><td style="padding:8px 32px 4px 32px"><h1 style="margin:0;font-size:20px;font-weight:600">Your event was changed</h1></td></tr>
-<tr><td style="padding:8px 32px 20px 32px;font-size:15px;line-height:1.6;color:#d7d2c8">Hi ${name}, your school changed your entry to <strong>${esc(toName)}</strong>.${hadVideo ? " Your previous video was removed — please open the NMAO Compete app and upload a new video for this event before the round closes." : " Make sure you compete in this event this round."}</td></tr>
+<tr><td style="padding:8px 32px 20px 32px;font-size:15px;line-height:1.6;color:#d7d2c8">Hi ${name}, your school changed your entry to <strong>${esc(toName)}</strong>.${clearVideo ? " Your previous video was removed — please open the NMAO Compete app and upload a new video for this event before the round closes." : hadVideo ? " Your uploaded video carries over — just double-check it's a " + esc(toName) + " performance." : " Make sure you compete in this event this round."}</td></tr>
 </table></td></tr></table></body></html>`;
         await fetch("https://api.resend.com/emails", {
           method: "POST", headers: { Authorization: "Bearer " + RESEND, "Content-Type": "application/json" },

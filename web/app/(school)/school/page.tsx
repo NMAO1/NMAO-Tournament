@@ -113,6 +113,7 @@ export default function SchoolPortal() {
   const [changeEvent, setChangeEvent] = useState<string>("");
   const [changeBusy, setChangeBusy] = useState(false);
   const [changeMsg, setChangeMsg] = useState("");
+  const [changeClearVideo, setChangeClearVideo] = useState(false); // keep video by default; opt in to clear
   const [nowTs, setNowTs] = useState(0);
   const [ctlSearch, setCtlSearch] = useState("");
   const [importOpen, setImportOpen] = useState(false);
@@ -322,11 +323,11 @@ export default function SchoolPortal() {
       const { data: sess } = await supabase.auth.getSession();
       const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/change-entry-event`, {
         method: "POST", headers: { "Content-Type": "application/json", apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${sess.session?.access_token}` },
-        body: JSON.stringify({ entry_id: entryId, to_event: changeEvent }),
+        body: JSON.stringify({ entry_id: entryId, to_event: changeEvent, clear_video: changeClearVideo }),
       });
       const j = await res.json();
       if (!res.ok || !j.ok) { setChangeMsg(j.error || "Could not change the event."); setChangeBusy(false); return; }
-      setChangeOpenId(null); setChangeEvent(""); setChangeBusy(false); load();
+      setChangeOpenId(null); setChangeEvent(""); setChangeClearVideo(false); setChangeBusy(false); load();
     } catch { setChangeMsg("Network error — try again."); setChangeBusy(false); }
   }
 
@@ -982,7 +983,7 @@ export default function SchoolPortal() {
                             {paid ? "Paid" : "Awaiting payment"}
                           </span>
                           {canChange && options.length > 0 && (
-                            <button onClick={() => { setChangeOpenId(isOpen ? null : en.id); setChangeEvent(""); setChangeMsg(""); }}
+                            <button onClick={() => { setChangeOpenId(isOpen ? null : en.id); setChangeEvent(""); setChangeMsg(""); setChangeClearVideo(false); }}
                               style={{ border: `1px solid ${neutrals.border}`, background: isOpen ? neutrals.surface2 : "transparent", color: neutrals.text, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
                               {isOpen ? "Cancel" : "Change event"}
                             </button>
@@ -999,9 +1000,16 @@ export default function SchoolPortal() {
                             style={{ border: "none", cursor: changeEvent && !changeBusy ? "pointer" : "not-allowed", fontWeight: 700, color: "#141210", borderRadius: 9, padding: "8px 16px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: !changeEvent || changeBusy ? 0.6 : 1 }}>
                             {changeBusy ? "Saving…" : "Save change"}
                           </button>
-                          {en.video_url && <span style={{ color: status.danger, fontSize: 12 }}>⚠ Their uploaded video will be cleared — they&apos;ll need to upload a new one for the new event.</span>}
-                          {changeMsg && <span style={{ color: status.danger, fontSize: 12 }}>{changeMsg}</span>}
-                          <span style={{ color: neutrals.muted2, fontSize: 12 }}>Payment carries over — no new fee. The competitor is notified.</span>
+                          {en.video_url && (
+                            <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", fontSize: 12.5, color: neutrals.text, width: "100%" }}>
+                              <input type="checkbox" checked={changeClearVideo} onChange={(e) => setChangeClearVideo(e.target.checked)} />
+                              The uploaded video doesn&apos;t match the new event — clear it so they re-upload
+                            </label>
+                          )}
+                          {changeMsg && <span style={{ color: status.danger, fontSize: 12, width: "100%" }}>{changeMsg}</span>}
+                          <span style={{ color: neutrals.muted2, fontSize: 12, width: "100%" }}>
+                            Payment carries over — no new fee. {en.video_url ? (changeClearVideo ? "The video will be cleared and they'll upload a new one." : "The uploaded video carries over to the new event.") : ""} The competitor is notified.
+                          </span>
                         </div>
                       )}
                     </div>
