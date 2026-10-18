@@ -108,7 +108,7 @@ export default function SchoolPortal() {
   const [entryForm, setEntryForm] = useState({ competitor: "", event: "trad_forms" });
   const [entryFeeCents, setEntryFeeCents] = useState(4500);
   const [deadline, setDeadline] = useState<string | null>(null);
-  const [openRoundId, setOpenRoundId] = useState<string | null>(null);
+  const [openRoundIds, setOpenRoundIds] = useState<Set<string>>(new Set());
   const [changeOpenId, setChangeOpenId] = useState<string | null>(null); // entry whose change-event panel is open
   const [changeEvent, setChangeEvent] = useState<string>("");
   const [changeBusy, setChangeBusy] = useState(false);
@@ -239,8 +239,8 @@ export default function SchoolPortal() {
     // Projected-income inputs + the current round's submission deadline (best-effort; RLS/columns may vary).
     supabase.from("app_settings").select("value").eq("key", "entry_fee_cents").maybeSingle()
       .then(({ data }) => { const v = data ? Number((data as { value: unknown }).value) : NaN; if (!Number.isNaN(v)) setEntryFeeCents(v); });
-    supabase.from("rounds").select("*").in("state", ["open", "collecting"]).order("opens_at", { ascending: false }).limit(1).maybeSingle()
-      .then(({ data }) => { const r = data as Record<string, unknown> | null; setDeadline(pickDeadline(r)); setOpenRoundId((r?.id as string | undefined) ?? null); });
+    supabase.from("rounds").select("*").in("state", ["open", "collecting"]).order("opens_at", { ascending: false })
+      .then(({ data }) => { const rows = (data ?? []) as Record<string, unknown>[]; setDeadline(pickDeadline(rows[0] ?? null)); setOpenRoundIds(new Set(rows.map((r) => r.id as string))); });
 
     const { data: comps } = await supabase.from("competitors")
       .select("id, first_name, last_name, dob, declared_rank, dueling_enabled").eq("school_id", (sch as School).id).order("last_name");
@@ -965,7 +965,7 @@ export default function SchoolPortal() {
                 {entries.map((en) => {
                   const a = roster.find((r) => r.id === en.competitor_id);
                   const paid = en.payment_status === "paid";
-                  const canChange = !!openRoundId && en.round_id === openRoundId;
+                  const canChange = openRoundIds.has(en.round_id);
                   const taken = new Set(entries.filter((x) => x.competitor_id === en.competitor_id).map((x) => x.event));
                   const options = EVENTS.filter((e) => e.code !== en.event && !taken.has(e.code));
                   const isOpen = changeOpenId === en.id;
