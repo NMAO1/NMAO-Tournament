@@ -11,7 +11,7 @@ import { uploadInhouseVideo, PickedVideo } from "../lib/upload";
 const EXPORT_PRESET = ImagePicker.VideoExportPreset.H264_1920x1080;
 const MAX_MB = 500;
 
-export type VideoTask = { entrant_id: string; competitor_id: string; tournament_name: string; event: string | null; division: string | null; prize?: string | null };
+export type VideoTask = { entrant_id: string; competitor_id: string; tournament_name: string; event: string | null; division: string | null; prize?: string | null; password?: string | null };
 
 // Mirrors the championship submit flow: pick a 1080p clip, upload to the private
 // bucket, record it on the in-house entry via submit-inhouse-video.
@@ -59,7 +59,15 @@ export default function InHouseUpload({ task, onDone, onClose }: { task: VideoTa
         <TouchableOpacity onPress={onClose} disabled={busy}><Text style={{ color: neutrals.muted, fontSize: 14 }}>Cancel</Text></TouchableOpacity>
       </View>
       <Text style={{ color: hues.gold.hi, fontSize: 12, fontWeight: "800", letterSpacing: 1, textTransform: "uppercase" }}>{task.tournament_name}</Text>
-      <Text style={{ color: neutrals.muted, fontSize: 14, marginTop: 4, marginBottom: 26 }}>{[task.event, task.division].filter(Boolean).join(" · ") || "Entry"}</Text>
+      <Text style={{ color: neutrals.muted, fontSize: 14, marginTop: 4, marginBottom: task.password ? 16 : 26 }}>{[task.event, task.division].filter(Boolean).join(" · ") || "Entry"}</Text>
+
+      {task.password ? (
+        <View style={{ borderWidth: 1, borderColor: hues.gold.base, backgroundColor: "rgba(230,185,63,0.08)", borderRadius: 12, padding: 14, marginBottom: 24 }}>
+          <Text style={{ color: neutrals.muted, fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", fontWeight: "700" }}>Say this password on camera</Text>
+          <Text style={{ color: hues.gold.hi, fontSize: 22, fontWeight: "800", marginTop: 4, letterSpacing: 1 }}>{task.password}</Text>
+          <Text style={{ color: neutrals.muted, fontSize: 12, marginTop: 5 }}>Say it at the start of your video — one take, no edits. It proves the clip is recent and really you.</Text>
+        </View>
+      ) : null}
 
       <TouchableOpacity onPress={pick} disabled={busy} activeOpacity={0.85}
         style={{ borderWidth: 1, borderColor: vid ? hues.gold.base : neutrals.border, borderRadius: 16, borderStyle: vid ? "solid" : "dashed", padding: 28, alignItems: "center", backgroundColor: vid ? "rgba(230,185,63,0.06)" : "transparent" }}>

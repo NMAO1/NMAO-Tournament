@@ -3,8 +3,8 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { neutrals, hues } from "@nmao/design-tokens";
 
-type Entrant = { id: string; display_name: string | null; event: string | null; division: string | null; video_url: string | null; scores: Record<string, number> | null; score: number | null; placement: number | null };
-type TournamentLite = { id: string; name: string; format: string };
+type Entrant = { id: string; display_name: string | null; event: string | null; division: string | null; video_url: string | null; scores: Record<string, number> | null; score: number | null; placement: number | null; password_verified: boolean | null };
+type TournamentLite = { id: string; name: string; format: string; password: string | null };
 
 const total = (scores: Record<string, number> | null | undefined, criteria: string[]) =>
   criteria.reduce((s, c) => s + (Number(scores?.[c]) || 0), 0);
@@ -28,6 +28,13 @@ export default function RunTournament({ tournament, criteria, entrants, onClose,
 
   function setScore(crit: string, val: string) {
     setEnts((list) => list.map((e, idx) => (idx === i ? { ...e, scores: { ...(e.scores || {}), [crit]: val === "" ? 0 : Number(val) } } : e)));
+  }
+  // Judge flags whether the competitor said the say-on-camera password. Toggle
+  // off by tapping the active choice. Best-effort — never blocks scoring.
+  async function setVerified(v: boolean | null) {
+    const next = cur.password_verified === v ? null : v;
+    setEnts((list) => list.map((e, idx) => (idx === i ? { ...e, password_verified: next } : e)));
+    await supabase.from("ih_entrants").update({ password_verified: next }).eq("id", cur.id);
   }
   async function saveCurrent() {
     const s = cur.scores || {};
@@ -115,6 +122,22 @@ export default function RunTournament({ tournament, criteria, entrants, onClose,
           cur.video_url
             ? <button onClick={() => onWatch(cur.id)} style={{ display: "inline-block", marginTop: 14, color: hues.gold.hi, fontSize: 14, background: "none", cursor: "pointer", border: `1px solid ${neutrals.border}`, borderRadius: 9, padding: "8px 14px" }}>▶ Watch entry video ↗</button>
             : <div style={{ marginTop: 14, color: neutrals.muted2, fontSize: 13 }}>No video submitted.</div>
+        )}
+
+        {/* say-on-camera password check — confirm a single, recent take */}
+        {tournament.format === "video" && tournament.password && (
+          <div style={{ marginTop: 16, border: `1px solid ${neutrals.border}`, borderRadius: 11, background: "#0e0e11", padding: "12px 14px" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 10.5, letterSpacing: 1, textTransform: "uppercase", color: neutrals.muted2 }}>Say-on-camera password</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: hues.gold.hi, letterSpacing: 1, marginTop: 2 }}>{tournament.password}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => setVerified(true)} style={{ cursor: "pointer", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, border: `1px solid ${cur.password_verified === true ? "#2E5B44" : neutrals.border}`, background: cur.password_verified === true ? "rgba(90,154,106,0.18)" : "transparent", color: cur.password_verified === true ? "#7ED0A0" : neutrals.muted }}>✓ Said it</button>
+                <button onClick={() => setVerified(false)} style={{ cursor: "pointer", borderRadius: 8, padding: "7px 12px", fontSize: 12, fontWeight: 700, border: `1px solid ${cur.password_verified === false ? "rgba(200,60,60,0.5)" : neutrals.border}`, background: cur.password_verified === false ? "rgba(224,112,112,0.14)" : "transparent", color: cur.password_verified === false ? "#E88" : neutrals.muted }}>✗ Missing</button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* criteria */}

@@ -5,8 +5,8 @@ import { neutrals, hues, status } from "@nmao/design-tokens";
 import RunTournament from "./RunTournament";
 import QrDownloads from "./QrDownloads";
 
-type Tournament = { id: string; name: string; event_date: string | null; upload_deadline: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean; prize: string | null; division_ages: string[] | null; division_ranks: string[] | null };
-type Entrant = { id: string; competitor_id: string | null; display_name: string | null; event: string | null; division: string | null; score: number | null; placement: number | null; prize: string | null; payment_status: string; self_registered: boolean; video_url: string | null; scores: Record<string, number> | null };
+type Tournament = { id: string; name: string; event_date: string | null; upload_deadline: string | null; state: string; visibility: string; format: string; entry_fee_cents: number | null; platform_fee_bps: number; registration_open: boolean; public_token: string; scoring_mode: string; criteria: string[] | null; include_unpaid: boolean; prize: string | null; division_ages: string[] | null; division_ranks: string[] | null; password: string | null };
+type Entrant = { id: string; competitor_id: string | null; display_name: string | null; event: string | null; division: string | null; score: number | null; placement: number | null; prize: string | null; payment_status: string; self_registered: boolean; video_url: string | null; scores: Record<string, number> | null; password_verified: boolean | null };
 type RosterLite = { id: string; first_name: string; last_name: string };
 
 // NMAO's preset in-house rubric (used when scoring_mode = 'nmao').
@@ -36,6 +36,10 @@ const toLocalDate = (ts: string | null) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 const endOfDayISO = (date: string) => (date ? new Date(`${date}T23:59:59`).toISOString() : null);
+// Say-on-camera password generator — a punchy, memorable phrase + 2 digits
+// (e.g. "DRAGON 47"). Editable; the 🎲 button just seeds a creative starting point.
+const PW_WORDS = ["DRAGON", "TIGER", "FALCON", "PHOENIX", "COBRA", "THUNDER", "STORM", "IRON", "JADE", "CRANE", "VIPER", "LOTUS", "SHADOW", "BLAZE", "FROST", "RONIN", "SABER", "ONYX", "RIVER", "SUMMIT", "EAGLE", "WOLF", "KOI", "BAMBOO", "COMET"];
+const randomPassword = () => `${PW_WORDS[Math.floor(Math.random() * PW_WORDS.length)]} ${10 + Math.floor(Math.random() * 90)}`;
 
 export default function InHouse({ schoolId, roster }: { schoolId: string; roster: RosterLite[] }) {
   const supabase = createClient();
@@ -61,7 +65,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
 
   const loadTournaments = useCallback(async () => {
     const { data, error } = await supabase.from("in_house_tournaments")
-      .select("id, name, event_date, upload_deadline, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid, prize, division_ages, division_ranks")
+      .select("id, name, event_date, upload_deadline, state, visibility, format, entry_fee_cents, platform_fee_bps, registration_open, public_token, scoring_mode, criteria, include_unpaid, prize, division_ages, division_ranks, password")
       .eq("school_id", schoolId).order("created_at", { ascending: false });
     if (error) { setErr(`Couldn't load tournaments: ${error.message}. You may be missing a database migration.`); return; }
     setTournaments((data ?? []) as Tournament[]);
@@ -70,7 +74,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
 
   async function loadEntrants(tid: string) {
     const { data } = await supabase.from("ih_entrants")
-      .select("id, competitor_id, display_name, event, division, score, placement, prize, payment_status, self_registered, video_url, scores")
+      .select("id, competitor_id, display_name, event, division, score, placement, prize, payment_status, self_registered, video_url, scores, password_verified")
       .eq("tournament_id", tid).order("placement", { ascending: true, nullsFirst: false });
     setEntrants((data ?? []) as Entrant[]);
   }
@@ -310,6 +314,22 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                 </label>
               </div>
 
+              {/* editable config: video say-on-camera password (video format only) */}
+              {cur.format === "video" && (
+                <div style={{ background: "#0e0e11", border: `1px solid ${neutrals.border}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
+                  <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2, marginBottom: 6 }}>Video password <span style={{ textTransform: "none", letterSpacing: 0, color: neutrals.muted2 }}>· say-on-camera</span></div>
+                  <div style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 10, lineHeight: 1.6 }}>
+                    Competitors say this phrase at the start of their video so you can confirm it&apos;s a single, recent take. Make it your own, or roll a random one. Leave blank to skip the check for this tournament.
+                  </div>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <input style={{ ...inp, flex: 1, minWidth: 200, letterSpacing: 1, fontWeight: 700, color: hues.gold.hi }} placeholder="e.g. DRAGON 47" value={cur.password ?? ""}
+                      onChange={(e) => patchLocal(cur.id, { password: e.target.value })}
+                      onBlur={(e) => updateTournament(cur.id, { password: e.target.value.trim() || null })} />
+                    <button onClick={() => updateTournament(cur.id, { password: randomPassword() })} style={{ ...ghost, border: "1px solid #3a3944", background: neutrals.surface }}>🎲 Randomize</button>
+                  </div>
+                </div>
+              )}
+
               {/* editable config: scoring */}
               <div style={{ background: "#0e0e11", border: `1px solid ${neutrals.border}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
                 <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: neutrals.muted2, marginBottom: 12 }}>Scoring &amp; judging</div>
@@ -373,6 +393,7 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
                 <div><div style={sumLbl}>Scoring</div><div style={sumVal}>{isCustom ? `Custom · ${cur.criteria?.length ?? 0} criteria` : "NMAO rubric"}</div></div>
                 <div><div style={sumLbl}>Public sign-ups</div><div style={sumVal}>{isPublic ? "On" : "Off"}</div></div>
                 <div><div style={sumLbl}>Unpaid compete</div><div style={sumVal}>{cur.include_unpaid ? "Yes" : "No"}</div></div>
+                {cur.format === "video" && cur.password && <div><div style={sumLbl}>Video password</div><div style={{ ...sumVal, color: hues.gold.hi, letterSpacing: 1 }}>{cur.password}</div></div>}
                 {cur.prize && <div style={{ flexBasis: "100%" }}><div style={sumLbl}>Prize</div><div style={sumVal}>{cur.prize}</div></div>}
               </div>
 
@@ -520,9 +541,9 @@ export default function InHouse({ schoolId, roster }: { schoolId: string; roster
 
       {running && cur && (
         <RunTournament
-          tournament={{ id: cur.id, name: cur.name, format: cur.format }}
+          tournament={{ id: cur.id, name: cur.name, format: cur.format, password: cur.password }}
           criteria={critList}
-          entrants={eligible.map((e) => ({ id: e.id, display_name: e.display_name, event: e.event, division: e.division, video_url: e.video_url, scores: e.scores, score: e.score, placement: e.placement }))}
+          entrants={eligible.map((e) => ({ id: e.id, display_name: e.display_name, event: e.event, division: e.division, video_url: e.video_url, scores: e.scores, score: e.score, placement: e.placement, password_verified: e.password_verified }))}
           onClose={() => { setRunning(false); if (selected) loadEntrants(selected); }}
           onSaved={() => { if (selected) loadEntrants(selected); }}
           onWatch={watchVideo}
