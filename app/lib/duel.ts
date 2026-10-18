@@ -90,9 +90,28 @@ export async function duelEvents(): Promise<DuelEvent[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data as any[]).map((e) => ({ code: e.code, name: e.name }));
 }
-export async function requestDuel(competitorId: string, eventCode: string): Promise<{ ok: boolean; duelId?: string; error?: string }> {
+// request_duel now matches a WAITING opponent from the queue, or — if none is
+// open — adds you to the queue and returns NULL. So a null duel id means
+// "queued, we'll match you when an opponent joins", not an error.
+export async function requestDuel(competitorId: string, eventCode: string): Promise<{ ok: boolean; duelId?: string; queued?: boolean; error?: string }> {
   const { data, error } = await supabase.rpc("request_duel", { p_competitor_id: competitorId, p_event: eventCode });
-  return error ? { ok: false, error: error.message } : { ok: true, duelId: data as string };
+  if (error) return { ok: false, error: error.message };
+  if (data == null) return { ok: true, queued: true };
+  return { ok: true, duelId: data as string };
+}
+
+// ---- matchmaking queue: events I'm waiting in, + leave ----
+export type QueuedEvent = { event: string; createdAt: string };
+export async function myDuelQueue(competitorId: string): Promise<QueuedEvent[]> {
+  // RLS (dq_self_read) already scopes to my competitors; the eq narrows to this one.
+  const { data, error } = await supabase.from("duel_queue").select("event, created_at").eq("competitor_id", competitorId);
+  if (error || !data) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (data as any[]).map((r) => ({ event: r.event, createdAt: r.created_at }));
+}
+export async function leaveDuelQueue(competitorId: string, eventCode?: string): Promise<boolean> {
+  const { error } = await supabase.rpc("leave_duel_queue", { p_competitor_id: competitorId, p_event: eventCode ?? null });
+  return !error;
 }
 
 // ---- respond to a challenge (respond_to_duel) ----

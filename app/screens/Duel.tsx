@@ -9,7 +9,8 @@ import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { uploadDuelVideo } from "../lib/upload";
 import {
   weekStatus, myActiveDuels, voteQueue, requestDuel, duelEvents, respondToDuel, submitDuelVideo, myDuelStanding, myDuelResults, currentDuelPassword,
-  type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent, type DuelStanding, type DuelResult,
+  myDuelQueue, leaveDuelQueue,
+  type WeekStatus, type ActiveDuel, type QueueDuel, type DuelEvent, type DuelStanding, type DuelResult, type QueuedEvent,
 } from "../lib/duel";
 import Arena from "./Arena";
 import DuelReveal from "./DuelReveal";
@@ -19,6 +20,8 @@ import { formatCountdown } from "../lib/compete";
 const EXPORT_PRESET = ImagePicker.VideoExportPreset.H264_1920x1080;
 const EXPLAINER_KEY = "duel_explainer_seen_v1";
 const prettyErr = (e?: string) => (e ? e.replace(/^.*?:\s*/, "") : "Please try again.");
+const EVENT_LABEL: Record<string, string> = { trad_forms: "Traditional Forms", trad_weapons: "Traditional Weapons", open_forms: "Open Forms", open_weapons: "Open Weapons" };
+const evLabel = (code: string) => EVENT_LABEL[code] ?? code.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 // The Duel hub — two sections: COMPETE (challenge + your active duels) and the
 // VOTE QUEUE. Tapping a queue card rotates into the Arena ring.
@@ -30,6 +33,7 @@ export default function Duel() {
   const [nowTs, setNowTs] = useState(Date.now());
   const [active, setActive] = useState<ActiveDuel[]>([]);
   const [queue, setQueue] = useState<QueueDuel[]>([]);
+  const [myQueue, setMyQueue] = useState<QueuedEvent[]>([]); // events I'm waiting in (matchmaking queue)
   const [results, setResults] = useState<DuelResult[]>([]);
   const [openResult, setOpenResult] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -54,8 +58,8 @@ export default function Duel() {
   }
 
   const load = useCallback(async (id: string) => {
-    const [w, a, q, st, res] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, ""), myDuelStanding(id), myDuelResults(id)]);
-    setWeek(w); setActive(a); setQueue(q); setStanding(st); setResults(res);
+    const [w, a, q, st, res, mq] = await Promise.all([weekStatus(id), myActiveDuels(id), voteQueue(id, ""), myDuelStanding(id), myDuelResults(id), myDuelQueue(id)]);
+    setWeek(w); setActive(a); setQueue(q); setStanding(st); setResults(res); setMyQueue(mq);
   }, []);
 
   // tick the "next slot" countdown once a second, only while the weekly limit is
@@ -78,7 +82,21 @@ export default function Duel() {
     })();
   }, [activeId, load]);
 
+  // While I'm waiting in the matchmaking queue, poll so a match surfaces without
+  // a manual pull-to-refresh (there's no realtime on duels today).
+  useEffect(() => {
+    if (!me || myQueue.length === 0) return;
+    const t = setInterval(() => { load(me); }, 25000);
+    return () => clearInterval(t);
+  }, [me, myQueue.length, load]);
+
   async function refresh() { if (!me) return; setRefreshing(true); await load(me); setRefreshing(false); }
+  async function leaveQueue(eventCode: string) {
+    if (!me) return;
+    const ok = await leaveDuelQueue(me, eventCode);
+    await load(me);
+    if (!ok) Alert.alert("Queue", "Couldn't leave the queue — please try again.");
+  }
   // Debounce the vote-queue search so it fires ~300ms after typing stops, not on
   // every keystroke.
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -97,7 +115,11 @@ export default function Duel() {
     if (!r.ok) { Alert.alert("Find a match", prettyErr(r.error)); return; }
     setChallenging(false);
     await load(me);
-    Alert.alert("You're matched", "A mystery opponent has been drawn — they have 48 hours to accept. Identities are revealed at the end.");
+    if (r.queued) {
+      Alert.alert("You're in the queue", `No opponent is open right now — we'll match you for ${ev.name} as soon as one joins, and send you a notification. You can leave the queue anytime.`);
+    } else {
+      Alert.alert("You're matched", "A mystery opponent has been drawn — they have 48 hours to accept. Identities are revealed at the end.");
+    }
   }
   async function respond(d: ActiveDuel, accept: boolean) {
     setBusyId(d.id);
@@ -190,7 +212,7 @@ export default function Duel() {
             <Text style={{ color: neutrals.text, fontWeight: "700", fontSize: 12 }}>Choose your event</Text>
             <TouchableOpacity onPress={() => setChallenging(false)}><Text style={{ color: neutrals.muted2, fontSize: 12 }}>Close</Text></TouchableOpacity>
           </View>
-          <Text style={{ color: neutrals.muted2, fontSize: 11, marginBottom: 10 }}>We'll match you with a random opponent at your rank, age, and rating. You won't see who until the reveal.</Text>
+          <Text style={{ color: neutrals.muted2, fontSize: 11, marginBottom: 10 }}>We'll match you with an opponent near your rank and age — or hold your spot in the queue until one's open. You won't see who until the reveal.</Text>
           {events.length === 0 ? (
             <Text style={{ color: neutrals.muted2, fontSize: 12 }}>Loading events…</Text>
           ) : events.map((ev) => (
@@ -204,8 +226,24 @@ export default function Duel() {
         </View>
       ) : null}
 
+      {myQueue.length > 0 ? (
+        <View style={{ borderWidth: 1, borderColor: hues.gold.shadow, borderRadius: 12, backgroundColor: "rgba(230,185,63,0.06)", padding: 12, marginTop: 6, marginBottom: 8 }}>
+          {myQueue.map((qe, idx) => (
+            <View key={qe.event} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: idx > 0 ? 10 : 0, paddingTop: idx > 0 ? 10 : 0, borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: neutrals.border }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: hues.gold.hi, fontSize: 12.5, fontWeight: "800" }}>⏳ In the queue — {evLabel(qe.event)}</Text>
+                <Text style={{ color: neutrals.muted2, fontSize: 11, marginTop: 2 }}>We'll match you the moment an opponent joins.</Text>
+              </View>
+              <TouchableOpacity onPress={() => leaveQueue(qe.event)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ borderWidth: 1, borderColor: neutrals.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
+                <Text style={{ color: neutrals.muted, fontSize: 12, fontWeight: "700" }}>Leave</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {active.map((d) => <ActiveCard key={d.id} d={d} busy={busyId === d.id} onRespond={respond} onUpload={upload} />)}
-      {active.length === 0 && !challenging ? <Text style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 4 }}>No active duels. Challenge a rival to begin.</Text> : null}
+      {active.length === 0 && myQueue.length === 0 && !challenging ? <Text style={{ color: neutrals.muted2, fontSize: 12, marginBottom: 4 }}>No active duels. Challenge a rival to begin.</Text> : null}
 
       {results.length > 0 ? (
         <>
