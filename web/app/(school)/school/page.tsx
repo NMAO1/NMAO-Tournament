@@ -19,7 +19,7 @@ type Settings = {
   competitor_id: string; allowed_events: string[] | null; dueling_enabled: boolean;
   competition_class: string | null; geo_exclude_miles: number | null; merch_enabled: boolean;
 };
-type Entry = { id: string; competitor_id: string; event: string; payment_status: string; video_url: string | null };
+type Entry = { id: string; competitor_id: string; event: string; payment_status: string; video_url: string | null; round_id: string };
 const RANKS = ["beginner", "intermediate", "advanced", "black_belt"];
 const CLASSES = ["beginner", "intermediate", "advanced"];
 // Belt (from membership) → tournament rank (4 buckets). Belts vary by school, so this is a
@@ -108,6 +108,11 @@ export default function SchoolPortal() {
   const [entryForm, setEntryForm] = useState({ competitor: "", event: "trad_forms" });
   const [entryFeeCents, setEntryFeeCents] = useState(4500);
   const [deadline, setDeadline] = useState<string | null>(null);
+  const [openRoundId, setOpenRoundId] = useState<string | null>(null);
+  const [changeOpenId, setChangeOpenId] = useState<string | null>(null); // entry whose change-event panel is open
+  const [changeEvent, setChangeEvent] = useState<string>("");
+  const [changeBusy, setChangeBusy] = useState(false);
+  const [changeMsg, setChangeMsg] = useState("");
   const [nowTs, setNowTs] = useState(0);
   const [ctlSearch, setCtlSearch] = useState("");
   const [importOpen, setImportOpen] = useState(false);
@@ -235,7 +240,7 @@ export default function SchoolPortal() {
     supabase.from("app_settings").select("value").eq("key", "entry_fee_cents").maybeSingle()
       .then(({ data }) => { const v = data ? Number((data as { value: unknown }).value) : NaN; if (!Number.isNaN(v)) setEntryFeeCents(v); });
     supabase.from("rounds").select("*").in("state", ["open", "collecting"]).order("opens_at", { ascending: false }).limit(1).maybeSingle()
-      .then(({ data }) => setDeadline(pickDeadline(data as Record<string, unknown> | null)));
+      .then(({ data }) => { const r = data as Record<string, unknown> | null; setDeadline(pickDeadline(r)); setOpenRoundId((r?.id as string | undefined) ?? null); });
 
     const { data: comps } = await supabase.from("competitors")
       .select("id, first_name, last_name, dob, declared_rank, dueling_enabled").eq("school_id", (sch as School).id).order("last_name");
@@ -260,7 +265,7 @@ export default function SchoolPortal() {
         supabase.from("skill_ratings").select("competitor_id, rating").in("competitor_id", ids),
         supabase.from("medals").select("competitor_id").in("competitor_id", ids),
         supabase.from("student_tournament_settings").select("competitor_id, allowed_events, dueling_enabled, competition_class, geo_exclude_miles, merch_enabled").in("competitor_id", ids),
-        supabase.from("entries").select("id, competitor_id, event, payment_status, video_url").in("competitor_id", ids),
+        supabase.from("entries").select("id, competitor_id, event, payment_status, video_url, round_id").in("competitor_id", ids),
         supabase.rpc("school_duel_consent"),
       ]);
       setEntries((en ?? []) as Entry[]);
@@ -306,6 +311,23 @@ export default function SchoolPortal() {
       setSavedMsg("Registered — the parent/guardian now pays in the app.");
     } catch { setErr("Network error."); }
     setSaving(false); load();
+  }
+
+  // Change an existing entry's event (competitor signed up for the wrong one).
+  // Only works while the round is open; the EF carries payment, clears any video.
+  async function changeEntryEvent(entryId: string) {
+    if (!changeEvent) return;
+    setChangeBusy(true); setChangeMsg("");
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/change-entry-event`, {
+        method: "POST", headers: { "Content-Type": "application/json", apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, Authorization: `Bearer ${sess.session?.access_token}` },
+        body: JSON.stringify({ entry_id: entryId, to_event: changeEvent }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.ok) { setChangeMsg(j.error || "Could not change the event."); setChangeBusy(false); return; }
+      setChangeOpenId(null); setChangeEvent(""); setChangeBusy(false); load();
+    } catch { setChangeMsg("Network error — try again."); setChangeBusy(false); }
   }
 
   async function connectBank() {
@@ -943,16 +965,45 @@ export default function SchoolPortal() {
                 {entries.map((en) => {
                   const a = roster.find((r) => r.id === en.competitor_id);
                   const paid = en.payment_status === "paid";
+                  const canChange = !!openRoundId && en.round_id === openRoundId;
+                  const taken = new Set(entries.filter((x) => x.competitor_id === en.competitor_id).map((x) => x.event));
+                  const options = EVENTS.filter((e) => e.code !== en.event && !taken.has(e.code));
+                  const isOpen = changeOpenId === en.id;
                   return (
-                    <div key={en.id} style={{ ...card, padding: "13px 16px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 600 }}>{a ? `${a.first_name} ${a.last_name}` : "Athlete"}</div>
-                        <div style={{ color: neutrals.muted, fontSize: 13, marginTop: 3 }}>{EVENTS.find((e) => e.code === en.event)?.name ?? en.event} · {en.video_url ? "video in" : "no video yet"}</div>
+                    <div key={en.id} style={{ ...card, padding: "13px 16px", marginBottom: 10 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 15, fontWeight: 600 }}>{a ? `${a.first_name} ${a.last_name}` : "Athlete"}</div>
+                          <div style={{ color: neutrals.muted, fontSize: 13, marginTop: 3 }}>{EVENTS.find((e) => e.code === en.event)?.name ?? en.event} · {en.video_url ? "video in" : "no video yet"}</div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10, whiteSpace: "nowrap" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 11px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5,
+                            color: paid ? "#7ED0A0" : hues.gold.hi, background: paid ? "rgba(90,154,106,0.14)" : "rgba(230,185,63,0.12)", border: `1px solid ${paid ? "#3f7a52" : hues.gold.shadow}` }}>
+                            {paid ? "Paid" : "Awaiting payment"}
+                          </span>
+                          {canChange && options.length > 0 && (
+                            <button onClick={() => { setChangeOpenId(isOpen ? null : en.id); setChangeEvent(""); setChangeMsg(""); }}
+                              style={{ border: `1px solid ${neutrals.border}`, background: isOpen ? neutrals.surface2 : "transparent", color: neutrals.text, borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>
+                              {isOpen ? "Cancel" : "Change event"}
+                            </button>
+                          )}
+                        </div>
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 11px", borderRadius: 999, textTransform: "uppercase", letterSpacing: 0.5,
-                        color: paid ? "#7ED0A0" : hues.gold.hi, background: paid ? "rgba(90,154,106,0.14)" : "rgba(230,185,63,0.12)", border: `1px solid ${paid ? "#3f7a52" : hues.gold.shadow}` }}>
-                        {paid ? "Paid" : "Awaiting payment"}
-                      </span>
+                      {isOpen && (
+                        <div style={{ borderTop: `1px solid ${neutrals.surface2}`, marginTop: 12, paddingTop: 12, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
+                          <select style={inp} value={changeEvent} onChange={(e) => setChangeEvent(e.target.value)}>
+                            <option value="">— choose the correct event —</option>
+                            {options.map((e) => <option key={e.code} value={e.code}>{e.name}</option>)}
+                          </select>
+                          <button onClick={() => changeEntryEvent(en.id)} disabled={!changeEvent || changeBusy}
+                            style={{ border: "none", cursor: changeEvent && !changeBusy ? "pointer" : "not-allowed", fontWeight: 700, color: "#141210", borderRadius: 9, padding: "8px 16px", background: `linear-gradient(160deg, ${hues.gold.hi}, ${hues.gold.base} 55%, ${hues.gold.shadow})`, opacity: !changeEvent || changeBusy ? 0.6 : 1 }}>
+                            {changeBusy ? "Saving…" : "Save change"}
+                          </button>
+                          {en.video_url && <span style={{ color: status.danger, fontSize: 12 }}>⚠ Their uploaded video will be cleared — they&apos;ll need to upload a new one for the new event.</span>}
+                          {changeMsg && <span style={{ color: status.danger, fontSize: 12 }}>{changeMsg}</span>}
+                          <span style={{ color: neutrals.muted2, fontSize: 12 }}>Payment carries over — no new fee. The competitor is notified.</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
