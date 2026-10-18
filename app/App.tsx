@@ -19,6 +19,7 @@ import Duel from "./screens/Duel";
 import Achievements from "./screens/Achievements";
 import Leaderboard from "./screens/Leaderboard";
 import Profile from "./screens/Profile";
+import Home from "./screens/Home";
 import DuelReveal from "./screens/DuelReveal";
 import { loadFrameManifest } from "./lib/badgeFrames";
 import { Header } from "./components/Header";
@@ -46,6 +47,7 @@ function MainTabs() {
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [reveal, setReveal] = useState<ActiveReveal | null>(null);
   const [addingChild, setAddingChild] = useState(false);
+  const [inhouseOpen, setInhouseOpen] = useState(false); // in-house (school tournaments) screen, reachable from Compete + notifications
   const active = TABS.find((t) => t.key === tab)!;
   // App Store 1.2 #7: an ejected/suspended competitor is locked out of posting
   // and competing. We block the content of every tab but Profile (kept reachable
@@ -79,6 +81,7 @@ function MainTabs() {
       return;
     }
     if (duelId && n.type === "duel_result") { setReveal({ kind: "duel", duelId }); return; }
+    if (n.type === "inhouse_reminder") { setInhouseOpen(true); return; }
     if (duelId) { setTab("duel"); }
   }
 
@@ -107,11 +110,11 @@ function MainTabs() {
       <View style={{ flex: 1 }}>
         {suspended && tab !== "profile" ? <Suspended /> : (
           <>
-            {tab === "compete" ? <Compete unread={unread} onBell={() => setAlertsOpen(true)} onOpenReveal={(r) => setReveal({ kind: "monthly", period: r.period, payload: r.payload })} /> : null}
+            {tab === "compete" ? <Compete unread={unread} onBell={() => setAlertsOpen(true)} onOpenReveal={(r) => setReveal({ kind: "monthly", period: r.period, payload: r.payload })} onOpenInhouse={() => setInhouseOpen(true)} /> : null}
             {tab === "duel" ? <Duel /> : null}
             {tab === "achievements" ? <Achievements /> : null}
             {tab === "leaderboard" ? <Leaderboard /> : null}
-            {tab === "profile" ? <Profile unread={unread} onBell={() => setAlertsOpen(true)} /> : null}
+            {tab === "profile" ? <Profile unread={unread} onBell={() => setAlertsOpen(true)} onOpenInhouse={() => setInhouseOpen(true)} /> : null}
           </>
         )}
       </View>
@@ -126,6 +129,19 @@ function MainTabs() {
 
       <Modal visible={addingChild} animationType="slide" onRequestClose={() => setAddingChild(false)}>
         <Onboard mode="add" onCancel={() => setAddingChild(false)} onDone={async (id) => { await reload(); if (id) setActive(id); setAddingChild(false); }} />
+      </Modal>
+
+      <Modal visible={inhouseOpen} animationType="slide" onRequestClose={() => setInhouseOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: neutrals.bg }}>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 18, paddingTop: 56, paddingBottom: 10 }}>
+            <TouchableOpacity onPress={() => setInhouseOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Text style={{ color: neutrals.muted, fontSize: 15, fontWeight: "700" }}>‹ Back</Text>
+            </TouchableOpacity>
+            <Text style={{ color: neutrals.text, fontSize: 14, fontWeight: "800", letterSpacing: 1.5, textTransform: "uppercase" }}>School Tournaments</Text>
+            <View style={{ width: 44 }} />
+          </View>
+          <Home onCompete={() => setInhouseOpen(false)} />
+        </View>
       </Modal>
 
       <Modal visible={!!reveal} animationType="fade" onRequestClose={() => setReveal(null)}>

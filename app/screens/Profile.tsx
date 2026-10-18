@@ -10,7 +10,6 @@ import { useActiveCompetitor } from "../lib/activeCompetitor";
 import { loadProfile, loadNotifPrefs, setNotifPref, type ProfileInfo } from "../lib/profile";
 import { shareInvite } from "../lib/invite";
 import Journal from "./Journal";
-import Home from "./Home";
 import Family from "./Family";
 import BuyEntry from "./BuyEntry";
 import FrameLab from "./FrameLab";
@@ -40,11 +39,12 @@ const NOTIF_TYPES = [
   { type: "duel_result", label: "Duel results" },
   { type: "sudden_death", label: "Sudden death" },
   { type: "upload_reminder", label: "Upload reminders" },
+  { type: "inhouse_reminder", label: "School tournaments" },
   { type: "voting_closing", label: "Voting closing" },
   { type: "reveal_ready", label: "Monthly reveal" },
 ];
 
-export default function Profile({ unread = 0, onBell }: { unread?: number; onBell?: () => void }) {
+export default function Profile({ unread = 0, onBell, onOpenInhouse }: { unread?: number; onBell?: () => void; onOpenInhouse?: () => void }) {
   const [me, setMe] = useState<string | null>(null);
   const [info, setInfo] = useState<ProfileInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,7 +72,6 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
   }, [activeId, ready, reloadKey]);
 
   if (sub === "journal" && me) return <Journal competitorId={me} onClose={() => setSub(null)} />;
-  if (sub === "home") return <Home onCompete={() => setSub(null)} />;
   if (sub === "notifs" && me) return <NotifPanel competitorId={me} onBack={() => setSub(null)} />;
   if (sub === "dojo") return <Panel title="My Dojo" onBack={() => setSub(null)}>{info?.school ? <Text style={{ color: neutrals.text, fontSize: 16, fontWeight: "700" }}>{info.school.name}</Text> : <Text style={{ color: neutrals.muted2 }}>No school linked yet.</Text>}</Panel>;
   if (sub === "rules") return <Panel title="Rules & Help" onBack={() => setSub(null)}><RulesText /></Panel>;
@@ -161,7 +160,7 @@ export default function Profile({ unread = 0, onBell }: { unread?: number; onBel
           hidden from the production menu. Re-add this Row to tune living-frames.
           The `sub === "framelab"` branch + import are kept so it's one line to restore. */}
       {/* <Row icon="✨" label="Frame Lab (preview)" onPress={() => setSub("framelab")} /> */}
-      <Row icon="🏆" label="In-house tournaments" onPress={() => setSub("home")} />
+      <Row icon="🏆" label="In-house tournaments" onPress={() => onOpenInhouse?.()} />
       <Row icon="📣" label="Invite a friend" onPress={() => shareInvite({ schoolName: info.school?.name, joinCode: info.school?.joinCode })} />
 
       <TouchableOpacity onPress={() => supabase.auth.signOut()} style={{ marginTop: 18, alignItems: "center" }}>

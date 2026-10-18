@@ -16,6 +16,7 @@ import { latestUnseenMonthly, MonthlyReveal as MonthlyRevealData } from "../lib/
 import BuyEntry from "./BuyEntry";
 import SchoolGate from "../components/SchoolGate";
 import { myCompetitorSchool, SchoolMembership } from "../lib/onboard";
+import { inhouseSummary, InhouseSummary } from "../lib/inhouse";
 import * as WebBrowser from "expo-web-browser";
 
 // Export competition videos at 1080p H.264 (flip to H264_1280x720 for smaller
@@ -34,7 +35,7 @@ const EVENTS = [
 const prettyBracket = (b: string) => b.replace("_plus", "+").replace("_", "–");
 const ordinal = (n: number) => (n === 1 ? "1st" : n === 2 ? "2nd" : n === 3 ? "3rd" : `${n}th`);
 
-export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?: number; onBell?: () => void; onOpenReveal?: (r: MonthlyRevealData) => void }) {
+export default function Compete({ unread = 0, onBell, onOpenReveal, onOpenInhouse }: { unread?: number; onBell?: () => void; onOpenReveal?: (r: MonthlyRevealData) => void; onOpenInhouse?: () => void }) {
   const [comps, setComps] = useState<Competitor[]>([]);
   const [competitorId, setCompetitorId] = useState<string | null>(null);
   const [event, setEvent] = useState<string | null>(null);
@@ -52,6 +53,7 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
   const [unseenReveal, setUnseenReveal] = useState<MonthlyRevealData | null>(null);
   const [nowTs, setNowTs] = useState(Date.now()); // ticks the deadline countdown
   const [refreshing, setRefreshing] = useState(false);
+  const [ih, setIh] = useState<InhouseSummary>({ open: 0, tasks: 0 }); // school (in-house) tournaments summary
 
   async function refreshCredits(cid: string | null) {
     if (!cid) { setCredits(null); return; }
@@ -66,8 +68,12 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
     if (!cid) { setMembership(null); return; }
     setMembership(await myCompetitorSchool(cid));
   }
+  async function refreshInhouse(cid: string | null) {
+    if (!cid) { setIh({ open: 0, tasks: 0 }); return; }
+    setIh(await inhouseSummary(cid));
+  }
   async function reload(cid: string | null) {
-    try { setLoadErr(""); await Promise.all([refreshCredits(cid), refreshDash(cid), refreshMembership(cid)]); }
+    try { setLoadErr(""); await Promise.all([refreshCredits(cid), refreshDash(cid), refreshMembership(cid), refreshInhouse(cid)]); }
     catch { setLoadErr("Couldn't load your competition data. Pull down to try again."); }
   }
   const onRefresh = async () => { setRefreshing(true); try { await reload(competitorId); } finally { setRefreshing(false); } };
@@ -293,6 +299,24 @@ export default function Compete({ unread = 0, onBell, onOpenReveal }: { unread?:
           <Text style={{ color: hues.sapphire.hi, fontWeight: "700", fontSize: 13 }}>Buy entries ›</Text>
         </TouchableOpacity>
       )}
+
+      {competitorId && onOpenInhouse ? (
+        <TouchableOpacity onPress={onOpenInhouse} activeOpacity={0.85}
+          style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20,
+            borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1,
+            borderColor: (ih.open > 0 || ih.tasks > 0) ? hues.gold.shadow : neutrals.border,
+            backgroundColor: (ih.open > 0 || ih.tasks > 0) ? "rgba(230,185,63,0.07)" : neutrals.surface }}>
+          <View style={{ flex: 1, paddingRight: 10 }}>
+            <Text style={{ color: (ih.open > 0 || ih.tasks > 0) ? hues.gold.hi : neutrals.text, fontWeight: "800", fontSize: 14 }}>🏆 School Tournaments</Text>
+            <Text style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>
+              {ih.open > 0 || ih.tasks > 0
+                ? [ih.open > 0 ? `${ih.open} open to join` : null, ih.tasks > 0 ? `${ih.tasks} to finish` : null].filter(Boolean).join(" · ")
+                : "Local events your dojo runs — see what's on."}
+            </Text>
+          </View>
+          <Text style={{ color: hues.sapphire.hi, fontWeight: "700", fontSize: 13 }}>{ih.tasks > 0 ? "Finish ›" : "View ›"}</Text>
+        </TouchableOpacity>
+      ) : null}
 
       {loadErr ? <Text style={{ color: status.danger, marginBottom: 16 }}>{loadErr}</Text> : null}
       {comps.length === 0 && !loadErr ? (
