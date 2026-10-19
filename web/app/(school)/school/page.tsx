@@ -599,63 +599,6 @@ export default function SchoolPortal() {
                     </div>
                   </div>
                 )}
-                {pending.length > 0 && (
-                  <div style={{ ...card, padding: 16, marginBottom: 22, borderColor: hues.amethyst.base }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.amethyst.hi }}>⏳ Invited from your membership</div>
-                      <Hint on={hintsOn} align="right">These students were provisioned from your NMAO membership roster. Assign each a competitive <b>rank</b> — then their guardian finishes registration (consent + payment) from the invite link. Rank is yours to set; guardians can&apos;t change it.</Hint>
-                    </div>
-                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 12 }}>
-                      {pendingNeedRank > 0
-                        ? `${pendingNeedRank} of ${pending.length} still need a rank before their guardian redeems.`
-                        : `All ${pending.length} have a rank set — ready for guardians to redeem.`}
-                    </div>
-                    {pending.some((p) => !p.declared_rank) && (
-                      <div style={{ padding: 12, borderRadius: 10, background: neutrals.surface2, border: `1px solid ${neutrals.border}`, marginBottom: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: hues.amethyst.hi }}>Set ranks by belt</div>
-                        <div style={{ color: neutrals.muted2, fontSize: 12, margin: "3px 0 10px" }}>
-                          Most students already have a belt on file. Set a rank for each belt group at once — defaults are pre-filled from the belt; the &ldquo;No belt on file&rdquo; group needs a pick. You can still fine-tune anyone below.
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {beltGroups().map((g) => {
-                            const r = groupRankFor(g.base);
-                            return (
-                              <div key={g.base} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                                <span style={{ minWidth: 168, fontSize: 13 }}>{g.label} <span style={{ color: neutrals.muted2 }}>· {g.count}</span></span>
-                                <select value={r} onChange={(e) => setGroupRank((s) => ({ ...s, [g.base]: e.target.value }))}
-                                  style={{ ...inp, padding: "7px 10px", background: r ? "#0e0e11" : "rgba(230,185,63,0.12)", borderColor: r ? neutrals.border : hues.gold.shadow }}>
-                                  <option value="">— pick —</option>
-                                  {RANKS.map((rk) => <option key={rk} value={rk}>{cap(rk)}</option>)}
-                                </select>
-                                <button onClick={() => applyGroupRank(g.base, r)} disabled={!r}
-                                  style={{ border: `1px solid ${neutrals.border}`, cursor: r ? "pointer" : "default", fontWeight: 700, color: neutrals.text, borderRadius: 8, padding: "7px 12px", fontSize: 12, background: neutrals.surface, opacity: r ? 1 : 0.5 }}>
-                                  Apply to {g.count}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        <button onClick={applyAllGroups}
-                          style={{ marginTop: 12, border: "none", cursor: "pointer", fontWeight: 800, color: "#141210", borderRadius: 8, padding: "9px 16px", fontSize: 13, background: `linear-gradient(160deg, ${hues.amethyst.hi}, ${hues.amethyst.base} 55%, ${hues.amethyst.shadow})` }}>
-                          Apply all belt defaults
-                        </button>
-                      </div>
-                    )}
-                    {pending.map((a) => (
-                      <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: `1px solid ${neutrals.surface2}` }}>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 600 }}>{a.first_name} {a.last_name}</div>
-                          <div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{a.dob ? `Age ${ageOf(a.dob)} · ` : ""}{a.belt_name ? `Belt on file: ${a.belt_name}` : "No belt on file"}</div>
-                        </div>
-                        <select value={a.declared_rank ?? ""} onChange={(e) => setPendingRank(a.id, e.target.value)} title="Set this athlete's competitive rank"
-                          style={{ ...inp, background: a.declared_rank ? neutrals.surface2 : "rgba(230,185,63,0.12)", borderColor: a.declared_rank ? neutrals.border : hues.gold.shadow }}>
-                          <option value="">— set rank —</option>
-                          {RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                )}
                 {joinReqs.length > 0 && (
                   <div style={{ ...card, padding: 16, marginBottom: 22, borderColor: hues.gold.base }}>
                     <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.gold.hi, marginBottom: 4 }}>🙋 Join requests</div>
@@ -822,6 +765,63 @@ export default function SchoolPortal() {
                   );
                 })}
                 <Hint on={hintsOn}>Each competitor&apos;s <b>Controls ▾</b> set their events, <b>class/level</b>, <b>dueling</b> (1-v-1 challenges), and rank. Changes save automatically — watch for <b>✓ Saved</b>. Set how far afield duels are matched under <b>Settings → Dueling reach</b>.</Hint>
+                {pending.length > 0 && (
+                  <div style={{ ...card, padding: 16, marginBottom: 22, borderColor: hues.amethyst.base }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <div style={{ fontSize: 12, letterSpacing: 1.4, textTransform: "uppercase", color: hues.amethyst.hi }}>⏳ Invited from your membership</div>
+                      <Hint on={hintsOn} align="right">These students were provisioned from your NMAO membership roster. Assign each a competitive <b>rank</b> — then their guardian finishes registration (consent + payment) from the invite link. Rank is yours to set; guardians can&apos;t change it.</Hint>
+                    </div>
+                    <div style={{ color: neutrals.muted, fontSize: 13, marginBottom: 12 }}>
+                      {pendingNeedRank > 0
+                        ? `${pendingNeedRank} of ${pending.length} still need a rank before their guardian redeems.`
+                        : `All ${pending.length} have a rank set — ready for guardians to redeem.`}
+                    </div>
+                    {pending.some((p) => !p.declared_rank) && (
+                      <div style={{ padding: 12, borderRadius: 10, background: neutrals.surface2, border: `1px solid ${neutrals.border}`, marginBottom: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, textTransform: "uppercase", color: hues.amethyst.hi }}>Set ranks by belt</div>
+                        <div style={{ color: neutrals.muted2, fontSize: 12, margin: "3px 0 10px" }}>
+                          Most students already have a belt on file. Set a rank for each belt group at once — defaults are pre-filled from the belt; the &ldquo;No belt on file&rdquo; group needs a pick. You can still fine-tune anyone below.
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {beltGroups().map((g) => {
+                            const r = groupRankFor(g.base);
+                            return (
+                              <div key={g.base} style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                                <span style={{ minWidth: 168, fontSize: 13 }}>{g.label} <span style={{ color: neutrals.muted2 }}>· {g.count}</span></span>
+                                <select value={r} onChange={(e) => setGroupRank((s) => ({ ...s, [g.base]: e.target.value }))}
+                                  style={{ ...inp, padding: "7px 10px", background: r ? "#0e0e11" : "rgba(230,185,63,0.12)", borderColor: r ? neutrals.border : hues.gold.shadow }}>
+                                  <option value="">— pick —</option>
+                                  {RANKS.map((rk) => <option key={rk} value={rk}>{cap(rk)}</option>)}
+                                </select>
+                                <button onClick={() => applyGroupRank(g.base, r)} disabled={!r}
+                                  style={{ border: `1px solid ${neutrals.border}`, cursor: r ? "pointer" : "default", fontWeight: 700, color: neutrals.text, borderRadius: 8, padding: "7px 12px", fontSize: 12, background: neutrals.surface, opacity: r ? 1 : 0.5 }}>
+                                  Apply to {g.count}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <button onClick={applyAllGroups}
+                          style={{ marginTop: 12, border: "none", cursor: "pointer", fontWeight: 800, color: "#141210", borderRadius: 8, padding: "9px 16px", fontSize: 13, background: `linear-gradient(160deg, ${hues.amethyst.hi}, ${hues.amethyst.base} 55%, ${hues.amethyst.shadow})` }}>
+                          Apply all belt defaults
+                        </button>
+                      </div>
+                    )}
+                    {pending.map((a) => (
+                      <div key={a.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: "10px 0", borderBottom: `1px solid ${neutrals.surface2}` }}>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 600 }}>{a.first_name} {a.last_name}</div>
+                          <div style={{ color: neutrals.muted2, fontSize: 12, marginTop: 2 }}>{a.dob ? `Age ${ageOf(a.dob)} · ` : ""}{a.belt_name ? `Belt on file: ${a.belt_name}` : "No belt on file"}</div>
+                        </div>
+                        <select value={a.declared_rank ?? ""} onChange={(e) => setPendingRank(a.id, e.target.value)} title="Set this athlete's competitive rank"
+                          style={{ ...inp, background: a.declared_rank ? neutrals.surface2 : "rgba(230,185,63,0.12)", borderColor: a.declared_rank ? neutrals.border : hues.gold.shadow }}>
+                          <option value="">— set rank —</option>
+                          {RANKS.map((r) => <option key={r} value={r}>{cap(r)}</option>)}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
 
