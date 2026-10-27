@@ -409,9 +409,14 @@ function Side({
   const glow = sf ? sf.accentColor : (frameSpec?.border?.glow ?? rarityBase(rarity));
   const borderTexture = !sf && frameSpec?.border?.texture ? frameElementUrl(frameSpec.border.texture) : null;
   const [cardSize, setCardSize] = useState<{ w: number; h: number } | null>(null);
-  // A pure "ring" spec (full-image picture frame — e.g. the TAOSD founder border) has a
-  // ring config, no shelf elements, and no tiled texture → render it as a RingFrame.
-  const ringSpec = !sf && frameSpec?.ring && (frameSpec.elements?.length ?? 0) === 0 && !frameSpec.border ? frameSpec.ring : null;
+  // Any equipped frame that defines a `ring` (a full-image picture-frame bezel) renders
+  // as a RingFrame — the V3 ring supersedes the V2 tiled-texture border + shelf elements
+  // for every ring frame (duelist, oracle, ascent, rising-star, grand-champion, taosd-
+  // founder), not just the founder border. RingFrame always draws the tint gradient
+  // under the art, so a frame whose ring image is missing degrades to its tint instead
+  // of breaking. Non-ring frames (commons, journal_keeper, medal/gem hoards) keep the
+  // tiled-texture + shelf-element band path below.
+  const ringSpec = !sf && frameSpec?.ring ? frameSpec.ring : null;
 
   // the video window + its overlays — reused by the texture-border and ring-border paths
   const videoInner = (
